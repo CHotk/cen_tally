@@ -2,18 +2,15 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-// PDF 只有按匯出才用到，按下去才載入，開 App 不用先下載這一大包。
-import 'package:pdf/pdf.dart' deferred as pdf;
-import 'package:pdf/widgets.dart' deferred as pw;
 
 import '../../app/providers.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/spacing.dart';
 import '../../app/theme/typography.dart';
+import '../../data/cloud/tally_sync.dart';
 import '../../data/export/file_download.dart';
 import '../../domain/models/tally.dart';
 import '../../shared/widgets/ambient_background.dart';
@@ -102,10 +99,15 @@ Widget _page(
   ),
 );
 
-Widget _iconAction(IconData icon, String tip, VoidCallback onTap) => IconButton(
+Widget _iconAction(
+  IconData icon,
+  String tip,
+  VoidCallback onTap, {
+  Color? color,
+}) => IconButton(
   onPressed: onTap,
   icon: Icon(icon, size: 22),
-  color: AppColors.ink2,
+  color: color ?? AppColors.ink2,
   tooltip: tip,
   padding: EdgeInsets.zero,
   visualDensity: VisualDensity.compact,
@@ -243,7 +245,7 @@ class _GlassAction extends StatelessWidget {
 /// 這個瀏覽器裡沒有帳就自動建一本（標題固定「記帳」，不能改）。
 /// [solo] 是分享給別人的獨立網址 `#/tally-solo`：沒有返回鍵、功能
 /// 選單、設定，也看不到任何異動紀錄的痕跡，不會跳到 App 其他功能；資料存在
-/// 朋友自己的瀏覽器，記完按匯出 PDF 傳回來。App 內的 `#/tally` 則是從功能
+/// 朋友自己的瀏覽器，記的帳同步到雲端。App 內的 `#/tally` 則是從功能
 /// 選單進來，多一個異動紀錄入口。
 class TallyEntryPage extends ConsumerStatefulWidget {
   const TallyEntryPage({super.key, this.solo = false});
@@ -266,7 +268,13 @@ class _TallyEntryPageState extends ConsumerState<TallyEntryPage> {
   Future<void> _open() async {
     final repo = ref.read(tallyRepositoryProvider);
     final books = await repo.books();
-    final book = books.lastOrNull ?? await repo.addBook('記帳');
+    // 兩台裝置各自自動建過帳本、同步後會有好幾本：固定用最早建的那本（每台
+    // 算出來都一樣），畫面顯示的是全部的每一筆。
+    books.sort((a, b) {
+      final c = a.createdAt.compareTo(b.createdAt);
+      return c != 0 ? c : a.id.compareTo(b.id);
+    });
+    final book = books.firstOrNull ?? await repo.addBook('記帳');
     if (mounted) setState(() => _id = book.id);
   }
 
@@ -300,12 +308,20 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   void initState() {
     super.initState();
     _load();
+    // 雲端同步拿到新資料就重讀。
+    tallyRevision.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    tallyRevision.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {
     final repo = ref.read(tallyRepositoryProvider);
     final b = (await repo.books()).where((x) => x.id == widget.bookId);
-    final items = await repo.items(widget.bookId);
+    final items = await repo.items();
     if (mounted) {
       setState(() {
         _book = b.firstOrNull;
@@ -413,9 +429,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         // 沒有設定、沒有返回，只能從功能選單點進來。
         standalone: true,
         actions: [
-          _iconAction(Icons.ios_share_rounded, '匯出 PDF', () async {
-            await showTallyExport(context, ref, b, _items);
-          }),
+          const _CloudButton(),
           if (!widget.solo) ...[
             _iconAction(Icons.history_rounded, '異動紀錄', () {
               context.push('/log');
@@ -909,296 +923,47 @@ Future<({bool plus, int amount, String note, DateTime at})?> showTallyItemForm(
   );
 }
 
-// ═══════════════════════ 匯出 PDF ═══════════════════════
+// ═══════════════════════ 雲端同步 ═══════════════════════
 
-/// 每一頁放幾筆（第一頁有結餘標題，放得少一點）。
-const _firstPageRows = 9;
-const _otherPageRows = 14;
-
-/// 把每一筆分頁：第一頁 9 筆，之後每頁 14 筆。
-List<List<TallyItem>> tallyPages(List<TallyItem> items) {
-  final pages = <List<TallyItem>>[];
-  var n = 0;
-  while (true) {
-    final take = pages.isEmpty ? _firstPageRows : _otherPageRows;
-    final end = (n + take).clamp(0, items.length);
-    pages.add(items.sublist(n, end));
-    n = end;
-    if (n >= items.length) break;
-  }
-  return pages;
-}
-
-/// 先預覽每一頁，按「存成 PDF」才存（手機叫分享選單、電腦直接下載）。
-/// 每一筆都會印出來，筆數多就自動分頁。成功、失敗都記進異動紀錄。
-Future<void> showTallyExport(
-  BuildContext context,
-  WidgetRef ref,
-  TallyBook book,
-  List<TallyItem> items,
-) {
-  final now = DateTime.now();
-  final bal = items.fold<int>(0, (s, i) => s + i.signed);
-  final filename =
-      '記帳_${now.year}${_two(now.month)}${_two(now.day)}_${_two(now.hour)}${_two(now.minute)}.pdf';
-  final pages = tallyPages(items);
-  final keys = [for (final _ in pages) GlobalKey()];
-  // 每筆之後的累計結餘（舊到新）。
-  final running = <String, int>{};
-  var acc = 0;
-  for (final i in items) {
-    acc += i.signed;
-    running[i.id] = acc;
-  }
-  var busy = false;
-  return _card<void>(
-    context,
-    (ctx) => StatefulBuilder(
-      builder: (ctx, setS) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _title('匯出 PDF'),
-          Text(
-            '共 ${items.length} 筆・${pages.length} 頁',
-            style: const TextStyle(fontSize: 14, color: AppColors.ink2),
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  for (final (n, p) in pages.indexed) ...[
-                    if (n > 0) const SizedBox(height: 12),
-                    RepaintBoundary(
-                      key: keys[n],
-                      child: TallyReceipt(
-                        items: p,
-                        running: running,
-                        balance: bal,
-                        at: now,
-                        page: n + 1,
-                        pageCount: pages.length,
-                        total: items.length,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: busy
-                ? null
-                : () async {
-                    setS(() => busy = true);
-                    final repo = ref.read(tallyRepositoryProvider);
-                    try {
-                      await pdf.loadLibrary();
-                      await pw.loadLibrary();
-                      final doc = pw.Document();
-                      for (final k in keys) {
-                        final boundary =
-                            k.currentContext!.findRenderObject()!
-                                as RenderRepaintBoundary;
-                        final img = await boundary.toImage(pixelRatio: 3);
-                        final data = await img.toByteData(
-                          format: ui.ImageByteFormat.png,
-                        );
-                        final image = pw.MemoryImage(
-                          data!.buffer.asUint8List(),
-                        );
-                        doc.addPage(
-                          pw.Page(
-                            pageFormat: pdf.PdfPageFormat.a4,
-                            margin: pw.EdgeInsets.zero,
-                            build: (_) => pw.Image(image, fit: pw.BoxFit.fill),
-                          ),
-                        );
-                      }
-                      final bytes = await doc.save();
-                      final ok = await shareOrSaveFile(
-                        filename,
-                        bytes,
-                        'application/pdf',
-                      );
-                      await repo.logExport(
-                        book.id,
-                        filename: filename,
-                        itemCount: items.length,
-                        balance: bal,
-                        ok: ok,
-                        pages: pages.length,
-                      );
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                        showAppNotice(
-                          context,
-                          ok ? '📄 已存成 PDF' : '這個裝置還不能存檔',
-                          isError: !ok,
-                        );
-                      }
-                    } catch (e) {
-                      await repo.logExport(
-                        book.id,
-                        filename: filename,
-                        itemCount: items.length,
-                        balance: bal,
-                        ok: false,
-                        pages: pages.length,
-                        error: '$e',
-                      );
-                      if (ctx.mounted) {
-                        setS(() => busy = false);
-                        showAppNotice(ctx, '存 PDF 失敗：$e', isError: true);
-                      }
-                    }
-                  },
-            icon: const Icon(Icons.picture_as_pdf_rounded),
-            label: Text(busy ? '處理中…' : '存成 PDF'),
-            style: FilledButton.styleFrom(
-              backgroundColor: tallyAccent,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-/// PDF 的其中一頁（A4 比例的白底頁）：第一頁最上面是結餘，每頁列出那一頁的
-/// 每一筆（日期、內容、金額、當時結餘），最後一行頁碼。
-class TallyReceipt extends StatelessWidget {
-  const TallyReceipt({
-    super.key,
-    required this.items,
-    required this.running,
-    required this.balance,
-    required this.at,
-    required this.page,
-    required this.pageCount,
-    required this.total,
-  });
-
-  final List<TallyItem> items;
-  final Map<String, int> running;
-  final int balance;
-  final DateTime at;
-  final int page;
-  final int pageCount;
-  final int total;
+/// 右上角的「雲端同步」（2026-10-20 取代匯出 PDF）：按下去立刻同步一次。
+/// 平常改了資料也會自動同步，這顆同時顯示狀態：雲朵（好了）、轉圈（同步中）、
+/// 紅色（上次失敗，按一下再試）。
+class _CloudButton extends ConsumerWidget {
+  const _CloudButton();
 
   @override
-  Widget build(BuildContext context) {
-    const ink = Color(0xFF1E1E28), dim = Color(0xFF7A7A88);
-    const plus = Color(0xFF2B8A3E), minus = Color(0xFFD9480F);
-    return AspectRatio(
-      aspectRatio: 210 / 297,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-        color: const Color(0xFFFFFDF6),
-        child: DefaultTextStyle(
-          style: const TextStyle(color: ink, fontSize: 13.5),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (page == 1) ...[
-                const Text(
-                  '記帳',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '目前支出',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: dim, fontSize: 12),
-                ),
-                Text(
-                  tallySigned(balance),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    color: balance >= 0 ? plus : minus,
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ] else
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    '記帳（續）',
-                    style: TextStyle(color: dim, fontSize: 12),
-                  ),
-                ),
-              const Divider(height: 1, color: Color(0xFFE5E1D5)),
-              const SizedBox(height: 4),
-              if (items.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    '沒有記錄',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: dim),
-                  ),
-                ),
-              for (final i in items)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 66,
-                        child: Text(
-                          _ymd(i.at),
-                          style: const TextStyle(color: dim, fontSize: 11.5),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          i.note.isEmpty ? (i.plus ? '收入' : '支出') : i.note,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      SizedBox(
-                        width: 70,
-                        child: Text(
-                          '${i.plus ? '+' : '−'}${tallyMoney(i.amount)}',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: i.plus ? plus : minus,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 66,
-                        child: Text(
-                          tallySigned(running[i.id] ?? 0),
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(color: dim, fontSize: 11.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const Spacer(),
-              const Divider(height: 1, color: Color(0xFFE5E1D5)),
-              const SizedBox(height: 6),
-              Text(
-                '共 $total 筆・截至 ${_ymd(at)} ${_hm(at)}・第 $page／$pageCount 頁',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: dim, fontSize: 11),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sync = ref.watch(tallySyncProvider);
+    return ValueListenableBuilder<TallySyncState>(
+      valueListenable: sync.state,
+      builder: (context, st, _) {
+        if (st == TallySyncState.running) {
+          return const SizedBox(
+            width: 40,
+            height: 40,
+            child: Padding(
+              padding: EdgeInsets.all(11),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: tallyAccent,
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+          );
+        }
+        final failed = st == TallySyncState.failed;
+        return _iconAction(
+          failed ? Icons.cloud_off_rounded : Icons.cloud_upload_rounded,
+          failed ? '上次沒傳上去，按一下再試' : '雲端同步',
+          () async {
+            final r = await sync.run('按雲端同步');
+            // 同步完的通知整個 App 統一跳（見 main.dart），這裡只管沒連上。
+            if (r == null && context.mounted) {
+              showAppNotice(context, '還沒連上雲端', isError: true);
+            }
+          },
+          color: failed ? AppColors.bad : null,
+        );
+      },
     );
   }
 }

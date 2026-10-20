@@ -74,60 +74,6 @@ void main() {
     expect(tallyStatus(0), r'結餘 NT$0');
     expect(tallyStatus(-1234), r'結餘 −NT$1,234');
   });
-
-  test('匯出 PDF 依筆數分頁：第一頁 9 筆、之後每頁 14 筆', () {
-    final now = DateTime(2026, 10, 19, 12);
-    List<TallyItem> n(int k) => [
-      for (var i = 0; i < k; i++)
-        TallyItem(
-          id: '$i',
-          bookId: 'b',
-          plus: true,
-          amount: 1,
-          note: '',
-          at: now,
-          createdAt: now,
-          updatedAt: now,
-        ),
-    ];
-    expect(tallyPages(n(0)).length, 1);
-    expect(tallyPages(n(9)).length, 1);
-    expect(tallyPages(n(10)).map((p) => p.length), [9, 1]);
-    expect(tallyPages(n(9 + 14 * 2 + 1)).map((p) => p.length), [9, 14, 14, 1]);
-  });
-
-  testWidgets('PDF 的一頁畫得出來', (t) async {
-    final now = DateTime(2026, 10, 19, 12);
-    final it = TallyItem(
-      id: 'i',
-      bookId: 'b',
-      plus: true,
-      amount: 500,
-      note: '車錢',
-      at: now,
-      createdAt: now,
-      updatedAt: now,
-    );
-    await t.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: TallyReceipt(
-              items: [it],
-              running: {'i': 500},
-              balance: 500,
-              at: now,
-              page: 1,
-              pageCount: 1,
-              total: 1,
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(find.text('車錢'), findsOneWidget);
-    expect(find.text(r'+NT$500'), findsWidgets);
-  });
 }
 
 class _MemoryStore implements KeyValueStore {
@@ -166,7 +112,7 @@ void soloTests() {
     expect(find.byTooltip('設定'), findsNothing);
     expect(find.byTooltip('改標題'), findsNothing);
     expect(find.byTooltip('異動紀錄'), findsNothing);
-    expect(find.byTooltip('匯出 PDF'), findsOneWidget);
+    expect(find.byTooltip('雲端同步'), findsOneWidget);
     expect(find.text('收入'), findsWidgets);
     expect(find.text('支出'), findsWidgets);
     expect(find.textContaining('欠'), findsNothing);

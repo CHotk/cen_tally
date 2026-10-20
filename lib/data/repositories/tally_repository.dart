@@ -21,6 +21,10 @@ class TallyRepository {
   /// 測試換掉用；正式是瀏覽器／系統標籤。
   static String Function() deviceLabel = currentDeviceLabel;
 
+  /// 有人新增／修改／刪除／匯出就通知（每個動作都會寫異動紀錄，在那裡呼叫），
+  /// 給自動同步用。
+  static void Function()? onLocalChange;
+
   static String newId() =>
       List.generate(32, (_) => _rng.nextInt(16).toRadixString(16)).join();
 
@@ -75,10 +79,11 @@ class TallyRepository {
           .toList()
         ..sort((a, b) => b.at.compareTo(a.at));
 
-  /// 一個帳本現在的結餘（＋ 減 −）。
-  Future<int> balance(String bookId) async {
+  /// 現在的結餘（＋ 減 −）。沒有帳本概念：兩台裝置各自自動建的帳本同步後
+  /// 會有兩本，算的是全部。[bookId] 留著只是沿用舊呼叫。
+  Future<int> balance([String? bookId]) async {
     var sum = 0;
-    for (final i in await items(bookId)) {
+    for (final i in await items()) {
       sum += i.signed;
     }
     return sum;
@@ -119,6 +124,7 @@ class TallyRepository {
       ),
     );
     await _write(eventsKey, all, (e) => e.toJson());
+    onLocalChange?.call();
   }
 
   Future<void> _putBook(TallyBook b) async {
@@ -286,4 +292,103 @@ class TallyRepository {
       'error': ?error,
     },
   );
+
+  // ── 雲端同步（2026-10-20）：帳本、每一筆、異動紀錄各一個檔 ──────────
+
+  /// 合併規則：照 id；刪掉的永遠贏（墓碑），其他比 updatedAt 後改的贏。
+  /// 異動紀錄沒有修改、沒有刪除，等於照 id 聯集。
+  static List<T> mergeRecords<T>(
+    List<T> local,
+    List<T> cloud, {
+    required String Function(T) idOf,
+    required DateTime Function(T) updatedAtOf,
+    required DateTime? Function(T) deletedAtOf,
+  }) {
+    final out = {for (final e in local) idOf(e): e};
+    for (final c in cloud) {
+      final m = out[idOf(c)];
+      if (m == null) {
+        out[idOf(c)] = c;
+        continue;
+      }
+      final md = deletedAtOf(m), cd = deletedAtOf(c);
+      if (md != null && cd == null) continue;
+      if (cd != null && md == null) {
+        out[idOf(c)] = c;
+        continue;
+      }
+      if (updatedAtOf(c).isAfter(updatedAtOf(m))) out[idOf(c)] = c;
+    }
+    return out.values.toList();
+  }
+
+  /// 跟雲端同步一次：每個檔先下載、跟本機合併，本機少了就存回本機，雲端
+  /// 少了就上傳。[get] 回傳雲端那個檔的內容（沒有就 null），[put] 上傳。
+  /// 回傳「從雲端拿到幾筆」「送上雲端幾筆」（新增或內容不一樣的都算）。
+  Future<({int downloaded, int uploaded})> syncWith({
+    required Future<List<Map<String, dynamic>>?> Function(String file) get,
+    required Future<void> Function(String file, List<Map<String, dynamic>>) put,
+  }) async {
+    var down = 0, up = 0;
+    Future<void> one<T>(
+      String file,
+      String key,
+      T Function(Map<String, dynamic>) fromJson,
+      Map<String, dynamic> Function(T) toJson,
+      String Function(T) idOf,
+      DateTime Function(T) updatedAtOf,
+      DateTime? Function(T) deletedAtOf,
+    ) async {
+      final local = await _read(key, fromJson);
+      final cloud = [for (final j in await get(file) ?? const []) fromJson(j)];
+      final merged = mergeRecords(
+        local,
+        cloud,
+        idOf: idOf,
+        updatedAtOf: updatedAtOf,
+        deletedAtOf: deletedAtOf,
+      );
+      int diff(List<T> from) {
+        final have = {for (final e in from) idOf(e): jsonEncode(toJson(e))};
+        return merged
+            .where((e) => have[idOf(e)] != jsonEncode(toJson(e)))
+            .length;
+      }
+
+      final d = diff(local), u = diff(cloud);
+      if (d > 0) await _write(key, merged, toJson);
+      if (u > 0) await put(file, [for (final e in merged) toJson(e)]);
+      down += d;
+      up += u;
+    }
+
+    await one<TallyBook>(
+      'books.json',
+      booksKey,
+      TallyBook.fromJson,
+      (e) => e.toJson(),
+      (e) => e.id,
+      (e) => e.updatedAt,
+      (e) => e.deletedAt,
+    );
+    await one<TallyItem>(
+      'items.json',
+      itemsKey,
+      TallyItem.fromJson,
+      (e) => e.toJson(),
+      (e) => e.id,
+      (e) => e.updatedAt,
+      (e) => e.deletedAt,
+    );
+    await one<TallyEvent>(
+      'events.json',
+      eventsKey,
+      TallyEvent.fromJson,
+      (e) => e.toJson(),
+      (e) => e.id,
+      (e) => e.at,
+      (_) => null,
+    );
+    return (downloaded: down, uploaded: up);
+  }
 }

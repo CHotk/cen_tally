@@ -15,7 +15,9 @@ dependencies:
   go_router: ^14.6.2
   shared_preferences: ^2.3.3
   web: ^1.1.1
-  pdf: ^3.12.0
+  http: ^1.2.2
+  aws_signature_v4: ^0.6.10
+  aws_common: ^0.7.13
 
 dev_dependencies:
   flutter_test:
@@ -25,6 +27,3 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-# pdf 帶進來的 image 4.11 跟 archive 4.0.9 不相容（編譯錯 decodeLazy），先固定成 Lume 用的版本。
-dependency_overrides:
-  image: 4.10.1

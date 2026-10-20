@@ -1,0 +1,296 @@
+import 'dart:typed_data';
+
+import 'package:aws_common/aws_common.dart';
+import 'package:aws_signature_v4/aws_signature_v4.dart';
+import 'package:http/http.dart' as http;
+
+import 'r2_http_client.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
+/// R2 連線用的憑證。三個欄位對應設定頁輸入卡片的三個欄位（見
+/// `design-history/已選擇完成/雲端同步設計/01_簡潔卡片式.html`）：`endpoint` 是
+/// 「Account ID / S3 API 網址」那格，貼的是完整網址（例如
+/// `https://<account_id>.r2.cloudflarestorage.com`），不是只貼
+/// account id 本身，少一道自己組字串的手續。
+class R2Credentials {
+  const R2Credentials({
+    required this.endpoint,
+    required this.accessKeyId,
+    required this.secretAccessKey,
+  });
+
+  final String endpoint;
+  final String accessKeyId;
+  final String secretAccessKey;
+
+  Map<String, dynamic> toJson() => {
+    'endpoint': endpoint,
+    'accessKeyId': accessKeyId,
+    'secretAccessKey': secretAccessKey,
+  };
+
+  factory R2Credentials.fromJson(Map<String, dynamic> json) => R2Credentials(
+    endpoint: json['endpoint'] as String,
+    accessKeyId: json['accessKeyId'] as String,
+    secretAccessKey: json['secretAccessKey'] as String,
+  );
+}
+
+class R2Exception implements Exception {
+  R2Exception(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// 直接對 Cloudflare R2 的 S3 相容 API 做請求，純前端、不用整包 AWS
+/// SDK——但簽章邏輯用 AWS 官方（Amplify Flutter 團隊）維護的
+/// `package:aws_signature_v4`，不是自己手刻（2026-09-23 使用者問
+/// 「應該自己刻嗎」，確認有現成、AWS 自己在用的實作後換成這個，理由是
+/// 簽章這種東西編碼規則錯一個字元就整個失敗，手刻的版本沒有真的 R2
+/// 帳號沒辦法驗證對不對，風險比用現成套件高很多）。
+///
+/// R2 沒有「測試連線」這種 API，[headBucket] 是業界慣用的替代做法：
+/// 打一個很輕量、沒有副作用的請求（`HEAD /`）去確認金鑰能不能通、
+/// bucket 存不存在——設定頁的「儲存並測試連線」會先呼叫這個，再實際
+/// 寫一個測試檔驗證寫入權限（見 `r2_sync_service.dart`），兩個都過
+/// 才算真的能同步。
+class R2Client {
+  R2Client({
+    required this.credentials,
+    required this.bucket,
+    http.Client? httpClient,
+  }) : _http = httpClient ?? createR2HttpClient(),
+       _signer = AWSSigV4Signer(
+         credentialsProvider: AWSCredentialsProvider(
+           AWSCredentials(credentials.accessKeyId, credentials.secretAccessKey),
+         ),
+       );
+
+  final R2Credentials credentials;
+  final String bucket;
+  final http.Client _http;
+  final AWSSigV4Signer _signer;
+
+  // R2 的 SigV4 簽章固定用 "auto" 當 region，不是真的 AWS 區域代碼
+  // ——這是 Cloudflare 文件明講的規則。
+  static const _region = 'auto';
+
+  Uri _uriFor(String key) {
+    final base = Uri.parse(credentials.endpoint);
+    final segments = [bucket, ...key.split('/').where((s) => s.isNotEmpty)];
+    return base.replace(pathSegments: segments);
+  }
+
+  /// 確認 bucket 存不存在、金鑰讀得動——不代表寫入權限也沒問題，見
+  /// class 說明。
+  Future<void> headBucket() async {
+    final uri = Uri.parse(credentials.endpoint).replace(pathSegments: [bucket]);
+    final res = await _send(AWSHttpRequest.head(uri));
+    if (res.statusCode >= 300) {
+      throw R2Exception(_errorMessage(res));
+    }
+  }
+
+  Future<Uint8List?> getObject(String key) async {
+    final res = await _send(AWSHttpRequest.get(_uriFor(key)));
+    if (res.statusCode == 404) return null;
+    if (res.statusCode >= 300) {
+      throw R2Exception(_errorMessage(res));
+    }
+    return res.bodyBytes;
+  }
+
+  /// 同 [getObject]，但連 ETag 一起回傳——同步時想知道「這次抓下來的
+  /// 內容之後要記住的版本標記」，不用另外再打一次 [headObject]
+  /// （2026-09-29 使用者要求加速：省掉沒必要的下載/上傳，見
+  /// `r2_sync_service.dart` 的說明）。
+  Future<({Uint8List? bytes, String? etag})> getObjectWithEtag(
+    String key,
+  ) async {
+    final res = await _send(AWSHttpRequest.get(_uriFor(key)));
+    if (res.statusCode == 404) return (bytes: null, etag: null);
+    if (res.statusCode >= 300) {
+      throw R2Exception(_errorMessage(res));
+    }
+    return (bytes: res.bodyBytes, etag: _etagOf(res));
+  }
+
+  /// 只問「這個 key 現在的版本標記（ETag）」，不下載內容本身——S3／R2
+  /// 相容 API 對單次 PUT 上傳的物件，ETag 就是內容的 MD5 雜湊值，能拿來
+  /// 判斷「雲端內容跟我上次看到的是不是同一份」，不用整包 GET 才知道
+  /// （2026-09-29 使用者問「不下載怎麼知道雲端有沒有新資料」，答案是
+  /// 用這個）。物件不存在回傳 null，不算錯誤。
+  Future<String?> headObject(String key) async {
+    final res = await _send(AWSHttpRequest.head(_uriFor(key)));
+    if (res.statusCode == 404) return null;
+    if (res.statusCode >= 300) {
+      throw R2Exception(_errorMessage(res));
+    }
+    return _etagOf(res);
+  }
+
+  String? _etagOf(http.Response res) =>
+      res.headers['etag']?.replaceAll('"', '');
+
+  /// 回傳寫進去之後的 ETag（給呼叫端記住這次上傳內容的版本標記用），
+  /// 拿不到（少數伺服器行為差異）就回傳 null，呼叫端要能處理沒有 ETag
+  /// 的情況，不能假設一定有。
+  Future<String?> putObject(
+    String key,
+    Uint8List body, {
+    String contentType = 'application/json',
+  }) async {
+    final res = await _send(
+      AWSHttpRequest.put(
+        _uriFor(key),
+        body: body,
+        headers: {'content-type': contentType},
+      ),
+    );
+    if (res.statusCode >= 300) {
+      throw R2Exception(_errorMessage(res));
+    }
+    return _etagOf(res);
+  }
+
+  /// 列出 bucket 裡所有檔案的 key（S3 ListObjectsV2，一次最多 1000 筆，
+  /// 有下一頁就照 continuation token 接著翻）。給「備份雲端資料」整包打包
+  /// 用（2026-10-08 使用者要求：雲端存什麼就拿到什麼）。
+  Future<List<String>> listKeys() async {
+    final keys = <String>[];
+    String? token;
+    final keyRe = RegExp(r'<Key>(.*?)</Key>', dotAll: true);
+    final tokenRe = RegExp(
+      r'<NextContinuationToken>(.*?)</NextContinuationToken>',
+      dotAll: true,
+    );
+    for (var page = 0; page < 1000; page++) {
+      final uri = Uri.parse(credentials.endpoint).replace(
+        pathSegments: [bucket],
+        queryParameters: {'list-type': '2', 'continuation-token': ?token},
+      );
+      final res = await _send(AWSHttpRequest.get(uri));
+      if (res.statusCode >= 300) {
+        throw R2Exception(_errorMessage(res));
+      }
+      final body = res.body;
+      keys.addAll(keyRe.allMatches(body).map((m) => _unescapeXml(m[1]!)));
+      token = body.contains('<IsTruncated>true</IsTruncated>')
+          ? tokenRe.firstMatch(body)?.group(1)
+          : null;
+      if (token == null) break;
+    }
+    return keys;
+  }
+
+  /// 列出 [prefix] 底下每個檔案的 ETag（key → ETag，跟 [headObject] 拿到的
+  /// 一樣、去掉引號）。一次請求最多 1000 個檔案（2026-10-15 使用者要求 YT
+  /// 同步加速：原本每個頻道的影片快取各問一次 HEAD，頻道一多就要排好幾輪，
+  /// 改成列一次清單就全部知道）。
+  Future<Map<String, String>> listEtags(String prefix) async {
+    final out = <String, String>{};
+    String? token;
+    final itemRe = RegExp(r'<Contents>(.*?)</Contents>', dotAll: true);
+    final keyRe = RegExp(r'<Key>(.*?)</Key>', dotAll: true);
+    final etagRe = RegExp(r'<ETag>(.*?)</ETag>', dotAll: true);
+    final tokenRe = RegExp(
+      r'<NextContinuationToken>(.*?)</NextContinuationToken>',
+      dotAll: true,
+    );
+    for (var page = 0; page < 1000; page++) {
+      final uri = Uri.parse(credentials.endpoint).replace(
+        pathSegments: [bucket],
+        queryParameters: {
+          'list-type': '2',
+          'prefix': prefix,
+          'continuation-token': ?token,
+        },
+      );
+      final res = await _send(AWSHttpRequest.get(uri));
+      if (res.statusCode >= 300) {
+        throw R2Exception(_errorMessage(res));
+      }
+      final body = res.body;
+      for (final m in itemRe.allMatches(body)) {
+        final item = m[1]!;
+        final key = keyRe.firstMatch(item)?.group(1);
+        final etag = etagRe.firstMatch(item)?.group(1);
+        if (key == null || etag == null) continue;
+        out[_unescapeXml(key)] = _unescapeXml(etag).replaceAll('"', '');
+      }
+      token = body.contains('<IsTruncated>true</IsTruncated>')
+          ? tokenRe.firstMatch(body)?.group(1)
+          : null;
+      if (token == null) break;
+    }
+    return out;
+  }
+
+  static String _unescapeXml(String s) => s
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&apos;', "'")
+      .replaceAll('&amp;', '&');
+
+  Future<void> deleteObject(String key) async {
+    final res = await _send(AWSHttpRequest.delete(_uriFor(key)));
+    // R2 對已經不存在的 key 也回 204，不用特別處理 404。
+    if (res.statusCode >= 300 && res.statusCode != 404) {
+      throw R2Exception(_errorMessage(res));
+    }
+  }
+
+  String _errorMessage(http.Response res) {
+    if (res.statusCode == 403) return 'R2 拒絕存取，檢查金鑰是否正確、有沒有讀寫權限';
+    if (res.statusCode == 404) return '找不到這個 bucket，檢查 Account ID／網址是否正確';
+    return 'R2 回應錯誤（狀態碼 ${res.statusCode}）：${res.body}';
+  }
+
+  Future<http.Response> _send(AWSHttpRequest request) async {
+    final signed = await _signer.sign(
+      request,
+      credentialScope: AWSCredentialScope(
+        region: _region,
+        service: AWSService.s3,
+      ),
+      serviceConfiguration: S3ServiceConfiguration(),
+    );
+    final bytes = await signed.bodyBytes;
+
+    // 網路瞬斷自動重試（2026-10-12 使用者在 iPhone Safari 同步，五十音
+    // 練習那個檔「Load failed」整項失敗——所有功能平行同步、YT 影片快取
+    // 一次十幾個請求，手機網路一抖就有一個斷掉）。只重試「連不上／斷線」
+    // 跟 R2 暫時性的 5xx；這幾種請求（GET／HEAD／PUT／DELETE）重送結果
+    // 一樣，不會重複寫入。最多試 [_attempts] 次，中間等一下再試。
+    for (var attempt = 1; ; attempt++) {
+      try {
+        // Request 送過一次就不能再送，每次重建一個。
+        final httpRequest = http.Request(signed.method.value, signed.uri)
+          ..headers.addAll(signed.headers);
+        if (bytes.isNotEmpty) httpRequest.bodyBytes = bytes;
+        final res = await http.Response.fromStream(
+          await _http.send(httpRequest),
+        );
+        if (res.statusCode >= 500 && attempt < _attempts) {
+          await Future<void>.delayed(_retryDelay * attempt);
+          continue;
+        }
+        return res;
+      } on http.ClientException {
+        if (attempt >= _attempts) rethrow;
+        await Future<void>.delayed(_retryDelay * attempt);
+      }
+    }
+  }
+
+  /// 網路失敗最多試幾次（含第一次）、每次重試前等多久（第 n 次等 n 倍）。
+  static const _attempts = 3;
+  static Duration _retryDelay = const Duration(milliseconds: 700);
+
+  /// 測試用：不要真的等。
+  @visibleForTesting
+  static set retryDelayForTest(Duration d) => _retryDelay = d;
+}

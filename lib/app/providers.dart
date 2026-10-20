@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/cloud/tally_sync.dart';
 import '../data/repositories/tally_repository.dart';
 import '../data/storage/key_value_store.dart';
 
@@ -10,4 +11,12 @@ final keyValueStoreProvider = Provider<KeyValueStore>(
 
 final tallyRepositoryProvider = Provider<TallyRepository>(
   (ref) => TallyRepository(ref.watch(keyValueStoreProvider)),
+);
+
+/// 雲端同步（2026-10-20）：一個 App 一份。
+final tallySyncProvider = Provider<TallySync>(
+  (ref) => TallySync(
+    ref.watch(keyValueStoreProvider),
+    ref.watch(tallyRepositoryProvider),
+  ),
 );
