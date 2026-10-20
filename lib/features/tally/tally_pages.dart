@@ -20,6 +20,7 @@ import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/glass_card.dart';
 import '../../shared/widgets/tally_loading.dart';
 import 'globe/tally_globe.dart';
+import 'pet/tally_pet.dart';
 import '../../shared/widgets/inline_empty_card.dart';
 
 /// 記帳（2026-10-19 使用者要求）：跟朋友算錢，一個帳本一個人，只有 ＋／−。
@@ -44,6 +45,8 @@ Widget _page(
   required Widget top,
   required List<Widget> children,
   Widget? bottom,
+  Key? bottomKey,
+  Widget? overlay,
 }) => Scaffold(
   body: AmbientBackground(
     child: SafeArea(
@@ -78,6 +81,7 @@ Widget _page(
                 child: BackdropFilter(
                   filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                   child: Container(
+                    key: bottomKey,
                     padding: const EdgeInsets.fromLTRB(
                       Gap.screenSide,
                       12,
@@ -95,6 +99,8 @@ Widget _page(
                 ),
               ),
             ),
+          // 吉祥物這種疊在整個畫面上的東西（只有牠本身接手指）。
+          if (overlay != null) Positioned.fill(child: overlay),
         ],
       ),
     ),
@@ -300,6 +306,10 @@ class TallyBookPage extends ConsumerStatefulWidget {
 }
 
 class _TallyBookPageState extends ConsumerState<TallyBookPage> {
+  /// 吉祥物可以站的東西（結餘卡、每天那張卡、每一筆、按鈕列）。
+  final _platKeys = <String, GlobalKey>{};
+  GlobalKey _pk(String id) => _platKeys.putIfAbsent(id, GlobalKey.new);
+
   /// 記一筆就 +1，雪球搖一下。
   final _shakes = ValueNotifier<int>(0);
 
@@ -422,6 +432,11 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
     }
     return _page(
       context,
+      bottomKey: _pk('bottom'),
+      overlay: TallyPetLayer(
+        platforms: () => _platKeys.values.toList(),
+        cheers: _shakes,
+      ),
       top: AppTopBar(
         title: '我的記帳',
         // 標題直接放 App logo（2026-10-20 使用者要求）。
@@ -460,6 +475,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
           fit: StackFit.passthrough,
           children: [
             GlassCard(
+              key: _pk('sum'),
               padding: const EdgeInsets.fromLTRB(18, 16, 170, 14),
               child: SizedBox(
                 height: 168 - 30,
@@ -535,6 +551,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
           for (final day in _byDay(_items.reversed)) ...[
             _DayHeader(items: day),
             GlassCard(
+              key: _pk('day-${_ymd(day.first.at)}'),
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: [
@@ -546,11 +563,14 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
                         endIndent: 16,
                         color: AppColors.glassEdge,
                       ),
-                    _ItemRow(
-                      item: i,
-                      after: running[i.id]!,
-                      onTap: () => _openItem(i),
-                      solo: widget.solo,
+                    KeyedSubtree(
+                      key: _pk('row-${i.id}'),
+                      child: _ItemRow(
+                        item: i,
+                        after: running[i.id]!,
+                        onTap: () => _openItem(i),
+                        solo: widget.solo,
+                      ),
                     ),
                   ],
                 ],

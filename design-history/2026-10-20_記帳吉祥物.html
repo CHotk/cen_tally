@@ -97,7 +97,7 @@
 
   <aside><div class="box">
     <h2>吉祥物（桌面寵物）</h2>
-    <div style="color:var(--ink2);font-size:14px;line-height:1.6">就是那隻 3D 吉伊卡哇，縮小到約 64 像素高，在記帳畫面上到處晃，不擋你按按鈕（只有點到牠本身才有反應）。</div>
+    <div style="color:var(--ink2);font-size:14px;line-height:1.6">就是那隻 3D 吉伊卡哇，縮小到約 46 像素高，在記帳畫面上到處晃，不擋你按按鈕（只有點到牠本身才有反應）。</div>
     <h3>自己會做的事</h3><ul>
       <li>在卡片上緣、按鈕列上面走來走去、偶爾跑一下。</li>
       <li>想去上面的卡片：拿出梯子爬上去，爬完梯子收起來。</li>
@@ -112,7 +112,7 @@
     </ul>
     <h3>直接叫牠做（看效果用）</h3>
     <div class="ctrl"><button data-do="walk">🚶 走路</button><button data-do="run">🏃 跑步</button><button data-do="hop">⤴ 跳</button><button data-do="climb">🪜 爬梯子</button><button data-do="jumpdown">⤵ 跳下去</button><button data-do="sleep">💤 睡覺</button><button data-do="sit">🪑 坐下</button></div>
-    <div class="sz">大小 <input type="range" id="size" min="22" max="48" value="32"><span id="szv"></span></div>
+    <div class="sz">大小 <input type="range" id="size" min="16" max="40" value="23"><span id="szv"></span></div>
     <div id="state"></div>
     <h3>放進 App</h3><ul><li>跟雪球一樣：3D 打包在 App 裡，用一整層透明的網頁疊在記帳畫面上；只有牠本身那一小塊會接手指，其他地方照常點得到。</li><li>設定可以關掉、可以調大小。</li></ul>
   </div></aside>
@@ -230,8 +230,22 @@ for (let i = 0; i < 5; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeom
 
 
 const pet = new THREE.Group(); scene.remove(chii); pet.add(chii); scene.add(pet);
+
+// 坐下時的小木椅（2026-10-20 使用者：坐下動作不明顯，給牠一張椅子）
+const chair = new THREE.Group(); chair.visible = false;
+{ const wood = toon(0xc48a52), dark = toon(0x8a5a32);
+  const seat = withOutline(new THREE.Mesh(new THREE.BoxGeometry(1.5, .14, 1.1), wood), 1.06); seat.position.set(0, .5, .1); chair.add(seat);
+  for (const [x, z] of [[-.62, -.38], [.62, -.38], [-.62, .55], [.62, .55]]) { const l = withOutline(new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .5, 10), dark), 1.12); l.position.set(x, .25, z); chair.add(l); }
+  for (const x of [-.62, .62]) { const p = withOutline(new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.1, 10), dark), 1.12); p.position.set(x, 1.0, -.42); chair.add(p); }
+  const back = withOutline(new THREE.Mesh(new THREE.BoxGeometry(1.36, .32, .08), wood), 1.06); back.position.set(0, 1.3, -.42); chair.add(back); }
+chair.rotation.x = .18;
+pet.add(chair);
 chii.rotation.x = .18; // 稍微從上面看一點
-let S = 32; // 每單位幾像素（牠大約 2 單位高 → 64px）
+const PACE = 1.4;
+// 台詞（2026-10-20 使用者：多一些，主人叫馨岑）
+const LINES = ['馨岑今天過得怎麼樣？', '馨岑辛苦了～', '鑫鑫腸買了沒？', '今天有好好吃飯嗎？', '記帳好棒！', '要早點睡喔', '嘿嘿'];
+const chat = () => say(LINES[Math.floor(Math.random() * LINES.length)], 2.4); // 動作之間停多久的倍數（2026-10-20 使用者：慢到 1.4 倍）
+let S = 23; // 2026-10-20 使用者：太大隻，縮小（約 46px 高） // 每單位幾像素（牠大約 2 單位高 → 64px）
 
 // ═══════ 物理：平台＝有 data-plat 的元素上緣 ═══════
 const sr = () => screen.getBoundingClientRect();
@@ -251,34 +265,35 @@ const shadow = document.createElement('div'); shadow.className = 'shadow'; scree
 const hit = document.getElementById('hit');
 
 function platOf(el) { return platforms().find(p => p.el === el); }
-function setMode(m, extra = {}) { Object.assign(P, { mode: m, t: 0 }, extra); stateEl.textContent = '現在：' + ({ idle: '發呆', walk: '走路', run: '跑步', fall: '掉下來', held: '被捏著（掙扎中）', climb: '爬梯子', dizzy: '頭暈', sleep: '睡覺', sit: '坐著', happy: '開心', look: '東張西望', toLadder: '走去放梯子' }[m] || m); }
+function setMode(m, extra = {}) { if (m !== 'fall') P.ignore = null; Object.assign(P, { mode: m, t: 0 }, extra); stateEl.textContent = '現在：' + ({ idle: '發呆', walk: '走路', run: '跑步', fall: '掉下來', held: '被捏著（掙扎中）', climb: '爬梯子', dizzy: '頭暈', sleep: '睡覺', sit: '坐著', happy: '開心', look: '東張西望', toLadder: '走去放梯子' }[m] || m); }
 const stateEl = document.getElementById('state');
 
 // 想下一件事
 function think() {
   const here = platOf(P.plat); if (!here) return setMode('fall', { vx: 0, vy: 0 });
   const r = Math.random();
-  const above = platforms().filter(p => p.y < here.y - 40 && p.y > here.y - 330 && Math.min(p.x2, here.x2) - Math.max(p.x1, here.x1) > 40);
-  if (r < .16 && above.length) return planClimb(here, above[Math.floor(Math.random() * above.length)]);
+  const above = abovePlats(here);
+  if (r < .16 && above.length) return planClimb(here, above[0]);
   if (r < .27 && here.el.id !== 'bottom') return planJumpDown(here);
   if (r < .5) return setMode('walk', { target: here.x1 + Math.random() * (here.x2 - here.x1), speed: 42 });
   if (r < .6) return setMode('run', { target: here.x1 + Math.random() * (here.x2 - here.x1), speed: 120 });
-  if (r < .72) return setMode('look', { until: 2.2 });
-  if (r < .8) return setMode('sit', { until: 4 });
-  if (r < .86) return setMode('sleep', { until: 6 });
+  if (r < .72) { if (Math.random() < .45) chat(); return setMode('look', { until: 2.2 * PACE }); }
+  if (r < .8) return setMode('sit', { until: 4.5 * PACE });
+  if (r < .86) return setMode('sleep', { until: 6 * PACE });
   if (r < .93) return setMode('happy', { vy: -330 });
-  setMode('idle', { until: 1.5 + Math.random() * 2 });
+  if (Math.random() < .3) chat();
+  setMode('idle', { until: (1.5 + Math.random() * 2) * PACE });
 }
+// 就地爬：正上方有卡片就直接拿梯子爬（2026-10-20 使用者：不用特別走到指定位置）。
+const abovePlats = (here) => platforms().filter(p => p.y < here.y - 30 && p.y > here.y - 330 && P.x >= p.x1 && P.x <= p.x2).sort((a, b) => b.y - a.y);
 function planClimb(here, top) {
-  const lo = Math.max(here.x1, top.x1) + 16, hi = Math.min(here.x2, top.x2) - 16;
-  setMode('toLadder', { target: lo + Math.random() * Math.max(1, hi - lo), speed: 60, climbTo: top.el });
-  say('爬上去看看！');
+  top ??= abovePlats(here)[0]; if (!top) { say('上面沒地方爬…'); return setMode('idle', { until: 1 }); }
+  P.ladder = placeLadder(P.x, top.y, here.y); setMode('climb', { climbTo: top.el }); say('爬上去看看！');
 }
-function planJumpDown(here) {
-  const edge = Math.random() < .5 ? here.x1 + 4 : here.x2 - 4;
-  setMode('walk', { target: edge, speed: 55, next: 'jumpdown' });
-}
-function jumpOff() { const here = platOf(P.plat); const dir = P.x < (here.x1 + here.x2) / 2 ? -1 : 1; P.face = dir; setMode('fall', { vx: dir * 90, vy: -260, plat: null }); say('嘿咻！', 1); }
+function planJumpDown(here) { if (platforms().some(p => p.y > here.y + 20 && P.x >= p.x1 && P.x <= p.x2)) jumpOff(); else setMode('idle', { until: 1 }); }
+// 跳下去：從站著的那一層往下穿過去，掉到下面那一層（2026-10-20 修：原本往卡片外跳，
+// 卡片跟畫面一樣寬，撞到畫面邊緣又落回同一張，看起來跳不下去）。
+function jumpOff() { const here = platOf(P.plat); if (!here) return; setMode('fall', { vx: P.face * 40, vy: -230, plat: null, ignore: here.el }); say('嘿咻！', 1); }
 
 // 梯子
 function placeLadder(x, yTop, yBot) {
@@ -295,18 +310,20 @@ hit.addEventListener('pointermove', e => {
   if (!press) return; const s = sr();
   press.hist.push({ x: e.clientX, y: e.clientY, t: performance.now() }); if (press.hist.length > 6) press.hist.shift();
   if (!press.held && (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 5 || performance.now() - press.t > 220)) { press.held = true; grab(); }
-  if (press.held) { P.x = e.clientX - s.left; P.y = e.clientY - s.top + 2.0 * S * .9; }
+  // 捏著：只記下手指在哪，牠每一幀平順地跟過去（2026-10-20 修：原本一捏就把頭瞬移到手指、
+  // 而且只在手指移動時才動，會一頓一頓）。
+  if (press.held) { P.gx = e.clientX - s.left + press.ox; P.gy = e.clientY - s.top + press.oy; }
 });
 hit.addEventListener('pointerup', e => {
   if (!press) return;
   if (press.held) { const h = press.hist, a = h[0], b = h[h.length - 1]; const dt = a && b ? Math.max(16, b.t - a.t) / 1000 : 1;
     const vx = a && b ? (b.x - a.x) / dt : 0, vy = a && b ? (b.y - a.y) / dt : 0;
-    setMode('fall', { vx: THREE.MathUtils.clamp(vx, -900, 900), vy: THREE.MathUtils.clamp(vy, -900, 900), plat: null }); say('哇啊——', 1); }
-  else if (P.mode !== 'held') { if (P.plat) setMode('happy', { vy: -340 }); say('♪', .8); }
+    setMode('fall', { vx: THREE.MathUtils.clamp(vx, -1200, 1200), vy: THREE.MathUtils.clamp(vy, -1400, 2600), plat: null }); say('哇啊——', 1); }
+  else if (P.mode !== 'held') { if (P.plat) setMode('happy', { vy: -340 }); Math.random() < .5 ? chat() : say('♪', .8); }
   press = null;
 });
 setInterval(() => { if (press && !press.held && performance.now() - press.t > 220) { press.held = true; grab(); } }, 50);
-function grab() { removeLadder(); setMode('held', { plat: null }); say('放開我～！', 1.4); }
+function grab() { removeLadder(); const s = sr(); press.ox = P.x - (press.x - s.left); press.oy = P.y - (press.y - s.top); P.gx = P.x; P.gy = P.y; setMode('held', { plat: null }); say('放開我～！', 1.4); }
 function removeLadder() { if (P.ladder) { const l = P.ladder; l.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250 }).onfinish = () => l.remove(); P.ladder = null; } }
 
 // 記一筆 → 跑過去看
@@ -319,9 +336,9 @@ document.querySelectorAll('[data-do]').forEach(b => b.onclick = () => {
   if (d === 'walk') setMode('walk', { target: here.x1 + Math.random() * (here.x2 - here.x1), speed: 42 });
   if (d === 'run') setMode('run', { target: P.x < (here.x1 + here.x2) / 2 ? here.x2 - 6 : here.x1 + 6, speed: 130 });
   if (d === 'hop') setMode('happy', { vy: -360 });
-  if (d === 'climb') { const above = platforms().filter(p => p.y < here.y - 40 && p.y > here.y - 330 && Math.min(p.x2, here.x2) - Math.max(p.x1, here.x1) > 40); if (above.length) planClimb(here, above[above.length - 1]); else say('上面沒地方爬…'); }
+  if (d === 'climb') planClimb(here);
   if (d === 'jumpdown') { if (here.el.id === 'bottom') say('已經在最下面了'); else planJumpDown(here); }
-  if (d === 'sleep') setMode('sleep', { until: 6 }); if (d === 'sit') setMode('sit', { until: 5 });
+  if (d === 'sleep') setMode('sleep', { until: 6 * PACE }); if (d === 'sit') setMode('sit', { until: 5 });
 });
 const sz = document.getElementById('size'); sz.oninput = () => { S = +sz.value; document.getElementById('szv').textContent = Math.round(S * 2) + 'px'; hit.style.width = S * 2 + 'px'; hit.style.height = S * 2.3 + 'px'; }; sz.oninput();
 
@@ -335,7 +352,7 @@ function frame() {
 
   // 姿勢先歸零
   chii.position.set(0, 0, 0); chii.rotation.z = 0; body.rotation.set(0, 0, 0); armL.rotation.set(0, 0, 0); armR.rotation.set(0, 0, 0);
-  legs[0].position.set(-.42, .06, .45); legs[1].position.set(.42, .06, .45); sparkles.visible = false; tears.forEach(t => t.m.visible = false);
+  legs[0].position.set(-.42, .06, .45); legs[1].position.set(.42, .06, .45); sparkles.visible = false; chair.visible = false; tears.forEach(t => t.m.visible = false);
   const br = 1 + Math.sin(T * 2.2) * .02; body.scale.set(1 / Math.sqrt(br), br, 1 / Math.sqrt(br));
   let turn = 0, eyeOpen = 1;
 
@@ -346,7 +363,7 @@ function frame() {
   switch (P.mode) {
     case 'idle': if (P.t > P.until) think(); break;
     case 'look': turn = Math.sin(P.t * 2.4) * .8; if (P.t > P.until) think(); break;
-    case 'walk': case 'run': if (step(P.speed)) { if (P.next === 'jumpdown') { P.next = null; jumpOff(); } else if (P.next === 'happy') { P.next = null; setMode('happy', { vy: -300 }); } else setMode('idle', { until: .6 + Math.random() * 1.5 }); } break;
+    case 'walk': case 'run': if (step(P.speed)) { if (P.next === 'jumpdown') { P.next = null; jumpOff(); } else if (P.next === 'happy') { P.next = null; setMode('happy', { vy: -300 }); } else setMode('idle', { until: (.6 + Math.random() * 1.5) * PACE }); } break;
     case 'toLadder': if (step(P.speed)) { const top = platOf(P.climbTo), here = platOf(P.plat); if (!top || !here) { setMode('idle', { until: 1 }); break; }
         P.ladder = placeLadder(P.x, top.y, here.y); setMode('climb', { climbTo: P.climbTo }); } break;
     case 'climb': { const top = platOf(P.climbTo); if (!top) { removeLadder(); setMode('fall', { plat: null, vx: 0, vy: 0 }); break; }
@@ -354,7 +371,8 @@ function frame() {
         const ph = T * 9; armL.rotation.x = -2.6 + Math.sin(ph) * .5; armR.rotation.x = -2.6 - Math.sin(ph) * .5; legs[0].position.y = .06 + Math.max(0, Math.sin(ph)) * .25; legs[1].position.y = .06 + Math.max(0, -Math.sin(ph)) * .25;
         if (P.ladder) P.ladder.style.top = top.y - 6 + 'px';
         if (P.y <= top.y) { P.y = top.y; P.plat = top.el; removeLadder(); setMode('happy', { vy: -220 }); say('到了！', 1.2); } break; }
-    case 'held': { // 捏著：手腳亂揮、身體晃
+    case 'held': { // 捏著：平順跟著手指；手腳亂揮、身體晃
+      const k = 1 - Math.exp(-dt * 28); P.x += (P.gx - P.x) * k; P.y += (P.gy - P.y) * k;
       const ph = T * 16; armL.rotation.z = -1.2 - Math.sin(ph) * .9; armR.rotation.z = 1.2 + Math.sin(ph + 1) * .9;
       legs[0].position.y = .06 + Math.abs(Math.sin(ph)) * .3; legs[1].position.y = .06 + Math.abs(Math.sin(ph + 1.5)) * .3;
       body.rotation.z = Math.sin(T * 7) * .25; chii.rotation.z = Math.sin(T * 3) * .15; tears.forEach(({ m, s }) => { m.visible = true; const k = (T * 1.6 + (s > 0 ? .5 : 0)) % 1; m.position.copy(surf(s * .45, 1.0 - k * .4, .03)); m.material.opacity = 1 - k; }); break; }
@@ -363,14 +381,15 @@ function frame() {
       const prevY = P.y; P.vy += 1700 * dt; P.x += P.vx * dt; P.y += P.vy * dt;
       if (P.x < 20) { P.x = 20; P.vx = Math.abs(P.vx) * .5; } if (P.x > W - 20) { P.x = W - 20; P.vx = -Math.abs(P.vx) * .5; }
       armL.rotation.z = -1.8; armR.rotation.z = 1.8; if (P.mode === 'happy') sparkles.visible = true;
-      if (P.vy > 0) for (const p of plats) if (P.x >= p.x1 - 6 && P.x <= p.x2 + 6 && prevY <= p.y && P.y >= p.y) {
-        const impact = P.vy; P.y = p.y; P.plat = p.el; P.vx = 0; P.vy = 0;
-        if (impact > 1100) { setMode('dizzy', { until: 1.8 }); say('頭好暈…'); } else setMode('idle', { until: .5 + Math.random() * 1.2, landed: .25 });
+      if (P.vy > 0) for (const p of plats) if (p.el !== P.ignore && P.x >= p.x1 - 6 && P.x <= p.x2 + 6 && prevY <= p.y && P.y >= p.y) {
+        if (P.vy > 1250) { P.vy *= .72; continue; } // 用力往下扔：穿過去、減速，越用力穿越多層
+        const impact = P.vy; P.y = p.y; P.plat = p.el; P.vx = 0; P.vy = 0; P.ignore = null;
+        if (impact > 1100) { setMode('dizzy', { until: 1.8 }); say('頭好暈…'); } else setMode('idle', { until: (.5 + Math.random() * 1.2) * PACE, landed: .25 });
         break; }
       if (P.y > H + 80) { P.x = W / 2; P.y = -40; P.vy = 0; } // 掉出畫面就從上面重來
       break; }
     case 'dizzy': sparkles.visible = true; sparkles.rotation.y += dt * 8; body.rotation.z = Math.sin(T * 6) * .15; eyeOpen = .2; if (P.t > P.until) setMode('idle', { until: 1 }); break;
-    case 'sit': legs[0].position.set(-.5, .05, .75); legs[1].position.set(.5, .05, .75); chii.position.y = -.12; if (P.t > P.until) think(); break;
+    case 'sit': chair.visible = true; chii.position.y = .52; legs[0].position.set(-.42, -.02, .85 + Math.sin(T * 3) * .08); legs[1].position.set(.42, -.02, .85 - Math.sin(T * 3) * .08); if (P.t > P.until) think(); break;
     case 'sleep': legs[0].position.set(-.5, .05, .7); legs[1].position.set(.5, .05, .7); chii.position.y = -.12; eyeOpen = .08; body.rotation.z = Math.sin(T * 1.2) * .05;
       if (P.t > P.until) { setMode('idle', { until: 1 }); say('嗯…睡飽了', 1.2); } break;
   }
