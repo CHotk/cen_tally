@@ -213,7 +213,7 @@ void main() {
     expect(logs.length, 2); // 失敗那筆也留著
   });
 
-  test('改了資料會自動排一次同步', () async {
+  test('改了資料立刻同步', () async {
     TallyRepository.onLocalChange = a.sync.schedule;
     final book = await a.repo.addBook('記帳');
     await a.repo.addItem(
@@ -223,7 +223,7 @@ void main() {
       note: '自動',
       at: DateTime(2026, 10, 1),
     );
-    await Future<void>.delayed(const Duration(milliseconds: 1700));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(cloud['items.json']!.single['note'], '自動');
   });
 

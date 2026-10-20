@@ -179,13 +179,9 @@ class TallySync {
 
   Future<TallySyncLog?>? _running;
   bool _again = false;
-  Timer? _debounce;
-
-  /// 改了資料：等一下（連續改只同步一次）再同步。
-  void schedule() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 1500), () => run('改了資料'));
-  }
+  /// 改了資料：立刻同步（2026-10-20 使用者要求：操作完可能馬上就關掉 App，
+  /// 不能等）。正在同步中就排在後面補跑一次，改的一定會送上去。
+  void schedule() => run('改了資料');
 
   /// 同步一次。正在跑就等它跑完再補跑一次。沒設金鑰或過期就什麼都不做
   /// （回傳 null）。

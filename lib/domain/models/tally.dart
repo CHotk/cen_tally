@@ -43,7 +43,7 @@ class TallyBook {
     'name': name,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
-    'deletedAt': deletedAt?.toIso8601String(),
+    'deletedAt': deletedAt?.toUtc().toIso8601String(),
   };
 
   factory TallyBook.fromJson(Map<String, dynamic> j) => TallyBook(
@@ -118,7 +118,7 @@ class TallyItem {
     'at': at.toUtc().toIso8601String(),
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
-    'deletedAt': deletedAt?.toIso8601String(),
+    'deletedAt': deletedAt?.toUtc().toIso8601String(),
   };
 
   factory TallyItem.fromJson(Map<String, dynamic> j) => TallyItem(
