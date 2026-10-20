@@ -459,12 +459,12 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               Row(
                 children: [
                   _Stat(
-                    label: '收入',
+                    label: '豪支出',
                     value: tallyMoney(plusSum),
                     color: _plusColor,
                   ),
                   _Stat(
-                    label: '支出',
+                    label: '岑支出',
                     value: tallyMoney(minusSum),
                     color: _minusColor,
                   ),
@@ -482,7 +482,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         if (_items.isEmpty)
           const InlineEmptyCard(
             title: '還沒有記錄',
-            message: '有收入按「＋ 收入」，花了錢按「− 支出」',
+            message: '豪出的錢按「＋ 豪支出」，岑出的錢按「− 岑支出」',
           )
         else ...[
           const Padding(
@@ -526,7 +526,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
           Expanded(
             child: _GlassAction(
               icon: Icons.add_rounded,
-              label: '收入',
+              label: '豪支出',
               color: _plusColor,
               onTap: () => _edit(plus: true),
             ),
@@ -535,7 +535,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
           Expanded(
             child: _GlassAction(
               icon: Icons.remove_rounded,
-              label: '支出',
+              label: '岑支出',
               color: _minusColor,
               onTap: () => _edit(plus: false),
             ),
@@ -695,7 +695,7 @@ class _ItemRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.note.isEmpty ? (item.plus ? '收入' : '支出') : item.note,
+                    item.note.isEmpty ? (item.plus ? '豪支出' : '岑支出') : item.note,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -708,7 +708,7 @@ class _ItemRow extends StatelessWidget {
                   Text(
                     item.edited && !solo
                         ? '✎ 改過・${item.updatedAt.month}/${item.updatedAt.day} ${_hm(item.updatedAt)}'
-                        : '${item.plus ? '收入' : '支出'}・${item.at.year}',
+                        : '${item.plus ? '豪支出' : '岑支出'}・${item.at.year}',
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: AppColors.ink3,
@@ -785,7 +785,7 @@ class _ItemDetail extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _title('${item.plus ? '＋' : '−'} ${tallyMoney(item.amount)}'),
-        row('種類', item.plus ? '＋ 收入' : '− 支出'),
+        row('種類', item.plus ? '＋ 豪支出' : '− 岑支出'),
         row('備註', item.note.isEmpty ? '（沒寫）' : item.note),
         row('日期', _ymd(item.at)),
         if (!solo) ...[
@@ -897,8 +897,8 @@ Future<({bool plus, int amount, String note, DateTime at})?> showTallyItemForm(
             _title(old == null ? '記一筆' : '修改這一筆'),
             SegmentedButton<bool>(
               segments: const [
-                ButtonSegment(value: true, label: Text('＋ 收入')),
-                ButtonSegment(value: false, label: Text('− 支出')),
+                ButtonSegment(value: true, label: Text('＋ 豪支出')),
+                ButtonSegment(value: false, label: Text('− 岑支出')),
               ],
               selected: {p},
               showSelectedIcon: false,

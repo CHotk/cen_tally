@@ -113,8 +113,8 @@ void soloTests() {
     expect(find.byTooltip('改標題'), findsNothing);
     expect(find.byTooltip('異動紀錄'), findsNothing);
     expect(find.byTooltip('雲端同步'), findsOneWidget);
-    expect(find.text('收入'), findsWidgets);
-    expect(find.text('支出'), findsWidgets);
+    expect(find.text('豪支出'), findsWidgets);
+    expect(find.text('岑支出'), findsWidgets);
     expect(find.textContaining('欠'), findsNothing);
     // 再開一次，同標題不重複建。
     final repo = c.read(tallyRepositoryProvider);
