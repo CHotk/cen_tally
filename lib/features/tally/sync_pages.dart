@@ -180,7 +180,7 @@ class _TallyKeyPageState extends ConsumerState<TallyKeyPage> {
             const Icon(Icons.cloud_outlined, size: 44, color: tallyAccent),
             const SizedBox(height: 12),
             Text(
-              widget.expired ? '金鑰到期了，請重新貼上' : '先連上雲端',
+              widget.expired ? '金鑰到期了，請重新貼上' : '連上雲端',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 22,
