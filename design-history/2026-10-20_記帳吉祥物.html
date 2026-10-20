@@ -332,7 +332,7 @@ hit.addEventListener('pointermove', e => {
 hit.addEventListener('pointerup', e => {
   if (!press) return;
   if (press.held) { const h = press.hist, a = h[0], b = h[h.length - 1]; const dt = a && b ? Math.max(16, b.t - a.t) / 1000 : 1;
-    const vx = a && b ? (b.x - a.x) / dt : 0, vy = a && b ? (b.y - a.y) / dt : 0;
+    let vx = a && b ? (b.x - a.x) / dt * .55 : 0, vy = a && b ? (b.y - a.y) / dt * .55 : 0; if (Math.hypot(vx, vy) < 260) vx = vy = 0; // 輕輕一拋不要飛太遠
     setMode('fall', { vx: THREE.MathUtils.clamp(vx, -1200, 1200), vy: THREE.MathUtils.clamp(vy, -1400, 2600), plat: null }); say('哇啊——', 1); }
   else if (P.mode !== 'held') { if (P.plat) setMode('happy', { vy: -340 }); Math.random() < .5 ? chat() : say('♪', .8); }
   press = null;
