@@ -357,16 +357,16 @@ document.querySelectorAll('[data-do]').forEach(b => b.onclick = () => {
   if (d === 'talk') { chat(); return; }
   if (d === 'sleep') setMode('sleep', { until: 6 * PACE }); if (d === 'sit') setMode('sit', { until: 5 });
 });
-document.getElementById('ents').innerHTML = Object.entries(ENTRANCES).map(([k, v]) => `<button data-ent="${k}">${v}</button>`).join('');
-document.querySelectorAll('[data-ent]').forEach(b => b.onclick = () => enter(b.dataset.ent));
 const sz = document.getElementById('size'); sz.oninput = () => { S = +sz.value; document.getElementById('szv').textContent = Math.round(S * 2) + 'px'; hit.style.width = S * 2 + 'px'; hit.style.height = S * 2.3 + 'px'; }; sz.oninput();
 
 // ═══════ 進場（2026-10-20 使用者：剛打開不要直接在畫面上，要從某處出來；先出幾種給他選，要有開門） ═══════
-const ENTRANCES = { door: '🚪 開門走出來', chute: '🪂 撐降落傘飄下來', globe: '❄ 從雪球裡跳出來', run: '🏃 從旁邊跑進來', poof: '💨 魔法煙霧變出來' };
+const ENTRANCES = { drop: '✨ 淡入掉下來（原本的）', door: '🚪 開門走出來', chute: '🪂 撐降落傘飄下來', globe: '❄ 從雪球裡跳出來', run: '🏃 從旁邊跑進來', poof: '💨 魔法煙霧變出來' };
 let entrance = 'door', pScale = 1, hidden = true, popT = -1;
 const GREET = ['馨岑今天過得怎麼樣？', '馨岑～我來了！', '今天也要好好記帳喔'];
 const greet = () => say(GREET[Math.floor(Math.random() * GREET.length)], 2.6);
 const later = (ms, fn) => setTimeout(fn, ms);
+document.getElementById('ents').innerHTML = Object.entries(ENTRANCES).map(([k, v]) => `<button data-ent="${k}">${v}</button>`).join('');
+document.querySelectorAll('[data-ent]').forEach(b => b.onclick = () => enter(b.dataset.ent));
 function firstRow() { const ps = platforms(); return ps.find(p => p.el.classList.contains('row')) || ps[0]; }
 function enter(kind) {
   entrance = kind; removeLadder(); document.querySelectorAll('.door,.chute,.puff').forEach(e => e.remove());
@@ -382,7 +382,11 @@ function enter(kind) {
     later(2300, () => d.classList.remove('open'));
     later(2900, () => { d.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300 }).onfinish = () => d.remove(); greet(); });
   }
-  if (kind === 'chute') { hidden = false; P.x = 120 + Math.random() * 120; P.y = -20; setMode('chute'); }
+  if (kind === 'drop') { // 原本的：淡淡出現，從上面掉到卡片上
+    hidden = false; canvas.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 700, easing: 'ease-out' });
+    P.x = 90 + Math.random() * 160; P.y = 110; setMode('fall', { vx: 30, vy: 0 }); later(900, greet);
+  }
+  if (kind === 'chute') { hidden = false; P.x = 120 + Math.random() * 120; P.y = 70; setMode('chute'); }
   if (kind === 'globe') {
     const g = screen.querySelector('.globe').getBoundingClientRect(), sr0 = sr();
     hidden = false; pScale = 0; popT = 0; P.x = g.left - sr0.left + g.width / 2; P.y = g.top - sr0.top + g.height * .55;
@@ -422,7 +426,7 @@ function frame() {
     case 'enter': break;
     case 'enterRun': if (step(P.speed)) { setMode('idle', { until: 1.5 }); greet(); } break;
     case 'chute': { // 撐降落傘：慢慢晃著飄下來
-      const prevY = P.y; P.y += 62 * dt; P.x += Math.sin(T * 1.8) * 26 * dt; chii.rotation.z = Math.sin(T * 1.8) * .12;
+      const prevY = P.y; P.y += 85 * dt; P.x += Math.sin(T * 1.8) * 26 * dt; chii.rotation.z = Math.sin(T * 1.8) * .12;
       armL.rotation.z = -2.7; armR.rotation.z = 2.7;
       for (const p of plats) if (P.x >= p.x1 && P.x <= p.x2 && prevY <= p.y && P.y >= p.y) {
         P.y = p.y; P.plat = p.el; const ch = screen.querySelector('.chute');
