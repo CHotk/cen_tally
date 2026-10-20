@@ -467,7 +467,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
                   children: [
                     const Text(
                       '目前結餘',
-                      style: TextStyle(fontSize: 13.5, color: AppColors.ink2),
+                      style: TextStyle(fontSize: 15.5, color: AppColors.ink2),
                     ),
                     const SizedBox(height: 2),
                     FittedBox(
@@ -476,7 +476,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
                       child: Text(
                         tallySigned(bal),
                         style: TextStyle(
-                          fontSize: 31,
+                          fontSize: 40, // 字放大，跟雪球之間的空白用滿（2026-10-20 使用者要求）
                           fontWeight: FontWeight.w900,
                           letterSpacing: -1,
                           color: _statusColor(bal),
@@ -659,11 +659,14 @@ class _MiniStat extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.ink3)),
+      Text(
+        label,
+        style: const TextStyle(fontSize: 12.5, color: AppColors.ink3),
+      ),
       Text(
         value,
         style: TextStyle(
-          fontSize: 13.5,
+          fontSize: 16,
           fontWeight: FontWeight.w700,
           color: color,
           fontFeatures: const [FontFeature.tabularFigures()],
