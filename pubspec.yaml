@@ -28,5 +28,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo/logo_240.png
-    - assets/bg/starry_bokeh.jpg
+    - assets/bg/stardust_night.jpg
 
