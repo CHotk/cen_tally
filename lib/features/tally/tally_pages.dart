@@ -6,8 +6,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+// PDF 只有按匯出才用到，按下去才載入，開 App 不用先下載這一大包。
+import 'package:pdf/pdf.dart' deferred as pdf;
+import 'package:pdf/widgets.dart' deferred as pw;
 
 import '../../app/providers.dart';
 import '../../app/theme/colors.dart';
@@ -994,6 +995,8 @@ Future<void> showTallyExport(
                     setS(() => busy = true);
                     final repo = ref.read(tallyRepositoryProvider);
                     try {
+                      await pdf.loadLibrary();
+                      await pw.loadLibrary();
                       final doc = pw.Document();
                       for (final k in keys) {
                         final boundary =
@@ -1008,7 +1011,7 @@ Future<void> showTallyExport(
                         );
                         doc.addPage(
                           pw.Page(
-                            pageFormat: PdfPageFormat.a4,
+                            pageFormat: pdf.PdfPageFormat.a4,
                             margin: pw.EdgeInsets.zero,
                             build: (_) => pw.Image(image, fit: pw.BoxFit.fill),
                           ),
