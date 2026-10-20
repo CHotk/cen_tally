@@ -310,6 +310,9 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   final _platKeys = <String, GlobalKey>{};
   GlobalKey _pk(String id) => _platKeys.putIfAbsent(id, GlobalKey.new);
 
+  /// 雪球那一格（吉祥物「從雪球跳出來」進場用）。
+  final _globeKey = GlobalKey();
+
   /// 記一筆就 +1，雪球搖一下。
   final _shakes = ValueNotifier<int>(0);
 
@@ -435,6 +438,11 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
       bottomKey: _pk('bottom'),
       overlay: TallyPetLayer(
         platforms: () => _platKeys.values.toList(),
+        rows: () => [
+          for (final e in _platKeys.entries)
+            if (e.key.startsWith('row-')) e.value,
+        ],
+        globe: _globeKey,
         cheers: _shakes,
       ),
       top: AppTopBar(
@@ -528,7 +536,10 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               right: -10,
               bottom: 0,
               width: 206,
-              child: TallyGlobe(shakes: _shakes),
+              child: KeyedSubtree(
+                key: _globeKey,
+                child: TallyGlobe(shakes: _shakes),
+              ),
             ),
           ],
         ),

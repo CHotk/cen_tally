@@ -141,13 +141,17 @@ chii.rotation.x = .18;
 const pet = new THREE.Group(); scene.remove(chii); pet.add(chii); scene.add(pet); pet.add(chair); scene.remove(chair);
 let px = -999, py = -999, S = 23;
 let mode = 'idle', faceDir = 1, moving = false, speed = 40, modeT = 0, landed = 0, nextBlink = 2;
-addEventListener('message', e => {
-  const p = e.data && e.data.pet; if (!p) return;
+// Flutter 直接呼叫 petPose（同一個網站，不用 postMessage）：給位置時當場畫一幀，跟 Flutter
+// 畫卡片是同一幀，捲動、爬梯子時牠才不會慢一拍、看起來閃（2026-10-20 使用者回報）。
+let drivenAt = -1;
+window.petPose = p => { apply(p); if (p.x != null) { drivenAt = performance.now(); frame(); } };
+addEventListener('message', e => { const p = e.data && e.data.pet; if (p) apply(p); });
+function apply(p) {
   if (p.x != null) { px = p.x; py = p.y; } if (p.s) S = p.s;
   if (p.land) landed = .25;
   if (p.m && p.m !== mode) { mode = p.m; modeT = 0; }
   if (p.f) faceDir = p.f; if (p.mv != null) moving = !!p.mv; if (p.sp) speed = p.sp;
-});
+}
 
 const clock = new THREE.Clock();
 function frame() {
@@ -169,6 +173,7 @@ function frame() {
       body.rotation.z = Math.sin(T * 7) * .25; chii.rotation.z = Math.sin(T * 3) * .15;
       tears.forEach(({ m, s }) => { m.visible = true; const k = (T * 1.6 + (s > 0 ? .5 : 0)) % 1; m.position.copy(surf(s * .45, 1.0 - k * .4, .03)); m.material.opacity = 1 - k; }); break; }
     case 'fall': armL.rotation.z = -1.8; armR.rotation.z = 1.8; break;
+    case 'chute': armL.rotation.z = -2.7; armR.rotation.z = 2.7; chii.rotation.z = Math.sin(T * 1.8) * .12; break;
     case 'happy': armL.rotation.z = -1.8; armR.rotation.z = 1.8; sparkles.visible = true; sparkles.rotation.y += dt * 3; break;
     case 'dizzy': sparkles.visible = true; sparkles.rotation.y += dt * 8; body.rotation.z = Math.sin(T * 6) * .15; eyeOpen = .2; break;
     case 'sit': chair.visible = true; chii.position.y = .52; legs[0].position.set(-.42, -.02, .85 + Math.sin(T * 3) * .08); legs[1].position.set(.42, -.02, .85 - Math.sin(T * 3) * .08); break;
@@ -179,10 +184,12 @@ function frame() {
   eyes.forEach(e => e.scale.y = eyeOpen);
   chii.rotation.y += (turn - chii.rotation.y) * Math.min(1, dt * 10);
   pet.scale.setScalar(S); pet.position.set(px, -py, 0);
-  renderer.render(scene, camera); requestAnimationFrame(frame);
+  renderer.render(scene, camera);
 }
-frame();
-try { parent.postMessage({ pet: { ready: 1 } }, '*'); } catch (_) {}
+// 自己的迴圈只在 Flutter 沒在帶的時候畫（剛載入、Flutter 那邊暫停時）
+(function loop() { if (performance.now() - drivenAt > 250) frame(); requestAnimationFrame(loop); })();
+// 畫好第二幀才說準備好（模型、材質都編譯好了，Flutter 再讓牠出場，進場不會卡）
+requestAnimationFrame(() => requestAnimationFrame(() => { try { parent.postMessage({ pet: { ready: 1 } }, '*'); } catch (_) {} }));
 </script>
 </body>
 </html>
