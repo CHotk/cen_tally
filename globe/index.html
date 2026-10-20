@@ -324,7 +324,7 @@ try {
   const q = new URLSearchParams(location.search);
   const canvas = document.getElementById('g');
   const g = makeGlobe(canvas, {
-    fit: +(q.get('fit') || 1), elev: +(q.get('elev') || 40), orbit: true, flakes: 700, petScale: +(q.get('pet') || 2.6),
+    fit: +(q.get('fit') || 1), elev: +(q.get('elev') || 33), orbit: true, flakes: 700, petScale: +(q.get('pet') || 2.6),
     autoRotate: .9, lift: 2.0, clearGlass: true,
   });
   // 點一下＝搖一搖；拖動＝轉（有拖就不算點）
