@@ -1,11 +1,11 @@
 {
-    "name": "記帳",
-    "short_name": "記帳",
+    "name": "我的記帳",
+    "short_name": "我的記帳",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0C0C13",
     "theme_color": "#0C0C13",
-    "description": "記帳",
+    "description": "我的記帳",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
