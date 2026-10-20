@@ -489,34 +489,39 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
           )
         else ...[
           const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 8),
+            padding: EdgeInsets.only(left: 4, bottom: 4),
             child: Text(
               '明細・新的在上面・點一筆看詳細',
               style: TextStyle(fontSize: 13.5, color: AppColors.ink2),
             ),
           ),
-          GlassCard(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(
-              children: [
-                for (final (n, i) in _items.reversed.indexed) ...[
-                  if (n > 0)
-                    const Divider(
-                      height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: AppColors.glassEdge,
+          // 一天一張卡，上面標日期、當天筆數跟小計（2026-10-20 使用者要求：
+          // 不同天要分開，不然混在一起）。
+          for (final day in _byDay(_items.reversed)) ...[
+            _DayHeader(items: day),
+            GlassCard(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                children: [
+                  for (final (n, i) in day.indexed) ...[
+                    if (n > 0)
+                      const Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: AppColors.glassEdge,
+                      ),
+                    _ItemRow(
+                      item: i,
+                      after: running[i.id]!,
+                      onTap: () => _openItem(i),
+                      solo: widget.solo,
                     ),
-                  _ItemRow(
-                    item: i,
-                    after: running[i.id]!,
-                    onTap: () => _openItem(i),
-                    solo: widget.solo,
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
+          ],
         ],
       ],
       bottom: Row(
@@ -536,6 +541,69 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               label: '支出',
               color: _minusColor,
               onTap: () => _edit(plus: false),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 照日期分組（保持原本的先後）。
+List<List<TallyItem>> _byDay(Iterable<TallyItem> items) {
+  final out = <List<TallyItem>>[];
+  for (final i in items) {
+    if (out.isNotEmpty && _ymd(out.last.last.at) == _ymd(i.at)) {
+      out.last.add(i);
+    } else {
+      out.add([i]);
+    }
+  }
+  return out;
+}
+
+/// 一天的標題：「今天・10/20（一）」左邊，當天筆數跟小計右邊。
+class _DayHeader extends StatelessWidget {
+  const _DayHeader({required this.items});
+
+  final List<TallyItem> items;
+
+  static const _week = ['一', '二', '三', '四', '五', '六', '日'];
+
+  @override
+  Widget build(BuildContext context) {
+    final d = items.first.at;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(d.year, d.month, d.day);
+    final diff = today.difference(day).inDays;
+    final rel = diff == 0 ? '今天・' : (diff == 1 ? '昨天・' : '');
+    final year = d.year == now.year ? '' : '${d.year}/';
+    final sum = items.fold(0, (s, i) => s + i.signed);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 14, 6, 8),
+      child: Row(
+        children: [
+          Text(
+            '$rel$year${d.month}/${d.day}（${_week[d.weekday - 1]}）',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '${items.length} 筆・',
+            style: const TextStyle(fontSize: 13.5, color: AppColors.ink3),
+          ),
+          Text(
+            tallySigned(sum),
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: sum >= 0 ? _plusColor : _minusColor,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ],
