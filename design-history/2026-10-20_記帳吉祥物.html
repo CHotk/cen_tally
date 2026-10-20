@@ -53,6 +53,18 @@
     background: linear-gradient(90deg, #8a5a32 0 4px, transparent 4px 22px, #8a5a32 22px 26px),
       repeating-linear-gradient(0deg, transparent 0 10px, #b07a45 10px 14px); filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
   .shadow { position: absolute; z-index: 7; height: 8px; border-radius: 50%; background: rgba(0,0,0,.35); filter: blur(2px); pointer-events: none; transform: translate(-50%, -50%); }
+  /* 進場用的道具 */
+  .door { position: absolute; z-index: 7; width: 36px; height: 52px; transform: translate(-50%, -100%); perspective: 220px; pointer-events: none; }
+  .door .hole { position: absolute; inset: -3px -4px 0; background: #140b06; border-radius: 18px 18px 0 0; box-shadow: 0 0 0 3px #6b4226; }
+  .door .panel { position: absolute; inset: 0; border-radius: 16px 16px 0 0; transform-origin: left center; transition: transform .55s cubic-bezier(.3,.8,.3,1);
+    background: repeating-linear-gradient(90deg, #b07a45 0 8px, #a06a38 8px 9px); box-shadow: inset 0 0 0 2px rgba(0,0,0,.28); }
+  .door .panel::after { content: ''; position: absolute; right: 6px; top: 27px; width: 5px; height: 5px; border-radius: 50%; background: #f2c46d; }
+  .door.open .panel { transform: rotateY(-105deg); }
+  .chute { position: absolute; z-index: 9; pointer-events: none; transform: translate(-50%, -100%); }
+  .chute .canopy { width: 70px; height: 34px; border-radius: 70px 70px 8px 8px; border: 2px solid #3a2a33;
+    background: repeating-linear-gradient(90deg, #ff9fbe 0 14px, #fff4f7 14px 28px); }
+  .chute svg { display: block; margin: 0 auto; }
+  .puff { position: absolute; z-index: 10; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.9); pointer-events: none; transform: translate(-50%, -50%); }
   .bubble { position: absolute; z-index: 10; pointer-events: none; font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); transform: translate(-50%, -100%); white-space: nowrap; }
 
   aside { width: 400px; max-width: 100%; }
@@ -62,6 +74,7 @@
   .ctrl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .ctrl button { border: 1px solid var(--edge); background: rgba(255,255,255,.06); color: var(--ink); border-radius: 12px; padding: 9px 12px; font-family: inherit; font-size: 13.5px; cursor: pointer; }
   .ctrl button:hover { border-color: rgba(255,200,87,.6); }
+  .ctrl button.on { border-color: rgba(255,200,87,.8); background: rgba(255,200,87,.16); }
   .sz { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--ink2); } .sz input { accent-color: var(--accent); flex: 1; }
   #state { margin-top: 10px; font-size: 13px; color: var(--ink3); }
   @media (max-width: 440px) { .page { padding: 16px 8px 40px; } .phone { width: 100%; padding: 8px; border-radius: 38px; } }
@@ -110,8 +123,10 @@
       <li><b>點一下</b>：開心跳一下。</li>
       <li>記一筆（按豪支出／岑支出）：牠會跑過去看。</li>
     </ul>
+    <h3>進場方式（點了就重播，選一個）</h3>
+    <div class="ctrl" id="ents"></div>
     <h3>直接叫牠做（看效果用）</h3>
-    <div class="ctrl"><button data-do="walk">🚶 走路</button><button data-do="run">🏃 跑步</button><button data-do="hop">⤴ 跳</button><button data-do="climb">🪜 爬梯子</button><button data-do="jumpdown">⤵ 跳下去</button><button data-do="sleep">💤 睡覺</button><button data-do="sit">🪑 坐下</button></div>
+    <div class="ctrl"><button data-do="walk">🚶 走路</button><button data-do="run">🏃 跑步</button><button data-do="hop">⤴ 跳</button><button data-do="climb">🪜 爬梯子</button><button data-do="jumpdown">⤵ 跳下去</button><button data-do="sleep">💤 睡覺</button><button data-do="sit">🪑 坐下</button><button data-do="talk">💬 說句話</button></div>
     <div class="sz">大小 <input type="range" id="size" min="16" max="40" value="23"><span id="szv"></span></div>
     <div id="state"></div>
     <h3>放進 App</h3><ul><li>跟雪球一樣：3D 打包在 App 裡，用一整層透明的網頁疊在記帳畫面上；只有牠本身那一小塊會接手指，其他地方照常點得到。</li><li>設定可以關掉、可以調大小。</li></ul>
@@ -265,7 +280,7 @@ const shadow = document.createElement('div'); shadow.className = 'shadow'; scree
 const hit = document.getElementById('hit');
 
 function platOf(el) { return platforms().find(p => p.el === el); }
-function setMode(m, extra = {}) { if (m !== 'fall') P.ignore = null; Object.assign(P, { mode: m, t: 0 }, extra); stateEl.textContent = '現在：' + ({ idle: '發呆', walk: '走路', run: '跑步', fall: '掉下來', held: '被捏著（掙扎中）', climb: '爬梯子', dizzy: '頭暈', sleep: '睡覺', sit: '坐著', happy: '開心', look: '東張西望', toLadder: '走去放梯子' }[m] || m); }
+function setMode(m, extra = {}) { if (m !== 'fall') P.ignore = null; Object.assign(P, { mode: m, t: 0 }, extra); stateEl.textContent = '現在：' + ({ idle: '發呆', walk: '走路', run: '跑步', fall: '掉下來', held: '被捏著（掙扎中）', climb: '爬梯子', dizzy: '頭暈', sleep: '睡覺', sit: '坐著', happy: '開心', look: '東張西望', toLadder: '走去放梯子', enter: '準備出場', enterRun: '跑進來', chute: '撐降落傘' }[m] || m); }
 const stateEl = document.getElementById('state');
 
 // 想下一件事
@@ -281,7 +296,7 @@ function think() {
   if (r < .8) return setMode('sit', { until: 4.5 * PACE });
   if (r < .86) return setMode('sleep', { until: 6 * PACE });
   if (r < .93) return setMode('happy', { vy: -330 });
-  if (Math.random() < .3) chat();
+  if (Math.random() < .42) chat();
   setMode('idle', { until: (1.5 + Math.random() * 2) * PACE });
 }
 // 就地爬：正上方有卡片就直接拿梯子爬（2026-10-20 使用者：不用特別走到指定位置）。
@@ -331,6 +346,7 @@ document.querySelectorAll('.act').forEach(b => b.onclick = () => { if (P.mode ==
   if (P.plat === bot?.el) setMode('run', { target: r.left - s.left + r.width / 2, speed: 140, next: 'happy' }); say('記好了嗎？'); });
 // 直接叫牠做
 document.querySelectorAll('[data-do]').forEach(b => b.onclick = () => {
+  if (b.dataset.do === 'talk') { chat(); return; }
   const here = platOf(P.plat); if (!here && b.dataset.do !== 'hop') return;
   const d = b.dataset.do;
   if (d === 'walk') setMode('walk', { target: here.x1 + Math.random() * (here.x2 - here.x1), speed: 42 });
@@ -338,9 +354,50 @@ document.querySelectorAll('[data-do]').forEach(b => b.onclick = () => {
   if (d === 'hop') setMode('happy', { vy: -360 });
   if (d === 'climb') planClimb(here);
   if (d === 'jumpdown') { if (here.el.id === 'bottom') say('已經在最下面了'); else planJumpDown(here); }
+  if (d === 'talk') { chat(); return; }
   if (d === 'sleep') setMode('sleep', { until: 6 * PACE }); if (d === 'sit') setMode('sit', { until: 5 });
 });
+document.getElementById('ents').innerHTML = Object.entries(ENTRANCES).map(([k, v]) => `<button data-ent="${k}">${v}</button>`).join('');
+document.querySelectorAll('[data-ent]').forEach(b => b.onclick = () => enter(b.dataset.ent));
 const sz = document.getElementById('size'); sz.oninput = () => { S = +sz.value; document.getElementById('szv').textContent = Math.round(S * 2) + 'px'; hit.style.width = S * 2 + 'px'; hit.style.height = S * 2.3 + 'px'; }; sz.oninput();
+
+// ═══════ 進場（2026-10-20 使用者：剛打開不要直接在畫面上，要從某處出來；先出幾種給他選，要有開門） ═══════
+const ENTRANCES = { door: '🚪 開門走出來', chute: '🪂 撐降落傘飄下來', globe: '❄ 從雪球裡跳出來', run: '🏃 從旁邊跑進來', poof: '💨 魔法煙霧變出來' };
+let entrance = 'door', pScale = 1, hidden = true, popT = -1;
+const GREET = ['馨岑今天過得怎麼樣？', '馨岑～我來了！', '今天也要好好記帳喔'];
+const greet = () => say(GREET[Math.floor(Math.random() * GREET.length)], 2.6);
+const later = (ms, fn) => setTimeout(fn, ms);
+function firstRow() { const ps = platforms(); return ps.find(p => p.el.classList.contains('row')) || ps[0]; }
+function enter(kind) {
+  entrance = kind; removeLadder(); document.querySelectorAll('.door,.chute,.puff').forEach(e => e.remove());
+  document.querySelectorAll('[data-ent]').forEach(b => b.classList.toggle('on', b.dataset.ent === kind));
+  hidden = true; pScale = 1; P.vx = P.vy = 0; P.plat = null; setMode('enter');
+  const row = firstRow(); if (!row) return;
+  if (kind === 'door') {
+    const x = row.x1 + 60, d = document.createElement('div'); d.className = 'door'; d.innerHTML = '<div class="hole"></div><div class="panel"></div>';
+    Object.assign(d.style, { left: x + 'px', top: row.y + 'px' }); screen.appendChild(d);
+    d.animate([{ transform: 'translate(-50%,-100%) scaleY(0)' }, { transform: 'translate(-50%,-100%) scaleY(1)' }], { duration: 320, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
+    later(550, () => d.classList.add('open'));
+    later(950, () => { hidden = false; P.x = x; P.y = row.y; P.plat = row.el; P.face = 1; setMode('walk', { target: x + 64, speed: 34 }); });
+    later(2300, () => d.classList.remove('open'));
+    later(2900, () => { d.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300 }).onfinish = () => d.remove(); greet(); });
+  }
+  if (kind === 'chute') { hidden = false; P.x = 120 + Math.random() * 120; P.y = -20; setMode('chute'); }
+  if (kind === 'globe') {
+    const g = screen.querySelector('.globe').getBoundingClientRect(), sr0 = sr();
+    hidden = false; pScale = 0; popT = 0; P.x = g.left - sr0.left + g.width / 2; P.y = g.top - sr0.top + g.height * .55;
+    setMode('happy', { vx: -130, vy: -560 }); P.plat = null; later(1600, greet);
+  }
+  if (kind === 'run') { hidden = false; P.x = -30; P.y = row.y; P.plat = row.el; P.face = 1; setMode('enterRun', { target: row.x1 + 90, speed: 150 }); }
+  if (kind === 'poof') {
+    const x = row.x1 + 120;
+    for (let i = 0; i < 7; i++) { const p = document.createElement('div'); p.className = 'puff'; screen.appendChild(p);
+      const a = i / 7 * Math.PI * 2; Object.assign(p.style, { left: x + 'px', top: row.y - 22 + 'px' });
+      p.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * 34}px), calc(-50% + ${Math.sin(a) * 24}px)) scale(1.5)`, opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => p.remove(); }
+    later(160, () => { hidden = false; pScale = 0; popT = 0; P.x = x; P.y = row.y; P.plat = row.el; setMode('idle', { until: 1.2 * PACE }); say('登登！', 1); });
+    later(1500, greet);
+  }
+}
 
 // ═══════ 每一幀 ═══════
 const clock = new THREE.Clock(); let nextBlink = 2;
@@ -348,7 +405,7 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 1 / 30), T = clock.elapsedTime; P.t += dt;
   const plats = platforms();
   // 站在平台上：跟著平台（捲動）走；平台捲出畫面就掉
-  if (P.plat) { const p = plats.find(q => q.el === P.plat); if (!p) setMode('fall', { plat: null, vx: 0, vy: 0 }); else { P.y = p.y; P.x = THREE.MathUtils.clamp(P.x, p.x1, p.x2); } }
+  if (P.plat) { const p = plats.find(q => q.el === P.plat); if (!p) setMode('fall', { plat: null, vx: 0, vy: 0 }); else { P.y = p.y; if (P.mode !== 'enterRun') P.x = THREE.MathUtils.clamp(P.x, p.x1, p.x2); } }
 
   // 姿勢先歸零
   chii.position.set(0, 0, 0); chii.rotation.z = 0; body.rotation.set(0, 0, 0); armL.rotation.set(0, 0, 0); armR.rotation.set(0, 0, 0);
@@ -362,6 +419,16 @@ function frame() {
 
   switch (P.mode) {
     case 'idle': if (P.t > P.until) think(); break;
+    case 'enter': break;
+    case 'enterRun': if (step(P.speed)) { setMode('idle', { until: 1.5 }); greet(); } break;
+    case 'chute': { // 撐降落傘：慢慢晃著飄下來
+      const prevY = P.y; P.y += 62 * dt; P.x += Math.sin(T * 1.8) * 26 * dt; chii.rotation.z = Math.sin(T * 1.8) * .12;
+      armL.rotation.z = -2.7; armR.rotation.z = 2.7;
+      for (const p of plats) if (P.x >= p.x1 && P.x <= p.x2 && prevY <= p.y && P.y >= p.y) {
+        P.y = p.y; P.plat = p.el; const ch = screen.querySelector('.chute');
+        if (ch) ch.animate([{ transform: 'translate(-50%,-100%)', opacity: 1 }, { transform: 'translate(-50%,-260%) rotate(25deg)', opacity: 0 }], { duration: 900, easing: 'ease-in' }).onfinish = () => ch.remove();
+        setMode('idle', { until: 1.5, landed: .25 }); greet(); break; }
+      break; }
     case 'look': turn = Math.sin(P.t * 2.4) * .8; if (P.t > P.until) think(); break;
     case 'walk': case 'run': if (step(P.speed)) { if (P.next === 'jumpdown') { P.next = null; jumpOff(); } else if (P.next === 'happy') { P.next = null; setMode('happy', { vy: -300 }); } else setMode('idle', { until: (.6 + Math.random() * 1.5) * PACE }); } break;
     case 'toLadder': if (step(P.speed)) { const top = platOf(P.climbTo), here = platOf(P.plat); if (!top || !here) { setMode('idle', { until: 1 }); break; }
@@ -400,7 +467,11 @@ function frame() {
   // 轉向（走路側一點、爬梯子背對）
   chii.rotation.y = THREE.MathUtils.lerp(chii.rotation.y, turn, Math.min(1, dt * 10));
 
-  pet.scale.setScalar(S); pet.position.set(P.x, -P.y, 0);
+  if (popT >= 0) { popT += dt; const k = Math.min(1, popT / .35); pScale = k < 1 ? 1.25 * Math.sin(k * Math.PI / 2) - .25 * k : 1; if (k >= 1) popT = -1; }
+  pet.visible = !hidden; pet.scale.setScalar(S * Math.max(.001, pScale)); pet.position.set(P.x, -P.y, 0);
+  if (P.mode === 'chute') { let ch = screen.querySelector('.chute');
+    if (!ch) { ch = document.createElement('div'); ch.className = 'chute'; ch.innerHTML = '<div class="canopy"></div><svg width="70" height="30"><path d="M4 0 L30 30 M66 0 L40 30 M35 0 L35 30" stroke="#3a2a33" stroke-width="1.5"/></svg>'; screen.appendChild(ch); }
+    Object.assign(ch.style, { left: P.x + 'px', top: P.y - S * 1.7 + 'px' }); }
   // 影子、點擊範圍、泡泡
   const under = P.plat ? P.y : (plats.filter(p => P.x >= p.x1 && P.x <= p.x2 && p.y >= P.y).sort((a, b) => a.y - b.y)[0]?.y ?? null);
   if (under != null && P.mode !== 'climb') { const hgt = under - P.y, k = Math.max(.3, 1 - hgt / 300); Object.assign(shadow.style, { display: 'block', left: P.x + 'px', top: under + 'px', width: S * 2.2 * k + 'px', opacity: k }); } else shadow.style.display = 'none';
@@ -412,7 +483,7 @@ function frame() {
 
   renderer.render(scene, camera); requestAnimationFrame(frame);
 }
-P.x = 90; P.y = 120; setMode('fall', { vx: 40, vy: 0 });
+setTimeout(() => enter(entrance), 500);
 frame();
 window.petDemo = { P, setMode, think };
 </script>

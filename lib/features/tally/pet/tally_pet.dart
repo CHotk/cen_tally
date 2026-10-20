@@ -37,10 +37,9 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     with SingleTickerProviderStateMixin {
   /// 牠多大：每單位幾像素（牠大約 2 單位高 → 約 46px）。2026-10-20 使用者：縮小一點。
   static const _s = 23.0;
-  static const _boxW = _s * 3.2, _boxH = _s * 3.4;
 
   /// 動作之間停多久的倍數（2026-10-20 使用者：切換有點快，慢到 1.4 倍）。
-  static const _pace = 1.4; // 3D 窗格大小（web/pet 的正交鏡頭同比例）
+  static const _pace = 1.4;
 
   /// 真的出場才建（測試、非網頁不建，關頁面時也不會才去建它）。
   Ticker? _ticker;
@@ -325,6 +324,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       case 'dizzy':
         if (t > until) _setMode('idle', until0: 1);
     }
+    sendPetPose({'x': x, 'y': y, 's': _s});
     if (moving != _wasMoving) {
       _wasMoving = moving;
       sendPetPose({'mv': moving ? 1 : 0, 'sp': speed, 'f': face});
@@ -385,12 +385,10 @@ class _TallyPetLayerState extends State<TallyPetLayer>
               ),
             ),
           ),
-        // 3D 樣子：窗格底部中間＝牠的腳
-        Positioned(
-          left: x - _boxW / 2,
-          top: y - _boxH + _s * .15,
-          width: _boxW,
-          height: _boxH,
+        // 3D 樣子：窗格蓋滿整個畫面、固定不動（2026-10-20 修：原本每一幀把窗格搬到
+        // 牠的位置，Flutter 網頁版搬動嵌入窗格會閃、捏著跟手也不順），每一幀把牠的
+        // 位置傳進去，3D 自己畫在那裡。
+        Positioned.fill(
           child: IgnorePointer(
             child: Opacity(opacity: _visible ? 1 : 0.01, child: buildPetView()),
           ),
@@ -458,7 +456,10 @@ class _TallyPetLayerState extends State<TallyPetLayer>
                   if (_hist.length >= 2) {
                     final a = _hist.first, b = _hist.last;
                     final dt = math.max(.016, b.$2 - a.$2);
-                    v = (b.$1 - a.$1) / dt;
+                    // 輕輕一拋不要飛太遠（2026-10-20 使用者回報）：打五五折，很輕的
+                    // 動作當成只是放開。
+                    v = (b.$1 - a.$1) / dt * .55;
+                    if (v.distance < 260) v = Offset.zero;
                   }
                   _held = false;
                   _setMode(
