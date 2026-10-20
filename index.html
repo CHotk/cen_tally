@@ -33,8 +33,57 @@
 
   <title>我的記帳</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { background: #0C0C13; margin: 0; }
+    /* 載入畫面（2026-10-20 使用者要求「像 Lume 一樣」）：下載程式、Flutter
+       起來、開本機儲存這段 Flutter 還畫不出東西，先用純 HTML 顯示 logo＋
+       名稱＋轉圈；Flutter 畫出第一個畫面就淡出移除。樣子跟
+       lib/shared/widgets/tally_loading.dart 一致，換過去不會跳。 */
+    #splash {
+      position: fixed; inset: 0; z-index: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #0C0C13;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      transition: opacity .25s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    @media (max-width: 600px) {
+      #splash { padding-bottom: 14vh; box-sizing: border-box; }
+    }
+    #splash img { width: 120px; height: auto; }
+    #splash .name {
+      margin-top: 16px; font-size: 26px; font-weight: 700;
+      letter-spacing: 1px; color: #F3F2F8;
+    }
+    #splash .loading {
+      margin-top: 26px; display: flex; align-items: center; gap: 8px;
+      font-size: 12.5px; color: #74738A;
+    }
+    #splash .spin {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid rgba(242, 241, 247, .15);
+      border-top-color: rgba(242, 241, 247, .6);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
-<body style="background:#0C0C13">
+<body>
+  <div id="splash" aria-label="我的記帳 載入中">
+    <img src="logo.png" alt="">
+    <div class="name">我的記帳</div>
+    <div class="loading"><div class="spin"></div>載入中…</div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('splash');
+      if (!el) return;
+      el.classList.add('hide');
+      setTimeout(function () { el.remove(); }, 300);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
