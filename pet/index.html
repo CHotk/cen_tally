@@ -28,9 +28,11 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
-// 正交鏡頭：寬 3.2 單位、高 3.4 單位，腳踩在底下往上 .15 的地方
-const camera = new THREE.OrthographicCamera(-1.6, 1.6, 3.25, -.15, -20, 20);
-function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight, h = 3.4; camera.left = -h * a / 2; camera.right = h * a / 2; camera.updateProjectionMatrix(); }
+// 這個窗格蓋滿整個記帳畫面、固定不動（2026-10-20 修：原本窗格每一幀跟著牠移動，
+// Flutter 網頁版搬動嵌入窗格會閃、捏著跟手也不順）。正交鏡頭的單位＝螢幕像素，
+// Flutter 每一幀傳牠的位置過來，這裡把牠畫在那裡。
+const camera = new THREE.OrthographicCamera(0, 1, 0, -1, -500, 500);
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.right = innerWidth; camera.bottom = -innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 // 光：卡通上色只看主光方向，柔和一點
@@ -136,9 +138,12 @@ const chair = new THREE.Group(); chair.visible = false;
 chair.rotation.x = .18;
 scene.add(chair);
 chii.rotation.x = .18;
+const pet = new THREE.Group(); scene.remove(chii); pet.add(chii); scene.add(pet); pet.add(chair); scene.remove(chair);
+let px = -999, py = -999, S = 23;
 let mode = 'idle', faceDir = 1, moving = false, speed = 40, modeT = 0, landed = 0, nextBlink = 2;
 addEventListener('message', e => {
   const p = e.data && e.data.pet; if (!p) return;
+  if (p.x != null) { px = p.x; py = p.y; } if (p.s) S = p.s;
   if (p.land) landed = .25;
   if (p.m && p.m !== mode) { mode = p.m; modeT = 0; }
   if (p.f) faceDir = p.f; if (p.mv != null) moving = !!p.mv; if (p.sp) speed = p.sp;
@@ -173,6 +178,7 @@ function frame() {
   if (eyeOpen === 1 && T > nextBlink) { const k = (T - nextBlink) / .14; eyeOpen = k < 1 ? Math.max(.08, Math.abs(1 - k * 2)) : 1; if (k >= 1) nextBlink = T + 2 + Math.random() * 3; }
   eyes.forEach(e => e.scale.y = eyeOpen);
   chii.rotation.y += (turn - chii.rotation.y) * Math.min(1, dt * 10);
+  pet.scale.setScalar(S); pet.position.set(px, -py, 0);
   renderer.render(scene, camera); requestAnimationFrame(frame);
 }
 frame();
