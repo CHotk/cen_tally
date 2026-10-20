@@ -3,10 +3,10 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"assets/AssetManifest.bin": "35d0855f7c0aea3e421ea7d5d7555fa9",
-"assets/AssetManifest.bin.json": "42dc39a045d276253cffc0dfae7a087d",
-"assets/AssetManifest.json": "8efa4aab84855f89b3d3e11a906056e8",
-"assets/assets/bg/starry_bokeh.jpg": "0935d4e2dce56405df754699cff2a49f",
+const RESOURCES = {"assets/AssetManifest.bin": "ec1bdf2f2554ce76f8de6b7cdc305221",
+"assets/AssetManifest.bin.json": "f19a662fa6b2e8ff782e0f22cedbd0dd",
+"assets/AssetManifest.json": "ea170d3e915d270a05655a8711d47f8c",
+"assets/assets/bg/stardust_night.jpg": "d4b099046bc97dc876dbc0e8b82e5b94",
 "assets/assets/logo/logo_240.png": "e4e50a76e09c3a64f748b628ef10dc9d",
 "assets/FontManifest.json": "7b2a36307916a9721811788013e65289",
 "assets/fonts/MaterialIcons-Regular.otf": "65b7f905add9c921e6b30ad3a1cba8e7",
@@ -26,7 +26,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "35d0855f7c0aea3e421ea7d5d7555fa9
 "canvaskit/skwasm_heavy.wasm": "8034ad26ba2485dab2fd49bdd786837b",
 "favicon.png": "18c70f490f8a99f9f3f912774b2b26be",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
-"flutter_bootstrap.js": "ff9c2323722c11726dcf3d245a968af3",
+"flutter_bootstrap.js": "7b71de0d53883e0fb362c8e9e3206d64",
 "globe/Fox.glb": "bb9a8a062c578f4e7531a979ab7d922d",
 "globe/index.html": "9c4ea077df32fc2bbf6655baaf5f4fbc",
 "globe/vendor/addons/controls/OrbitControls.js": "fb493b163eb8218d0fa0f27d0e9ac50e",
@@ -42,7 +42,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "35d0855f7c0aea3e421ea7d5d7555fa9
 "index.html": "3aa312ce13dcc8615b88dd842c3343ab",
 "/": "3aa312ce13dcc8615b88dd842c3343ab",
 "logo.png": "e4e50a76e09c3a64f748b628ef10dc9d",
-"main.dart.js": "6b294bbb4ce59c9ff5671e167a2d09e5",
+"main.dart.js": "a1314e95659588445f4e898d26fc1118",
 "main.dart.js_1.part.js": "05231b021f20c3af629a0cd22a55d145",
 "main.dart.js_2.part.js": "abddd7e282467cdbad667bda6d4295f7",
 "manifest.json": "362e800a3441778076ab3b2cdd6296b6",

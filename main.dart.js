@@ -49471,7 +49471,7 @@ J(a){var s=$.aZl(),r=B.K2.aqT(A.mn(B.Yr,t.B))
 return new A.w9(s,"\u6211\u7684\u8a18\u5e33",A.bbf(),B.x6,B.UG,B.Z3,!1,r,null)}}
 A.a8V.prototype={}
 A.uI.prototype={
-J(a){return A.o7(A.ka(B.cu,A.b([A.aid("assets/bg/starry_bokeh.jpg",new A.aat(),B.Je,!0,null,null,null),this.c],t.p),B.W,B.H8),B.Jc,B.cz)}}
+J(a){return A.o7(A.ka(B.cu,A.b([A.aid("assets/bg/stardust_night.jpg",new A.aat(),B.Je,!0,null,null,null),this.c],t.p),B.W,B.H8),B.Jc,B.cz)}}
 A.aat.prototype={
 $3(a,b,c){return B.av},
 $S:105}
