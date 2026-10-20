@@ -10,7 +10,7 @@ const globeSupported = true;
 web.HTMLIFrameElement? _frame;
 final _registered = <String>{};
 
-Widget buildGlobeView({double petScale = 2.6, double fit = 1.0}) {
+Widget buildGlobeView({double petScale = 2.6, double fit = .9}) {
   final type = 'tally-globe-$petScale-$fit';
   if (_registered.add(type)) {
     ui_web.platformViewRegistry.registerViewFactory(type, (int _) {

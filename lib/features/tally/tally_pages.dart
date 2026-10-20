@@ -448,59 +448,67 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         ],
       ),
       children: [
-        // 結餘在左、雪球在右（2026-10-20 使用者選的設計）。數字到十萬、百萬
-        // 也塞得下：放不下就整行等比例縮小（FittedBox）。
-        GlassCard(
-          padding: const EdgeInsets.fromLTRB(20, 18, 8, 14),
-          child: SizedBox(
-            height: 150,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '目前結餘',
-                        style: TextStyle(fontSize: 14, color: AppColors.ink2),
-                      ),
-                      const SizedBox(height: 2),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          tallySigned(bal),
-                          style: TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                            color: _statusColor(bal),
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+        // 結餘在左、雪球在右，照設計稿 design-history/2026-10-20_雪球放結餘卡.html
+        // 的尺寸（2026-10-20 使用者：照設計稿做，包括大小）：卡高 168、雪球寬
+        // 160、往上凸出卡片 34。數字到十萬、百萬也塞得下：放不下就整行等比例
+        // 縮小（FittedBox）。上面先留 26 的空，凸出去的雪球才不會被切掉。
+        const SizedBox(height: 26),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GlassCard(
+              padding: const EdgeInsets.fromLTRB(18, 16, 168, 14),
+              child: SizedBox(
+                height: 168 - 30,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '目前結餘',
+                      style: TextStyle(fontSize: 13.5, color: AppColors.ink2),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        tallySigned(bal),
+                        style: TextStyle(
+                          fontSize: 31,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                          color: _statusColor(bal),
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          children: [
-                            _MiniStat('豪支出', tallyMoney(plusSum), _plusColor),
-                            const SizedBox(width: 12),
-                            _MiniStat('岑支出', tallyMoney(minusSum), _minusColor),
-                            const SizedBox(width: 12),
-                            _MiniStat('筆數', '${_items.length}', AppColors.ink),
-                          ],
-                        ),
+                    ),
+                    const SizedBox(height: 10),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          _MiniStat('豪支出', _bare(plusSum), _plusColor),
+                          const SizedBox(width: 10),
+                          _MiniStat('岑支出', _bare(minusSum), _minusColor),
+                          const SizedBox(width: 10),
+                          _MiniStat('筆數', '${_items.length}', AppColors.ink),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 156, child: TallyGlobe(shakes: _shakes)),
-              ],
+              ),
             ),
-          ),
+            Positioned(
+              top: -34,
+              right: 4,
+              bottom: 0,
+              width: 160,
+              child: TallyGlobe(shakes: _shakes),
+            ),
+          ],
         ),
         const SizedBox(height: Gap.lg),
         if (_items.isEmpty)
@@ -634,6 +642,9 @@ class _DayHeader extends StatelessWidget {
 }
 
 /// 結餘卡下面那排小字（豪支出／岑支出／筆數）。
+/// 小字那排的金額不帶 NT$（照設計稿，省位置）。
+String _bare(int v) => tallyMoney(v).replaceFirst(r'NT$', '');
+
 class _MiniStat extends StatelessWidget {
   const _MiniStat(this.label, this.value, this.color);
 
@@ -645,14 +656,11 @@ class _MiniStat extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
-        label,
-        style: const TextStyle(fontSize: 11.5, color: AppColors.ink3),
-      ),
+      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.ink3)),
       Text(
         value,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: 13.5,
           fontWeight: FontWeight.w700,
           color: color,
           fontFeatures: const [FontFeature.tabularFigures()],
