@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>記帳背景</title>
+<!--
+  2026-10-20 使用者要求：把 3D 聖誕雪球（lume/design-history/2026-10-20_3D聖誕雪球.html）
+  找個地方塞進「我的記帳」，先給設計稿。四種放法，每種都是完整可以點的記帳畫面，
+  雪球是真的 3D（可以拖著轉）。A 是一般 App 最常見的「頂部主視覺」。
+-->
+<style>
+  :root {
+    --bg: #0C0C13; --ink: #F3F2F8; --ink2: #A3A2B2; --ink3: #74738A;
+    --glass: rgba(255,255,255,.07); --edge: rgba(255,255,255,.14);
+    --plus: #5FE08D; --minus: #FFB066; --accent: #FFC857;
+  }
+  * { box-sizing: border-box; }
+  html { background: #05060b; }
+  body { margin: 0; min-height: 100%; color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    background: radial-gradient(1200px 700px at 20% -10%, #1b2140 0%, transparent 60%), radial-gradient(900px 600px at 110% 110%, #2a1a2a 0%, transparent 60%), #05060b; }
+  header { padding: 28px 20px 8px; max-width: 1100px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 24px; }
+  header p { margin: 6px 0 0; color: var(--ink2); font-size: 14px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 20px; max-width: 1100px; margin: 0 auto; }
+  .tab { border: 1px solid var(--edge); background: var(--glass); color: var(--ink2); border-radius: 999px;
+    padding: 9px 15px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .tab.on { background: rgba(255,200,87,.16); border-color: rgba(255,200,87,.5); color: var(--accent); font-weight: 700; }
+  .tab small { opacity: .7; margin-left: 4px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 20px 60px; display: flex; gap: 36px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+
+  /* 手機外框：不能用 height:100% + flex，會被壓扁（見記憶 html_mockup_phone_shell_css_bug） */
+  .phone { flex-shrink: 0; width: 375px; min-height: 780px; height: 780px; border-radius: 46px; padding: 12px;
+    background: #111; box-shadow: 0 0 0 2px #2a2a33, 0 30px 80px rgba(0,0,0,.6); position: relative; }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 36px; overflow: hidden; background: var(--bg); }
+  .amb { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(260px 220px at 10% 5%, rgba(36,80,216,.35), transparent 70%),
+                radial-gradient(260px 240px at 100% 35%, rgba(194,82,28,.28), transparent 70%),
+                radial-gradient(260px 240px at 95% 85%, rgba(14,124,108,.28), transparent 70%),
+                radial-gradient(240px 240px at 0% 100%, rgba(108,47,206,.3), transparent 70%); }
+  .scroll { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 14px 16px 120px; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+  .status { height: 22px; display: flex; justify-content: space-between; font-size: 12px; color: var(--ink2); padding: 0 10px; margin-bottom: 6px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 4px; }
+  .topbar img { height: 34px; }
+  .cloud { width: 34px; height: 34px; display: grid; place-items: center; color: var(--ink2); font-size: 19px; }
+
+  .card { position: relative; border-radius: 20px; background: rgba(255,255,255,.075); border: 1px solid var(--edge);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+  .summary { padding: 20px 20px 16px; margin-top: 8px; }
+  .summary .lab { font-size: 14px; color: var(--ink2); }
+  .summary .bal { font-size: 40px; font-weight: 900; letter-spacing: -1px; color: var(--plus); font-variant-numeric: tabular-nums; }
+  .stats { display: flex; margin-top: 12px; }
+  .stats div { flex: 1; } .stats b { display: block; font-size: 15px; } .stats span { font-size: 12px; color: var(--ink3); }
+  .hint { font-size: 12.5px; color: var(--ink2); margin: 16px 4px 4px; }
+  .day { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 6px 8px; }
+  .day b { font-size: 15px; } .day span { font-size: 12.5px; color: var(--ink3); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,.08); }
+  .row:first-child { border-top: 0; }
+  .date { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; text-align: center; line-height: 1; }
+  .date b { font-size: 16px; display: block; } .date small { font-size: 10px; color: var(--ink2); }
+  .row .t { flex: 1; min-width: 0; } .row .t b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .t span { font-size: 12px; color: var(--ink3); }
+  .row .m { text-align: right; } .row .m b { font-size: 15.5px; display: block; } .row .m span { font-size: 11.5px; color: var(--ink3); }
+  .plus { color: var(--plus); } .minus { color: var(--minus); }
+  .dplus { background: rgba(95,224,141,.12); } .dplus b { color: var(--plus); }
+  .dminus { background: rgba(255,176,102,.12); } .dminus b { color: var(--minus); }
+
+  .bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 22px; display: flex; gap: 10px;
+    background: rgba(12,12,19,.55); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid rgba(255,255,255,.08); z-index: 5; }
+  .act { flex: 1; border-radius: 16px; padding: 15px 0; text-align: center; font-weight: 800; font-size: 16px; cursor: pointer; user-select: none; border: 1px solid; }
+  .act.p { color: var(--plus); background: rgba(95,224,141,.13); border-color: rgba(95,224,141,.45); }
+  .act.m { color: var(--minus); background: rgba(255,176,102,.13); border-color: rgba(255,176,102,.45); }
+  .act:active { transform: scale(.97); }
+
+  .toast { position: absolute; left: 50%; top: 58px; transform: translate(-50%, -20px); opacity: 0; z-index: 20;
+    background: rgba(30,30,44,.92); border: 1px solid var(--edge); padding: 9px 14px; border-radius: 999px; font-size: 13px;
+    transition: all .3s ease; white-space: nowrap; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  canvas.globe { display: block; touch-action: none; cursor: grab; }
+
+  /* A 頂部主視覺 */
+  .heroA { position: relative; height: 270px; margin: -6px -16px 0; }
+  .heroA canvas { width: 100%; height: 100%; }
+  .heroA .cap { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 12px; color: var(--ink3); }
+
+  /* B 結餘卡合體 */
+  .summaryB { padding: 20px 20px 16px; margin-top: 50px; min-height: 160px; }
+  .summaryB .left { width: 52%; }
+  .globeB { position: absolute; right: -8px; top: -62px; width: 188px; height: 220px; }
+  .globeB canvas { width: 100%; height: 100%; }
+
+  /* C 浮動雪球 */
+  .fab { position: absolute; right: 14px; bottom: 96px; width: 92px; height: 104px; z-index: 6; border-radius: 26px; }
+  .fab canvas { width: 100%; height: 100%; }
+  .fab .ping { position: absolute; top: 2px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .sheet { position: absolute; inset: 0; z-index: 30; background: rgba(8,8,14,.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .sheet.show { opacity: 1; pointer-events: auto; }
+  .sheet .big { flex: 1; } .sheet .big canvas { width: 100%; height: 100%; }
+  .sheet .bar { padding: 0 18px 26px; display: flex; gap: 10px; }
+  .sheet .bar button { flex: 1; border-radius: 15px; padding: 14px 0; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+    border: 1px solid var(--edge); background: var(--glass); color: var(--ink); }
+  .sheet .bar .shake { background: linear-gradient(180deg, #f2c46d, #d6963e); color: #2a1a05; border-color: rgba(255,220,150,.6); }
+  .sheet .head { padding: 20px 20px 0; display: flex; justify-content: space-between; align-items: center; }
+  .sheet .head b { font-size: 17px; } .sheet .head span { font-size: 12.5px; color: var(--ink2); display: block; margin-top: 2px; }
+  .x { width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--edge); background: var(--glass); color: var(--ink); font-size: 16px; cursor: pointer; }
+
+  /* D 下拉同步 */
+  .pull { position: absolute; left: 0; right: 0; top: 0; height: 0; overflow: hidden; z-index: 1; }
+  .pull canvas { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 260px; height: 260px; }
+  .pull .msg { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 12.5px; color: var(--ink2); }
+  .dragArea { position: absolute; inset: 0; z-index: 2; transition: transform .35s cubic-bezier(.2,.9,.3,1.2); }
+  .dragArea.dragging { transition: none; }
+  .pullTip { text-align: center; font-size: 11.5px; color: var(--ink3); margin: -2px 0 2px; }
+
+  aside { width: 420px; max-width: 100%; }
+  aside .card { padding: 20px 22px; }
+  aside h2 { margin: 0 0 4px; font-size: 20px; }
+  aside .tagline { color: var(--accent); font-size: 13.5px; margin-bottom: 12px; }
+  aside h3 { font-size: 14.5px; margin: 16px 0 6px; color: var(--ink); }
+  aside ul { margin: 0; padding-left: 18px; color: var(--ink2); font-size: 14px; line-height: 1.7; }
+  aside .pc { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  aside .pc div { background: rgba(255,255,255,.04); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--ink2); line-height: 1.6; }
+  aside .pc b { display: block; color: var(--ink); margin-bottom: 2px; }
+  .common { margin-top: 14px; }
+  .loadingNote { color: var(--ink3); font-size: 12.5px; margin-top: 10px; }
+  @media (max-width: 440px) { .phone { transform: scale(.92); transform-origin: top center; margin-bottom: -60px; } }
+/* 2026-10-20 定案方向：雪球放結餘卡右邊 */
+  #screens { display: flex; gap: 36px; flex-wrap: wrap; justify-content: center; }
+  figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  figcaption { text-align: center; font-size: 13.5px; color: var(--ink2); line-height: 1.6; }
+  figcaption b { display: block; color: var(--ink); font-size: 15px; }
+  .sumG { margin-top: 8px; padding: 16px 0 14px 18px; display: flex; align-items: stretch; min-height: 168px; overflow: visible; }
+  .sumG .left { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  .sumG .lab { font-size: 13.5px; color: var(--ink2); }
+  .sumG .bal { font-size: 31px; font-weight: 900; letter-spacing: -1px; color: var(--plus); font-variant-numeric: tabular-nums; margin: 2px 0 10px; }
+  .mini { display: flex; gap: 10px; white-space: nowrap; }
+  .sumG .bal, .mini { transform-origin: left center; }
+  .numToggle { display: flex; gap: 8px; justify-content: center; margin: 4px 0 10px; }
+  .sliders { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin: 0 0 18px; font-size: 13.5px; color: var(--ink2); }
+  .sliders label { display: flex; align-items: center; gap: 8px; }
+  .sliders input { accent-color: var(--accent); width: 160px; }
+  .sliders span { min-width: 54px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .mini div { display: flex; flex-direction: column; }
+  .mini span { font-size: 11px; color: var(--ink3); }
+  .mini b { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .globeSlot { width: 152px; flex-shrink: 0; position: relative; margin: -8px 12px -6px 0; }
+  .globeSlot canvas { width: 100%; height: 100%; display: block; }
+
+  /* 沒網路的 2D 雪球（純 CSS） */
+  .flatGlobe { position: absolute; inset: 18px 14px 6px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; user-select: none; }
+  .flatGlobe .ball { position: relative; width: 122px; height: 122px; border-radius: 50%; overflow: hidden;
+    background: radial-gradient(circle at 50% 35%, #26304f 0%, #121628 70%);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.35), inset -10px -14px 26px rgba(255,255,255,.08), 0 6px 18px rgba(0,0,0,.4); margin-bottom: -14px; z-index: 1; }
+  .flatGlobe .hill { position: absolute; left: -10%; right: -10%; bottom: -34px; height: 70px; border-radius: 50%; background: linear-gradient(#f4f7ff, #cfd9ee); }
+  .flatGlobe .house { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); width: 34px; }
+  .flatGlobe .roof { width: 0; height: 0; margin: 0 auto; border-left: 21px solid transparent; border-right: 21px solid transparent; border-bottom: 14px solid #f4f7ff; transform: translateX(-4px); }
+  .flatGlobe .wall { height: 20px; background: #8a3a2c; display: flex; justify-content: space-around; align-items: center; }
+  .flatGlobe .wall span { width: 7px; height: 7px; background: #ffc46b; box-shadow: 0 0 8px #ffb15c; }
+  .flatGlobe .tree { position: absolute; bottom: 30px; width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 26px solid #1f5a3c; }
+  .flatGlobe .t1 { left: 16px; } .flatGlobe .t2 { right: 18px; transform: scale(.8); transform-origin: bottom; }
+  .flatGlobe .pet { position: absolute; left: 50%; bottom: 8px; width: 44px; transform: translateX(-2px); animation: walk 5s ease-in-out infinite; }
+  .flatGlobe .pet img { width: 100%; display: block; animation: bob .45s ease-in-out infinite alternate; }
+  .flatGlobe .shine { position: absolute; left: 18px; top: 14px; width: 30px; height: 46px; border-radius: 50%; background: linear-gradient(160deg, rgba(255,255,255,.45), rgba(255,255,255,0)); transform: rotate(18deg); }
+  .flatGlobe .snowfall i { position: absolute; top: -6px; border-radius: 50%; background: #fff; opacity: .85; animation: fall linear infinite; }
+  .flatGlobe .base { width: 128px; height: 30px; border-radius: 10px 10px 14px 14px; background: linear-gradient(#6b3d26, #3d2215); box-shadow: inset 0 2px 0 #d9a74e, inset 0 -3px 0 rgba(217,167,78,.6); }
+  .flatGlobe.shaking { animation: shake .55s ease; }
+  .flatGlobe.shaking .snowfall i { animation-duration: .9s !important; }
+  @keyframes fall { to { transform: translateY(132px) translateX(6px); } }
+  @keyframes bob { to { transform: translateY(-3px); } }
+  @keyframes walk { 0%,100% { left: 22%; } 50% { left: 62%; } }
+  @keyframes shake { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-8deg); } 40% { transform: rotate(7deg); } 60% { transform: rotate(-5deg); } 80% { transform: rotate(3deg); } }
+/* ── 背景設計稿 ── */
+  .bgLayer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .bgLayer > * { position: absolute; inset: 0; }
+  .bgImg { background-size: cover; background-position: center; }
+  .drift .bgImg { inset: -6% -6% -6% -6%; animation: drift 38s ease-in-out infinite alternate; }
+  @keyframes drift { 0% { transform: translate(0, 0) scale(1.02); } 50% { transform: translate(-2.5%, 1.5%) scale(1.06); } 100% { transform: translate(2%, -1.5%) scale(1.04); } }
+  .aurora { background: linear-gradient(#070a16, #0d1328 55%, #120c1e); }
+  .aurora span { position: absolute; left: -30%; width: 160%; height: 38%; border-radius: 50%; filter: blur(38px); opacity: .55; mix-blend-mode: screen; }
+  .aurora span:nth-child(1) { top: 2%; background: linear-gradient(90deg, transparent, #3df2a5, #2ad4c9, transparent); animation: au 16s ease-in-out infinite alternate; }
+  .aurora span:nth-child(2) { top: 14%; background: linear-gradient(90deg, transparent, #8b6cff, #d26bff, transparent); animation: au 22s ease-in-out infinite alternate-reverse; opacity: .45; }
+  .aurora span:nth-child(3) { top: 62%; height: 30%; background: linear-gradient(90deg, transparent, #2ad4c9, transparent); animation: au 26s ease-in-out infinite alternate; opacity: .18; }
+  @keyframes au { 0% { transform: translateX(-8%) rotate(-6deg) scaleY(.8); } 100% { transform: translateX(8%) rotate(5deg) scaleY(1.15); } }
+  .snowSky { background: radial-gradient(120% 60% at 50% 0%, #1d2b55 0%, #0d1530 55%, #070a16 100%); }
+  .snowFx i, .goldFx i { position: absolute; top: -10px; border-radius: 50%; background: #fff; animation: fallBg linear infinite; }
+  @keyframes fallBg { to { transform: translate(18px, 820px); } }
+  .goldSky { background: radial-gradient(90% 55% at 80% 30%, #4a2e12 0%, transparent 60%), radial-gradient(80% 50% at 10% 85%, #3a1f12 0%, transparent 60%), linear-gradient(#120c09, #1a120c 60%, #0d0907); }
+  .goldFx i { width: 26px !important; height: 26px !important; background: radial-gradient(circle, rgba(255,205,120,.75), rgba(255,180,90,0) 70%); animation-duration: 26s !important; filter: blur(1px); }
+
+  .pickWrap { width: 100%; }
+  #bgPick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .bgOpt { border: 1px solid var(--edge); background: rgba(255,255,255,.05); color: var(--ink); border-radius: 16px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 13.5px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+  .bgOpt small { color: var(--ink3); font-size: 11.5px; }
+  .bgOpt.on { border-color: rgba(255,200,87,.7); background: rgba(255,200,87,.1); }
+  .sw { display: block; height: 66px; border-radius: 10px; background-size: cover; background-position: center; }
+  .sw-starry { background-image: url(bg/starry_bokeh.jpg); }
+  .sw-nebula { background-image: url(bg/purple_nebula.jpg); }
+  .sw-ambient { background: radial-gradient(50px 40px at 10% 10%, rgba(36,80,216,.7), transparent), radial-gradient(50px 40px at 95% 40%, rgba(194,82,28,.6), transparent), radial-gradient(50px 40px at 90% 90%, rgba(14,124,108,.6), transparent), radial-gradient(50px 40px at 5% 95%, rgba(108,47,206,.6), transparent), #0C0C13; }
+  .sw-aurora { background: linear-gradient(170deg, rgba(61,242,165,.55), rgba(139,108,255,.45) 40%, #0d1328 75%); }
+  .sw-snow { background: radial-gradient(circle at 20% 30%, #fff 1px, transparent 2px) 0 0/18px 18px, radial-gradient(120% 60% at 50% 0%, #1d2b55, #070a16); }
+  .sw-gold { background: radial-gradient(circle at 70% 30%, rgba(255,205,120,.7), transparent 30%), radial-gradient(circle at 25% 75%, rgba(255,180,90,.5), transparent 25%), #120c09; }
+  .driftRow { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; font-size: 14px; color: var(--ink2); }
+  .tog { width: 46px; height: 28px; border-radius: 999px; background: rgba(255,255,255,.14); position: relative; cursor: pointer; border: 0; }
+  .tog::after { content: ''; position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .2s; }
+  .tog.on { background: #5FE08D; } .tog.on::after { left: 21px; }
+  #bgNote { margin-top: 14px; font-size: 14px; color: var(--ink2); line-height: 1.7; }
+  #bgNote b { color: var(--ink); font-size: 15.5px; }
+  .tg { margin-left: 8px; font-size: 11.5px; color: var(--accent); border: 1px solid rgba(255,200,87,.5); border-radius: 999px; padding: 1px 8px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header>
+  <h1>🌌 記帳背景・六種設計</h1>
+  <p>左邊是 App 實際畫面（雪球是真的 3D，可以拖著轉、點一下搖），右邊點一下換背景。前兩個是你給的圖，後四個是我做的（純程式畫、不用圖片，很輕）。</p>
+</header>
+<main>
+  <div class="phone"><div class="screen" id="screen"></div></div>
+  <aside><div class="card" style="padding:20px 22px">
+    <h2 style="margin:0 0 12px;font-size:19px">選背景</h2>
+    <div id="bgPick"></div>
+    <div class="driftRow"><span>背景慢慢飄（圖片的那兩個）</span><button class="tog on" id="drift"></button></div>
+    <div id="bgNote"></div>
+    <h3 style="margin:18px 0 6px;font-size:14.5px">放進 App 的做法</h3>
+    <ul style="margin:0;padding-left:18px;color:var(--ink2);font-size:14px;line-height:1.7">
+      <li>圖片背景轉成 JPG（每張約 80–100 KB），打包在 App 裡，離線也有。</li>
+      <li>「慢慢飄」是很慢的位移（約 40 秒一輪），不影響閱讀。</li>
+      <li>會動的極光、雪夜、暖金散景都是程式畫的，不用下載圖片。</li>
+      <li>要的話也可以做成設定讓你自己換（跟著同步）。</li>
+    </ul>
+  </div></aside>
+</main>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
+// ════════════════ 雪球（跟 lume/design-history/2026-10-20_3D聖誕雪球.html 同一顆，縮成元件） ════════════════
+const FOX_URL = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Assets@main/Models/Fox/glTF-Binary/Fox.glb';
+let foxPromise = null;
+const loadFox = () => foxPromise ??= new GLTFLoader().loadAsync(FOX_URL).catch(() => null);
+
+function flakeTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.35, 'rgba(255,255,255,.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+}
+const flakeTex = flakeTexture();
+
+function softEnv(renderer) {
+  const env = new THREE.Scene();
+  const g = new THREE.SphereGeometry(10, 48, 24), col = [], p = g.attributes.position;
+  const top = new THREE.Color(0x26314f), mid = new THREE.Color(0x0d1020), bot = new THREE.Color(0x3a2618);
+  for (let i = 0; i < p.count; i++) {
+    const k = p.getY(i) / 10, c = k > 0 ? mid.clone().lerp(top, k) : mid.clone().lerp(bot, -k);
+    col.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  env.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  const soft = document.createElement('canvas'); soft.width = soft.height = 128;
+  const sg = soft.getContext('2d'), sr = sg.createRadialGradient(64, 64, 0, 64, 64, 64);
+  sr.addColorStop(0, '#fff'); sr.addColorStop(.35, 'rgba(255,255,255,.55)'); sr.addColorStop(1, 'rgba(255,255,255,0)');
+  sg.fillStyle = sr; sg.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(soft);
+  for (const [w, h, c, x, y, z] of [[7, 4.5, new THREE.Color(.95, .82, .66), 5, 6, 5], [5, 7, new THREE.Color(.35, .45, .7), -7, 2, -4]]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, map: tex, transparent: true, side: THREE.DoubleSide }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m);
+  }
+  return new THREE.PMREMGenerator(renderer).fromScene(env, .035).texture;
+}
+
+/**
+ * 在 canvas 上建一顆雪球。opts.fit：鏡頭留白比例（越大球越小）；opts.base：要不要底座；
+ * opts.orbit：可不可以拖著轉；opts.lift：鏡頭高度。回傳 { shake, hop, setActive, resize }。
+ */
+function makeGlobe(canvas, opts = {}) {
+  const o = { fit: 1, base: true, orbit: true, flakes: 900, lift: 2.2, autoRotate: .7, petScale: 1, clearGlass: false, ...opts };
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x000000, 0);
+  const scene = new THREE.Scene();
+  scene.environment = softEnv(renderer);
+
+  const camera = new THREE.PerspectiveCamera(30, 1, .1, 60);
+  const controls = new OrbitControls(camera, canvas);
+  controls.enabled = o.orbit; controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true;
+  controls.minPolarAngle = .5; controls.maxPolarAngle = Math.PI * .55;
+  controls.autoRotate = true; controls.autoRotateSpeed = o.autoRotate;
+
+  scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x3a2a22, .55));
+  const key = new THREE.DirectionalLight(0xffd9b0, 1.4); key.position.set(3.5, 6.5, 4); key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024); Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 }); key.shadow.bias = -.0005;
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0x8fb4ff, .9); rim.position.set(-4, 3, -4); scene.add(rim);
+
+  const globe = new THREE.Group(); scene.add(globe);
+  const R = 1.45, BASE_H = o.base ? .62 : .0, CY = BASE_H + R * .72, GY = CY - R * .55;
+  const GROUND_R = Math.sqrt(R * R - (R * .55) ** 2) - .02;
+  const mat = (c, x = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .55, ...x });
+  const glow = (c, i = 2) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i, roughness: .4 });
+  const mesh = (geo, m, cast = true) => { const x = new THREE.Mesh(geo, m); x.castShadow = cast; x.receiveShadow = true; return x; };
+  const hAt = (x, z) => {
+    const r = Math.hypot(x, z) / GROUND_R, edge = 1 - Math.pow(Math.min(r, 1), 4);
+    return .16 * (1 - r * r) + edge * (.025 * Math.sin(x * 6 + 1) * Math.cos(z * 5) + .018 * Math.sin((x + z) * 9));
+  };
+  const groundY = (x, z) => GY + hAt(x, z);
+  const place = (obj, x, z, ry = 0) => { obj.position.set(x, groundY(x, z), z); obj.rotation.y = ry; globe.add(obj); return obj; };
+
+  if (o.base) {
+    const pts = [[0, 0], [1.62, 0], [1.66, .04], [1.66, .12], [1.6, .16], [1.52, .2], [1.5, .46], [1.42, .52], [1.36, .58], [1.3, BASE_H], [0, BASE_H]].map(([x, y]) => new THREE.Vector2(x, y));
+    const base = mesh(new THREE.LatheGeometry(pts, 96), new THREE.MeshPhysicalMaterial({ color: 0x5a3220, roughness: .38, clearcoat: .8, clearcoatRoughness: .25 }));
+    globe.add(base);
+    const gold = new THREE.MeshStandardMaterial({ color: 0xd9a74e, metalness: 1, roughness: .22 });
+    for (const [y, r, t] of [[.17, 1.56, .028], [.5, 1.47, .025]]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, t, 12, 120), gold); ring.rotation.x = Math.PI / 2; ring.position.y = y; globe.add(ring);
+    }
+  }
+  // 放在卡片上（背景透明）時不能用「透光折射」玻璃：它會把透明背景算成一片白霧。
+  // 改用半透明玻璃＋反光，卡片的毛玻璃透得過來。
+  const glass = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 72), o.clearGlass
+    ? new THREE.MeshPhysicalMaterial({ color: 0xdfeaff, transparent: true, opacity: .16, roughness: .05, metalness: 0,
+        clearcoat: 1, clearcoatRoughness: .1, specularIntensity: .6, envMapIntensity: 1.6 })
+    : new THREE.MeshPhysicalMaterial({
+    color: 0xffffff, roughness: .02, transmission: 1, thickness: .35, ior: 1.33, clearcoat: .7, clearcoatRoughness: .16,
+    specularIntensity: .3, envMapIntensity: .9, attenuationColor: new THREE.Color(0xe8f3ff), attenuationDistance: 6,
+  }));
+  glass.material.depthWrite = false; glass.position.y = CY; globe.add(glass);
+
+  { // 雪地
+    const rings = 24, segs = 110, pos = [], idx = [];
+    pos.push(0, hAt(0, 0), 0);
+    for (let i = 1; i <= rings; i++) for (let j = 0; j < segs; j++) {
+      const r = GROUND_R * i / rings, a = j / segs * Math.PI * 2, x = Math.cos(a) * r, z = Math.sin(a) * r; pos.push(x, hAt(x, z), z);
+    }
+    for (let j = 0; j < segs; j++) idx.push(0, 1 + (j + 1) % segs, 1 + j);
+    for (let i = 1; i < rings; i++) { const a0 = 1 + (i - 1) * segs, a1 = 1 + i * segs;
+      for (let j = 0; j < segs; j++) { const j1 = (j + 1) % segs; idx.push(a0 + j, a0 + j1, a1 + j, a0 + j1, a1 + j1, a1 + j); } }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    const snow = mesh(geo, new THREE.MeshPhysicalMaterial({ color: 0xf3f7ff, roughness: .85, sheen: 1, sheenColor: new THREE.Color(0xcfe0ff) }), false);
+    snow.position.y = GY; globe.add(snow);
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(GROUND_R, GROUND_R * .9, Math.max(GY - BASE_H, .05) + .02, 80, 1, true), mat(0xe9eef8, { roughness: .9 }));
+    skirt.position.y = (GY + BASE_H) / 2; globe.add(skirt);
+  }
+  { // 小屋
+    const h = new THREE.Group(), wood = mat(0x8a3a2c, { roughness: .7 }), snowM = mat(0xf6f9ff, { roughness: .9 });
+    const body = mesh(new THREE.BoxGeometry(.42, .3, .36), wood); body.position.y = .15; h.add(body);
+    for (const s of [-1, 1]) {
+      const roof = mesh(new THREE.BoxGeometry(.5, .035, .29), snowM); roof.position.set(0, .37, s * .1); roof.rotation.x = s * .62; h.add(roof);
+      const under = mesh(new THREE.BoxGeometry(.48, .02, .27), mat(0x4a2418)); under.position.set(0, .35, s * .095); under.rotation.x = s * .62; h.add(under);
+    }
+    const gable = new THREE.Shape(); gable.moveTo(-.21, 0); gable.lineTo(.21, 0); gable.lineTo(0, .13); gable.closePath();
+    for (const s of [-1, 1]) { const g = mesh(new THREE.ExtrudeGeometry(gable, { depth: .01, bevelEnabled: false }), wood); g.rotation.y = s * Math.PI / 2; g.position.set(s * .21, .3, 0); h.add(g); }
+    const chim = mesh(new THREE.BoxGeometry(.06, .14, .06), mat(0x6b6f7a)); chim.position.set(.11, .43, -.06); h.add(chim);
+    const door = mesh(new THREE.BoxGeometry(.08, .14, .01), mat(0x4a2418)); door.position.set(0, .07, .182); h.add(door);
+    const win = glow(0xffc46b, 1.5);
+    for (const x of [-.13, .13]) { const w = mesh(new THREE.BoxGeometry(.075, .07, .01), win, false); w.position.set(x, .17, .182); h.add(w); }
+    const pl = new THREE.PointLight(0xffb15c, .55, .9, 2); pl.position.set(0, .18, .32); h.add(pl);
+    place(h, 0, -.05);
+  }
+  const twinkles = [];
+  const tree = (x, z, s, lights) => {
+    const t = new THREE.Group(), green = mat(0x1f5a3c, { roughness: .8 }), white = mat(0xf6f9ff, { roughness: .9 });
+    const trunk = mesh(new THREE.CylinderGeometry(.025, .03, .08, 10), mat(0x5b3a26)); trunk.position.y = .04; t.add(trunk);
+    [[.15, .2, .14], [.12, .18, .26], [.085, .15, .36]].forEach(([r, h, y]) => {
+      const c = mesh(new THREE.ConeGeometry(r, h, 16), green); c.position.y = y; t.add(c);
+      const cap = mesh(new THREE.ConeGeometry(r * .62, h * .38, 16), white); cap.position.y = y + h * .33; t.add(cap);
+    });
+    if (lights) {
+      const star = mesh(new THREE.OctahedronGeometry(.032), glow(0xffd36b, 4), false); star.position.y = .47; t.add(star);
+      twinkles.push({ m: star.material, base: 4, sp: 2.2, ph: 0 });
+      const cols = [0xff5a5a, 0xffd36b, 0x6bc8ff, 0x7dff9a, 0xff8de1];
+      for (let i = 0; i < 22; i++) { const k = i / 22, y = .1 + k * .32, r = .15 * (1 - k * .78) + .008, a = k * Math.PI * 7;
+        const m = glow(cols[i % 5], 3), b = mesh(new THREE.SphereGeometry(.011, 8, 8), m, false); b.position.set(Math.cos(a) * r, y, Math.sin(a) * r); t.add(b);
+        twinkles.push({ m, base: 3, sp: 1.5 + Math.random() * 3, ph: Math.random() * 6 }); }
+    }
+    t.scale.setScalar(s); place(t, x, z, Math.random() * 6);
+  };
+  tree(-.86, -.72, 1.12, true); tree(.95, -.62, .9); tree(-1.1, .12, .72); tree(.66, -.95, .68); tree(1.12, .1, .7); tree(-.42, -1.1, .66);
+  { // 雪人
+    const s = new THREE.Group(), w = mat(0xfafcff, { roughness: .85 });
+    const b1 = mesh(new THREE.SphereGeometry(.085, 20, 16), w); b1.position.y = .07; s.add(b1);
+    const b2 = mesh(new THREE.SphereGeometry(.06, 20, 16), w); b2.position.y = .18; s.add(b2);
+    const scarf = mesh(new THREE.TorusGeometry(.045, .014, 8, 20), mat(0xd23b3b)); scarf.rotation.x = Math.PI / 2; scarf.position.y = .145; s.add(scarf);
+    const nose = mesh(new THREE.ConeGeometry(.01, .045, 8), mat(0xff8a2b)); nose.rotation.x = Math.PI / 2; nose.position.set(0, .185, .075); s.add(nose);
+    const brim = mesh(new THREE.CylinderGeometry(.05, .05, .008, 16), mat(0x22252e)); brim.position.y = .232; s.add(brim);
+    const top = mesh(new THREE.CylinderGeometry(.033, .035, .05, 16), mat(0x22252e)); top.position.y = .26; s.add(top);
+    place(s, .55, .78, -.5);
+  }
+
+  const blob = (r, m, sx = 1, sy = 1, sz = 1) => { const x = mesh(new THREE.SphereGeometry(r, 24, 18), m); x.scale.set(sx, sy, sz); return x; };
+  const eye = (x, y, z, s = .011) => { const g = new THREE.Group(); g.add(mesh(new THREE.SphereGeometry(s, 12, 10), mat(0x14141a, { roughness: .2 }), false));
+    const hl = mesh(new THREE.SphereGeometry(s * .35, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }), false); hl.position.set(s * .35, s * .35, s * .75); g.add(hl); g.position.set(x, y, z); return g; };
+  const pink = mat(0xffa3b8);
+  const bear = () => { const g = new THREE.Group(), b = new THREE.Group(); g.add(b); const w = mat(0xfdfcf8, { roughness: .7 });
+    b.add(blob(.085, w, 1.12, .92, 1).translateY(.088));
+    for (const s of [-1, 1]) { b.add(blob(.026, w).translateX(s * .055).translateY(.162)); b.add(eye(s * .03, .1, .077)); b.add(blob(.016, pink, 1.2, .6, .35).translateX(s * .056).translateY(.078).translateZ(.068)); }
+    const limbs = []; for (const s of [-1, 1]) { const arm = blob(.018, w); arm.position.set(s * .088, .07, .02); b.add(arm); limbs.push(arm);
+      const leg = blob(.022, w, 1, .8, 1.1); leg.position.set(s * .04, .016, 0); g.add(leg); limbs.push(leg); }
+    g.userData = { body: b, limbs }; return g; };
+  const bunny = (c) => { const g = new THREE.Group(), b = new THREE.Group(); g.add(b); const w = mat(c, { roughness: .75 });
+    b.add(blob(.065, w, 1, .88, 1.25).translateY(.06)); const head = blob(.05, w); head.position.set(0, .12, .055); b.add(head);
+    for (const s of [-1, 1]) { const ear = blob(.026, w, .38, 1.7, .3); ear.position.set(s * .022, .2, .04); ear.rotation.z = s * -.18; b.add(ear); b.add(eye(s * .026, .13, .096, .009)); }
+    b.add(blob(.022, mat(0xffffff)).translateY(.07).translateZ(-.08)); g.userData = { body: b }; return g; };
+  const penguin = () => { const g = new THREE.Group(), b = new THREE.Group(); g.add(b);
+    b.add(blob(.07, mat(0x1d2330, { roughness: .45 }), 1, 1.38, .95).translateY(.098)); b.add(blob(.058, mat(0xfafafa), .86, 1.2, .62).translateY(.09).translateZ(.034));
+    for (const s of [-1, 1]) { b.add(eye(s * .022, .155, .06, .008)); const ft = blob(.02, mat(0xffa12b), 1, .35, 1.4); ft.position.set(s * .028, .006, .03); g.add(ft); }
+    const beak = mesh(new THREE.ConeGeometry(.012, .03, 8), mat(0xffa12b)); beak.rotation.x = Math.PI / 2; beak.position.set(0, .14, .078); b.add(beak);
+    const scarf = mesh(new THREE.TorusGeometry(.05, .012, 8, 20), mat(0xd23b3b)); scarf.rotation.x = Math.PI / 2; scarf.position.y = .12; b.add(scarf);
+    g.userData = { body: b }; return g; };
+  const animals = [
+    { o: bear(), r: .62, speed: .55, ph: 0, kind: 'run' },
+    { o: bunny(0xf2e9dc), r: .8, speed: .34, ph: 2.2, kind: 'hop' },
+    { o: bunny(0xbf9470), r: .72, speed: -.3, ph: 4.4, kind: 'hop' },
+    { o: penguin(), r: .46, speed: .16, ph: 1.0, kind: 'waddle' },
+  ];
+  // 小區域放雪球時動物放大（2026-10-20 使用者：球小了動物要大一點才看得清楚）。
+  animals.forEach(a => { a.o.scale.setScalar(o.petScale); globe.add(a.o); });
+  let fox = null, foxModel = null;
+  loadFox().then(gltf => {
+    if (!gltf) return;
+    const m = SkeletonUtils.clone(gltf.scene); m.scale.setScalar(.0017 * o.petScale); foxModel = m;
+    m.traverse(x => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = true; } });
+    const holder = new THREE.Group(); holder.add(m); globe.add(holder);
+    const mixer = new THREE.AnimationMixer(m), clip = n => mixer.clipAction(gltf.animations.find(a => a.name === n));
+    fox = { holder, mixer, run: clip('Run'), look: clip('Survey'), th: 2.6, mode: 'run', until: 7 }; fox.run.play();
+  });
+
+  // 雪花
+  const N = o.flakes, fP = new Float32Array(N * 3), fV = new Float32Array(N * 3), fR = new Float32Array(N);
+  const spawn = (i, any) => { for (;;) { const x = (Math.random() * 2 - 1) * R * .9, z = (Math.random() * 2 - 1) * R * .9;
+    const y = any ? GY + Math.random() * R * 1.45 : CY + R * (.2 + Math.random() * .7);
+    if (x * x + (y - CY) ** 2 + z * z < (R * .92) ** 2 && y > groundY(x, z) + .02) { fP.set([x, y, z], i * 3); fV.set([0, -.03, 0], i * 3); fR[i] = 0; return; } } };
+  for (let i = 0; i < N; i++) spawn(i, true);
+  const fG = new THREE.BufferGeometry(); fG.setAttribute('position', new THREE.BufferAttribute(fP, 3));
+  const fl = new THREE.Points(fG, new THREE.PointsMaterial({ size: .034, map: flakeTex, transparent: true, depthWrite: false, color: 0xdfe6f2 }));
+  fl.renderOrder = 3; globe.add(fl);
+
+  let swirl = 0, wobble = 0, hopUntil = 0;
+  function shake() {
+    swirl = 1.6; wobble = 1; hopUntil = clock.elapsedTime + 1.2;
+    for (let i = 0; i < N; i++) { fR[i] = 0; fV[i * 3] = (Math.random() - .5) * 1.2; fV[i * 3 + 1] = .6 + Math.random() * 1.3; fV[i * 3 + 2] = (Math.random() - .5) * 1.2; }
+  }
+
+  function resize() {
+    const w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    const v = THREE.MathUtils.degToRad(camera.fov) / 2, hh = Math.atan(Math.tan(v) * camera.aspect);
+    const half = o.base ? 1.75 : 1.5;
+    const d = Math.max(half / Math.tan(v), half / Math.tan(hh)) * o.fit + .3;
+    const ty = o.base ? 1.5 : CY;
+    controls.target.set(0, ty, 0);
+    const dir = camera.position.clone().sub(controls.target); if (dir.lengthSq() < .01) dir.set(0, o.lift - ty, 1);
+    camera.position.copy(controls.target).add(dir.normalize().multiplyScalar(d));
+  }
+  { const e = THREE.MathUtils.degToRad(o.elev ?? 30), ty0 = o.base ? 1.5 : CY; camera.position.set(0, ty0 + Math.sin(e) * 6, Math.cos(e) * 6); }
+  resize();
+
+  const clock = new THREE.Clock();
+  let active = true;
+  function frame() {
+    if (!active) return;
+    const dt = Math.min(clock.getDelta(), 1 / 30), t = clock.elapsedTime;
+    const excited = t < hopUntil;
+    for (const a of animals) {
+      const th = a.ph + t * a.speed, x = Math.cos(th) * a.r, z = Math.sin(th) * a.r, dir = Math.sign(a.speed);
+      a.o.position.set(x, groundY(x, z), z); a.o.rotation.y = Math.atan2(-Math.sin(th) * dir, Math.cos(th) * dir);
+      const b = a.o.userData.body;
+      if (excited) { b.position.y = Math.abs(Math.sin(t * 14)) * .09; b.rotation.z = 0; continue; }   // 記一筆：大家跳起來
+      if (a.kind === 'run') { const p = t * 13; b.position.y = Math.abs(Math.sin(p)) * .028; a.o.userData.limbs.forEach((l, i) => l.position.z = Math.sin(p + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI : 0)) * .025); }
+      else if (a.kind === 'hop') { const p = (t * 1.9 + a.ph) % 1, up = Math.sin(p * Math.PI); b.position.y = up * .11; const sq = p < .12 || p > .9 ? .82 : 1 + up * .08; b.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq)); }
+      else { b.rotation.z = Math.sin(t * 7) * .16; b.position.y = Math.abs(Math.sin(t * 7)) * .01; }
+    }
+    if (fox) {
+      fox.mixer.update(dt);
+      if (t > fox.until) { const nx = fox.mode === 'run' ? 'look' : 'run'; fox[nx].reset().play(); fox[fox.mode].crossFadeTo(fox[nx], .35, false); fox.mode = nx; fox.until = t + (nx === 'run' ? 7 : 3); }
+      if (fox.mode === 'run') fox.th += dt * .5;
+      const x = Math.cos(fox.th) * .93, z = Math.sin(fox.th) * .93;
+      fox.holder.position.set(x, groundY(x, z), z); fox.holder.rotation.y = Math.atan2(-Math.sin(fox.th), Math.cos(fox.th));
+    }
+    for (const k of twinkles) k.m.emissiveIntensity = k.base * (.55 + .45 * Math.sin(t * k.sp + k.ph));
+    swirl *= Math.pow(.35, dt);
+    for (let i = 0; i < N; i++) {
+      const j = i * 3;
+      if (fR[i] > 0) { fR[i] -= dt; if (fR[i] <= 0) spawn(i, false); continue; }
+      let x = fP[j], y = fP[j + 1], z = fP[j + 2], vx = fV[j], vy = fV[j + 1], vz = fV[j + 2];
+      vy -= .9 * dt; const dr = Math.pow(.18, dt); vx *= dr; vz *= dr; vy = Math.max(vy * dr, -.09 - (i % 7) * .006);
+      vx += (-z * swirl * 1.4 + Math.sin(t * .7 + i) * .02) * dt * 3; vz += (x * swirl * 1.4 + Math.cos(t * .6 + i * 1.3) * .02) * dt * 3;
+      x += vx * dt; y += vy * dt; z += vz * dt;
+      const dy = y - CY, d = Math.sqrt(x * x + dy * dy + z * z), lim = R * .94;
+      if (d > lim) { const k = lim / d; x *= k; z *= k; y = CY + dy * k; const nx = x / lim, ny = dy / lim, nz = z / lim, dot = vx * nx + vy * ny + vz * nz;
+        if (dot > 0) { vx -= 1.6 * dot * nx; vy -= 1.6 * dot * ny; vz -= 1.6 * dot * nz; } }
+      const gy = groundY(x, z) + .008; if (y < gy) { y = gy; vx = vy = vz = 0; fR[i] = 3 + Math.random() * 9; }
+      fP[j] = x; fP[j + 1] = y; fP[j + 2] = z; fV[j] = vx; fV[j + 1] = vy; fV[j + 2] = vz;
+    }
+    fG.attributes.position.needsUpdate = true;
+    wobble *= Math.pow(.02, dt);
+    globe.position.x = Math.sin(t * 38) * .05 * wobble; globe.rotation.z = Math.sin(t * 31) * .03 * wobble;
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  new ResizeObserver(resize).observe(canvas);
+  return {
+    shake,
+    setActive(v) { if (v === active) return; active = v; if (v) { clock.getDelta(); requestAnimationFrame(frame); } },
+    resize,
+    // 設計稿拉桿用：動物大小、鏡頭遠近（雪球在格子裡的大小）即時調。
+    setPetScale(k) { o.petScale = k; animals.forEach(a => a.o.scale.setScalar(k)); foxModel?.scale.setScalar(.0017 * k); },
+    setFit(k) { o.fit = k; resize(); },
+    dispose() { active = false; renderer.dispose(); renderer.forceContextLoss(); },
+  };
+}
+
+// ════════════════ 記帳畫面 ════════════════
+const items = [
+  ['豪點的外送（幾次合併）', 1, 400], ['唱歌', 1, 493], ['酒', 0, 238], ['百家樂', 1, 100], ['豪給我', 1, 1000],
+  ['家樂福 524/2', 0, 262], ['燒烤', 0, 290], ['四季春', 0, 40],
+];
+const money = v => 'NT$' + Math.abs(v).toLocaleString('en-US');
+function listHtml() {
+  let bal = 543;
+  const rows = items.map(([n, p, a]) => {
+    const r = `<div class="row"><div class="date ${p ? 'dplus' : 'dminus'}"><div><b>20</b><small>10月</small></div></div>
+      <div class="t"><b>${n}</b><span>${p ? '豪支出' : '岑支出'}・2026</span></div>
+      <div class="m"><b class="${p ? 'plus' : 'minus'}">${p ? '+' : '−'}${money(a)}</b><span>結餘 ${bal >= 0 ? '+' : '−'}${money(bal)}</span></div></div>`;
+    bal -= p ? a : -a; return r;
+  }).join('');
+  return `<div class="hint">明細・新的在上面・點一筆看詳細</div>
+    <div class="day"><b>今天・10/20（二）</b><span>28 筆・<b class="plus">+NT$795</b></span></div>
+    <div class="card">${rows}</div>`;
+}
+const card = (globe) => `<div class="card sumG">
+    <div class="left">
+      <div class="lab">目前結餘</div><div class="bal">+NT$543</div>
+      <div class="mini"><div><span>豪支出</span><b class="plus">9,337</b></div><div><span>岑支出</span><b class="minus">8,794</b></div><div><span>筆數</span><b>29</b></div></div>
+    </div>
+    <div class="globeSlot">${globe}</div>
+  </div>`;
+const top = `<div class="status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+  <div class="topbar"><img src="../assets/logo/logo_240.png" alt="我的記帳"><div class="cloud" title="雲端同步">☁</div></div>`;
+const bottom = `<div class="bottom"><div class="act p">＋ 豪支出</div><div class="act m">− 岑支出</div></div>`;
+
+// ════════════════ 背景 ════════════════
+// layer：背景那層的 HTML（圖片或 CSS 畫的），fx：上面再疊的動態（下雪、極光）
+const snowDots = (n, cls) => Array.from({ length: n }, (_, i) =>
+  `<i class="${cls}" style="left:${(i * 37 + 11) % 100}%;animation-delay:${-(i * .73) % 9}s;animation-duration:${7 + (i % 6) * 1.3}s;width:${2 + (i % 3)}px;height:${2 + (i % 3)}px;opacity:${.35 + (i % 4) * .15}"></i>`).join('');
+const BGS = [
+  { id: 'starry', name: '星夜柔光散景', tag: '你的圖', layer: `<div class="bgImg" style="background-image:url(bg/starry_bokeh.jpg)"></div>`,
+    note: '粉、金、綠三團柔光，跟 App 的豪支出（綠）、岑支出（橘）顏色很搭；中間乾淨，卡片疊上去不亂。' },
+  { id: 'nebula', name: '紫夜星雲', tag: '你的圖', layer: `<div class="bgImg" style="background-image:url(bg/purple_nebula.jpg)"></div>`,
+    note: '整片紫色比較夢幻、統一；金色的錢數字在紫底上特別顯眼。' },
+  { id: 'ambient', name: '原本的四色光暈', tag: '現在', layer: `<div class="amb"></div>`,
+    note: '現在 App 用的：深色底＋四個角落的藍、橘、綠、紫光暈（純程式畫的，最輕）。' },
+  { id: 'aurora', name: '極光', tag: '會動', layer: `<div class="aurora"><span></span><span></span><span></span></div>`,
+    note: '綠紫兩條極光在上面慢慢流動（純 CSS，不用圖片），冬天感。' },
+  { id: 'snow', name: '雪夜', tag: '會動', layer: `<div class="snowSky"></div><div class="snowFx">${snowDots(46, 'sf')}</div>`,
+    note: '深藍夜空、整個畫面慢慢飄雪，跟雪球最搭（雪是 CSS 畫的，很輕）。' },
+  { id: 'gold', name: '暖金散景', tag: '溫暖', layer: `<div class="goldSky"></div><div class="goldFx">${snowDots(22, 'gb')}</div>`,
+    note: '暗咖啡底＋暖金色的大顆散景光點，像聖誕夜的燈，比較溫暖。' },
+];
+let bgId = 'starry', drift = true;
+
+const screen = document.getElementById('screen');
+function render() {
+  const b = BGS.find(x => x.id === bgId);
+  screen.querySelector('.bgLayer').innerHTML = b.layer;
+  screen.classList.toggle('drift', drift);
+  document.querySelectorAll('[data-bg]').forEach(x => x.classList.toggle('on', x.dataset.bg === bgId));
+  document.getElementById('bgNote').innerHTML = `<b>${b.name}</b>${b.tag ? `<span class="tg">${b.tag}</span>` : ''}<br>${b.note}`;
+}
+screen.innerHTML = `<div class="bgLayer"></div><div class="scroll">${top}${card('<canvas class="globe" id="g"></canvas>')}${listHtml()}</div>${bottom}`;
+document.getElementById('bgPick').innerHTML = BGS.map(b => `<button class="bgOpt" data-bg="${b.id}"><span class="sw sw-${b.id}"></span>${b.name}<small>${b.tag}</small></button>`).join('');
+document.getElementById('bgPick').onclick = e => { const x = e.target.closest('[data-bg]'); if (x) { bgId = x.dataset.bg; render(); } };
+document.getElementById('drift').onclick = e => { drift = !drift; e.currentTarget.classList.toggle('on', drift); render(); };
+render();
+
+const g = makeGlobe(document.getElementById('g'), { fit: 1, orbit: true, flakes: 700, petScale: 2.6, autoRotate: .9, clearGlass: true, elev: 40 });
+let x0 = 0, y0 = 0, t0 = 0; const cv = document.getElementById('g');
+cv.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); });
+cv.addEventListener('pointerup', e => { if (Math.hypot(e.clientX - x0, e.clientY - y0) < 6 && performance.now() - t0 < 350) g.shake(); });
+window.bgDemo = { set: id => { bgId = id; render(); } };
+</script>
+</body>
+</html>
