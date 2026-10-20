@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 /// 非網頁平台（含測試）：沒有 3D 雪球。
 const globeSupported = false;
 
-Widget buildGlobeView({double petScale = 2.6, double fit = .9}) =>
+Widget buildGlobeView({double petScale = 2.6, double fit = .75}) =>
     const SizedBox.shrink();
 
 /// 雪球回報的訊息（ready／error），非網頁平台不會有。
