@@ -452,6 +452,8 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         // 的尺寸（2026-10-20 使用者：照設計稿做，包括大小）：卡高 168、雪球寬
         // 160，整顆收在卡片裡（使用者：設計稿是在卡片內，不要凸出去）。數字到
         // 十萬、百萬也塞得下：放不下就整行等比例縮小（FittedBox）。
+        // 雪球往上超出卡片，上面留空，不然會被列表頂端切掉。
+        const SizedBox(height: 30),
         Stack(
           clipBehavior: Clip.none,
           // 卡片要撐滿整行（預設會縮成內容寬，雪球就跑到卡片外面了）。
@@ -502,13 +504,14 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
                 ),
               ),
             ),
-            // 往卡片內縮、四邊留空：雪球整顆（含底座）都在卡片裡，不壓到卡片邊框
-            //（2026-10-20 使用者回報右邊、下面被切到卡片外）。
+            // 雪球的上、左、右可以超出卡片、不被切；下面對齊卡片底邊切掉，像坐在
+            // 卡片裡（2026-10-20 使用者要求）。這一格故意比卡片大，雪球才不會被
+            // 這一格自己的邊切到。
             Positioned(
-              top: 8,
-              right: 12,
-              bottom: 8,
-              width: 152,
+              top: -36,
+              right: -10,
+              bottom: 0,
+              width: 206,
               child: TallyGlobe(shakes: _shakes),
             ),
           ],
