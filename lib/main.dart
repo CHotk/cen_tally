@@ -103,7 +103,7 @@ class _TallyAppState extends ConsumerState<TallyApp>
 
   @override
   Widget build(BuildContext context) => MaterialApp.router(
-    title: '記帳',
+    title: '我的記帳',
     debugShowCheckedModeBanner: false,
     routerConfig: _router,
     locale: const Locale('zh', 'TW'),
