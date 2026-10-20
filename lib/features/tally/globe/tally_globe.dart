@@ -47,20 +47,15 @@ class _TallyGlobeState extends State<TallyGlobe>
       if (type == 'ready' && _phase == _Phase.loading) {
         _timeout?.cancel();
         setState(() => _phase = _Phase.ready);
-      } else if (type == 'error') {
-        _timeout?.cancel();
-        setState(() => _phase = _Phase.flat);
       }
+      // 2D 備用雪球先不用（2026-10-20 使用者：明明有網路卻跑出備用版；載不起來
+      // 就一直轉圈就好）。_FlatGlobe 留著，之後要再開回來改這裡。
     });
-    // 記帳畫面畫完、先讓它順順地出來，再開始載雪球。
-    _start = Timer(const Duration(milliseconds: 600), () {
+    // 記帳畫面畫完、先讓它順順地出來（手機上開機那一秒很吃 CPU，雪球的 3D 引擎
+    // 別跟它搶），再開始載雪球。
+    _start = Timer(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       setState(() => _phase = _Phase.loading);
-      _timeout = Timer(const Duration(seconds: 20), () {
-        if (mounted && _phase == _Phase.loading) {
-          setState(() => _phase = _Phase.flat);
-        }
-      });
     });
   }
 

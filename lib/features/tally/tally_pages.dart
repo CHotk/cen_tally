@@ -454,9 +454,11 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         // 十萬、百萬也塞得下：放不下就整行等比例縮小（FittedBox）。
         Stack(
           clipBehavior: Clip.none,
+          // 卡片要撐滿整行（預設會縮成內容寬，雪球就跑到卡片外面了）。
+          fit: StackFit.passthrough,
           children: [
             GlassCard(
-              padding: const EdgeInsets.fromLTRB(18, 16, 168, 14),
+              padding: const EdgeInsets.fromLTRB(18, 16, 170, 14),
               child: SizedBox(
                 height: 168 - 30,
                 child: Column(
@@ -500,11 +502,13 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
                 ),
               ),
             ),
+            // 往卡片內縮、四邊留空：雪球整顆（含底座）都在卡片裡，不壓到卡片邊框
+            //（2026-10-20 使用者回報右邊、下面被切到卡片外）。
             Positioned(
-              top: 2,
-              right: 4,
-              bottom: 2,
-              width: 160,
+              top: 8,
+              right: 12,
+              bottom: 8,
+              width: 152,
               child: TallyGlobe(shakes: _shakes),
             ),
           ],
