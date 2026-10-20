@@ -18,6 +18,7 @@ import '../../shared/widgets/app_confirm_dialog.dart';
 import '../../shared/widgets/app_notice.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/glass_card.dart';
+import '../../shared/widgets/tally_loading.dart';
 import '../../shared/widgets/inline_empty_card.dart';
 
 /// 記帳（2026-10-19 使用者要求）：跟朋友算錢，一個帳本一個人，只有 ＋／−。
@@ -280,9 +281,7 @@ class _TallyEntryPageState extends ConsumerState<TallyEntryPage> {
 
   @override
   Widget build(BuildContext context) => _id == null
-      ? const Scaffold(
-          body: Center(child: CircularProgressIndicator.adaptive()),
-        )
+      ? const TallyLoading()
       : TallyBookPage(bookId: _id!, solo: widget.solo);
 }
 
@@ -394,9 +393,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   Widget build(BuildContext context) {
     final b = _book;
     if (!_loaded) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator.adaptive()),
-      );
+      return const TallyLoading();
     }
     if (b == null) {
       return _page(

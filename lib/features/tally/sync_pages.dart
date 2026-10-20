@@ -8,6 +8,7 @@ import '../../data/cloud/tally_sync.dart';
 import '../../shared/widgets/ambient_background.dart';
 import '../../shared/widgets/app_notice.dart';
 import '../../shared/widgets/glass_card.dart';
+import '../../shared/widgets/tally_loading.dart';
 import 'tally_pages.dart';
 
 String _two(int v) => v.toString().padLeft(2, '0');
@@ -48,9 +49,7 @@ class _TallyGateState extends ConsumerState<TallyGate> {
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator.adaptive()),
-      );
+      return const TallyLoading();
     }
     final c = _config;
     if (c == null || c.expired) {
