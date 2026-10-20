@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -166,9 +167,34 @@ class _TallyKeyPageState extends ConsumerState<TallyKeyPage> {
           autocorrect: false,
           enableSuggestions: false,
           style: const TextStyle(color: AppColors.ink, fontSize: 16),
-          decoration: _dec(label),
+          decoration: _dec(label).copyWith(
+            // 右邊「貼上」：手機上長按輸入框貼上不好按，一鍵貼。
+            suffixIcon: TextButton.icon(
+              onPressed: () => _paste(c),
+              icon: const Icon(Icons.content_paste_rounded, size: 18),
+              label: const Text('貼上'),
+              style: TextButton.styleFrom(foregroundColor: tallyAccent),
+            ),
+          ),
         ),
       );
+
+  /// 從剪貼簿貼進去（去掉前後空白、換行）。瀏覽器不給讀剪貼簿時提示改用
+  /// 長按輸入框貼上。
+  Future<void> _paste(TextEditingController c) async {
+    try {
+      final t = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
+      if (t == null || t.isEmpty) {
+        if (mounted) showAppNotice(context, '剪貼簿是空的', isError: true);
+        return;
+      }
+      c.text = t;
+    } catch (_) {
+      if (mounted) {
+        showAppNotice(context, '這個瀏覽器不讓讀剪貼簿，請長按輸入框貼上', isError: true);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
