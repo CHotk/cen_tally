@@ -74,36 +74,43 @@ class TallyKeyPage extends ConsumerStatefulWidget {
 class _TallyKeyPageState extends ConsumerState<TallyKeyPage> {
   final _id = TextEditingController();
   final _secret = TextEditingController();
-  final _endpoint = TextEditingController(
-    text: TallySyncConfig.defaultEndpoint,
-  );
-  final _bucket = TextEditingController(text: TallySyncConfig.defaultBucket);
-  int _months = 3;
   bool _busy = false;
-  bool _advanced = false;
   String? _error;
+
+  /// 兩把金鑰都填了，「連上雲端」才亮起來。
+  bool get _ready =>
+      _id.text.trim().isNotEmpty && _secret.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in [_id, _secret]) {
+      c.addListener(() => setState(() {}));
+    }
+  }
 
   @override
   void dispose() {
-    for (final c in [_id, _secret, _endpoint, _bucket]) {
-      c.dispose();
-    }
+    _id.dispose();
+    _secret.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final now = DateTime.now();
     final c = TallySyncConfig(
-      endpoint: _endpoint.text.trim(),
-      bucket: _bucket.text.trim(),
+      endpoint: TallySyncConfig.defaultEndpoint,
+      bucket: TallySyncConfig.defaultBucket,
       accessKeyId: _id.text.trim(),
       secretAccessKey: _secret.text.trim(),
-      expiresAt: DateTime(now.year, now.month + _months, now.day, now.hour),
+      expiresAt: // 固定記三個月，到期再貼一次。
+      DateTime(
+        now.year,
+        now.month + 3,
+        now.day,
+        now.hour,
+      ),
     );
-    if (c.accessKeyId.isEmpty || c.secretAccessKey.isEmpty) {
-      setState(() => _error = '兩把金鑰都要貼');
-      return;
-    }
     setState(() {
       _busy = true;
       _error = null;
@@ -183,7 +190,7 @@ class _TallyKeyPageState extends ConsumerState<TallyKeyPage> {
             ),
             const SizedBox(height: 6),
             const Text(
-              '記的帳會存在雲端，換手機、刪掉重裝都拿得回來',
+              '資料會儲存於雲端',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 15, color: AppColors.ink2),
             ),
@@ -195,40 +202,6 @@ class _TallyKeyPageState extends ConsumerState<TallyKeyPage> {
                 children: [
                   _field(_id, 'Access Key ID'),
                   _field(_secret, 'Secret Access Key', secret: true),
-                  Row(
-                    children: [
-                      const Text(
-                        '這台裝置記住',
-                        style: TextStyle(fontSize: 15, color: AppColors.ink2),
-                      ),
-                      const Spacer(),
-                      DropdownButton<int>(
-                        value: _months,
-                        dropdownColor: const Color(0xFF1C1C28),
-                        underline: const SizedBox.shrink(),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: AppColors.ink,
-                        ),
-                        items: [
-                          for (final m in [1, 3, 6, 12])
-                            DropdownMenuItem(value: m, child: Text('$m 個月')),
-                        ],
-                        onChanged: (v) => setState(() => _months = v ?? 3),
-                      ),
-                    ],
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() => _advanced = !_advanced),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.ink3,
-                    ),
-                    child: Text(_advanced ? '收起端點設定' : '端點、儲存桶（已經填好）'),
-                  ),
-                  if (_advanced) ...[
-                    _field(_endpoint, '端點（Endpoint）'),
-                    _field(_bucket, '儲存桶'),
-                  ],
                 ],
               ),
             ),
@@ -242,11 +215,14 @@ class _TallyKeyPageState extends ConsumerState<TallyKeyPage> {
               ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: _busy ? null : _save,
+              onPressed: _busy || !_ready ? null : _save,
               style: FilledButton.styleFrom(
                 backgroundColor: tallyAccent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 17),
+                // 金鑰還沒填好：反灰。
+                disabledBackgroundColor: Colors.white.withValues(alpha: 0.10),
+                disabledForegroundColor: AppColors.ink3,
                 textStyle: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
