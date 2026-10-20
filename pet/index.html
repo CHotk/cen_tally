@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>吉祥物</title>
+<!--
+  記帳吉祥物（2026-10-20，設計稿 design-history/2026-10-20_記帳吉祥物.html）的「樣子」那一塊。
+  只負責畫牠跟動作；走去哪、掉下來、被捏起來這些都是 Flutter（lib/features/tally/pet/）算的，
+  Flutter 把這個小窗格移到牠的位置，再用 postMessage 告訴牠現在在做什麼：
+    {pet: {m: 模式, f: 面向 -1/1, mv: 有沒有在移動, sp: 速度}}；{pet: {land: 1}} 落地壓扁一下。
+  模型照抄 lume/design-history/2026-10-20_吉伊卡哇3D.html（同一隻）。Three.js 打包在 ../globe/vendor。
+  ※ 角色版權屬原作者，私人使用。
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "../globe/vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three';
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+// 正交鏡頭：寬 3.2 單位、高 3.4 單位，腳踩在底下往上 .15 的地方
+const camera = new THREE.OrthographicCamera(-1.6, 1.6, 3.25, -.15, -20, 20);
+function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight, h = 3.4; camera.left = -h * a / 2; camera.right = h * a / 2; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+// 光：卡通上色只看主光方向，柔和一點
+scene.add(new THREE.AmbientLight(0xffffff, 1.35));
+const sun = new THREE.DirectionalLight(0xffffff, 1.35); sun.position.set(2.5, 5, 4); 
+scene.add(sun);
+
+// 卡通上色用的三階漸層（白→淡粉灰→粉灰），看起來像手繪上色
+const grad = (() => { const c = new Uint8Array([205, 250, 255]); const t = new THREE.DataTexture(c, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const toon = (color) => new THREE.MeshToonMaterial({ color, gradientMap: grad });
+const black = new THREE.MeshBasicMaterial({ color: 0x241a20 });
+const outlineMat = new THREE.MeshBasicMaterial({ color: 0x241a20, side: THREE.BackSide });
+// 粗黑描邊：同一個形狀放大一點、只畫背面（反轉外殼）
+function withOutline(mesh, k = 1.045) {
+  const o = new THREE.Mesh(mesh.geometry, outlineMat); o.scale.setScalar(k); mesh.add(o); mesh.castShadow = true; return mesh;
+}
+
+// ── 身體：麻糬形（下面寬、頭頂圓） ──
+// 大福形：上下都圓、兩側飽滿（超橢圓轉一圈），底部稍微壓平坐在地上
+const A = 1.12, B = .98, CY0 = .98, NE = 2.5;
+const pts = [];
+for (let i = 0; i <= 64; i++) {
+  const th = -Math.PI / 2 + Math.PI * i / 64, c = Math.cos(th), sn = Math.sin(th);
+  const x = A * Math.pow(Math.abs(c), 2 / NE), y = CY0 + B * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / NE);
+  pts.push(new THREE.Vector2(Math.max(x, .001), Math.max(y, .03)));
+}
+const topY = x => CY0 + B * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(x) / A, NE)), 1 / NE);
+pts[0].x = .001; pts[pts.length - 1].x = .001;
+const bodyGeo = new THREE.LatheGeometry(pts, 96); bodyGeo.computeVertexNormals();
+const R = y => { // 某高度的半徑（給臉上零件貼表面用）
+  const t = y / 1.9; for (let i = 1; i < pts.length; i++) if (pts[i].y >= y) { const a = pts[i - 1], b = pts[i]; return a.x + (b.x - a.x) * ((y - a.y) / (b.y - a.y)); } return .001; };
+const surf = (x, y, out = 0) => { const r = R(y); const z = Math.sqrt(Math.max(r * r - x * x, 0)); return new THREE.Vector3(x, y, z + out); };
+
+const chii = new THREE.Group(); scene.add(chii);
+const body = new THREE.Group(); chii.add(body);
+const bodyMesh = withOutline(new THREE.Mesh(bodyGeo, toon(0xfffdfb)), 1.035); body.add(bodyMesh);
+
+// 耳朵：頭頂兩個小圓
+for (const s of [-1, 1]) {
+  const ear = withOutline(new THREE.Mesh(new THREE.SphereGeometry(.2, 32, 24), toon(0xfffdfb)), 1.09);
+  // 黏在頭頂表面上（往裡埋一點）
+  ear.scale.set(1.05, .9, .85); ear.position.set(s * .5, topY(.5) - .02, .02); ear.rotation.z = s * -.4; body.add(ear);
+}
+
+// ── 臉 ──
+const face = new THREE.Group(); body.add(face);
+const eyes = [];
+for (const s of [-1, 1]) {
+  const p = surf(s * .34, 1.12, -.02);
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(.13, 32, 24), black); eye.scale.set(.86, 1, .45); eye.position.copy(p);
+  eye.lookAt(p.clone().multiplyScalar(2).setY(p.y)); face.add(eye); eyes.push(eye);
+  const hl = new THREE.Mesh(new THREE.SphereGeometry(.045, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  hl.position.set(.035, .045, .11); eye.add(hl);
+  const hl2 = new THREE.Mesh(new THREE.SphereGeometry(.02, 12, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  hl2.position.set(-.04, -.05, .11); eye.add(hl2);
+  // 眉毛：細細的弧線
+  const brow = new THREE.Mesh(new THREE.TorusGeometry(.14, .018, 8, 24, Math.PI * .7), black);
+  const bp = surf(s * .36, 1.36, .005); brow.position.copy(bp); brow.rotation.set(-.25, s * .32, Math.PI * .15 + (s < 0 ? 0 : .02)); face.add(brow);
+  // 臉頰：粉紅橢圓＋三條斜線
+  const cp = surf(s * .66, .92, .03); // 往外推，不然一半陷進身體變月牙
+  const cheek = new THREE.Mesh(new THREE.CircleGeometry(.17, 32), new THREE.MeshBasicMaterial({ color: 0xffa9bd, transparent: true, opacity: .92 }));
+  cheek.scale.set(1.35, .8, 1); cheek.position.copy(cp); cheek.lookAt(cp.clone().multiplyScalar(2).setY(cp.y)); face.add(cheek);
+  for (let k = -1; k <= 1; k++) {
+    const line = new THREE.Mesh(new THREE.CapsuleGeometry(.012, .09, 4, 8), black);
+    line.position.set(k * .085, 0, .003); line.rotation.z = -.5; cheek.add(line);
+  }
+}
+// 嘴：ω（兩個小弧）＋一點點舌頭
+{ const mp = surf(0, .92, .005);
+  const mouth = new THREE.Group(); mouth.position.copy(mp); mouth.scale.setScalar(1.7); face.add(mouth);
+  for (const s of [-1, 1]) { const arc = new THREE.Mesh(new THREE.TorusGeometry(.045, .012, 8, 20, Math.PI), black); arc.rotation.z = Math.PI; arc.position.x = s * .045; mouth.add(arc); }
+  const tongue = new THREE.Mesh(new THREE.SphereGeometry(.03, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff7f98 })); tongue.scale.set(1, .7, .4); tongue.position.set(0, -.055, 0); mouth.add(tongue); }
+
+// 眼淚（哭哭時才出現）
+const tears = [];
+for (const s of [-1, 1]) { const t = new THREE.Mesh(new THREE.SphereGeometry(.06, 16, 12), new THREE.MeshToonMaterial({ color: 0x8fd3ff, gradientMap: grad, transparent: true, opacity: .9 }));
+  t.scale.set(.8, 1.2, .8); t.visible = false; face.add(t); tears.push({ m: t, s }); }
+
+// ── 手腳：小小圓圓 ──
+const armL = new THREE.Group(), armR = new THREE.Group();
+for (const [g, s] of [[armL, -1], [armR, 1]]) {
+  const p = surf(s * .98, .62, -.12); g.position.copy(p); body.add(g);
+  const hand = withOutline(new THREE.Mesh(new THREE.SphereGeometry(.17, 24, 18), toon(0xfffdfb)), 1.1); hand.scale.set(.85, 1, .85); hand.position.set(s * .06, -.04, .02); g.add(hand);
+}
+const legs = [];
+for (const s of [-1, 1]) { const leg = withOutline(new THREE.Mesh(new THREE.SphereGeometry(.2, 24, 18), toon(0xfffdfb)), 1.08); leg.scale.set(1, .55, 1.1); leg.position.set(s * .42, .06, .45); chii.add(leg); legs.push(leg); }
+
+// 頭頂的小星星（開心時轉）
+const sparkles = new THREE.Group(); chii.add(sparkles); sparkles.visible = false;
+for (let i = 0; i < 5; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(.09), new THREE.MeshBasicMaterial({ color: [0xffd36b, 0xff9fbe, 0x8fd3ff][i % 3] }));
+  const a = i / 5 * Math.PI * 2; st.position.set(Math.cos(a) * 1.25, 2.1 + Math.sin(i) * .15, Math.sin(a) * 1.25); sparkles.add(st); }
+
+
+
+
+// 坐下時的小木椅（2026-10-20 使用者：坐下動作不明顯，給牠一張椅子）
+const chair = new THREE.Group(); chair.visible = false;
+{ const wood = toon(0xc48a52), dark = toon(0x8a5a32);
+  const seat = withOutline(new THREE.Mesh(new THREE.BoxGeometry(1.5, .14, 1.1), wood), 1.06); seat.position.set(0, .5, .1); chair.add(seat);
+  for (const [x, z] of [[-.62, -.38], [.62, -.38], [-.62, .55], [.62, .55]]) { const l = withOutline(new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .5, 10), dark), 1.12); l.position.set(x, .25, z); chair.add(l); }
+  for (const x of [-.62, .62]) { const p = withOutline(new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.1, 10), dark), 1.12); p.position.set(x, 1.0, -.42); chair.add(p); }
+  const back = withOutline(new THREE.Mesh(new THREE.BoxGeometry(1.36, .32, .08), wood), 1.06); back.position.set(0, 1.3, -.42); chair.add(back); }
+chair.rotation.x = .18;
+scene.add(chair);
+chii.rotation.x = .18;
+let mode = 'idle', faceDir = 1, moving = false, speed = 40, modeT = 0, landed = 0, nextBlink = 2;
+addEventListener('message', e => {
+  const p = e.data && e.data.pet; if (!p) return;
+  if (p.land) landed = .25;
+  if (p.m && p.m !== mode) { mode = p.m; modeT = 0; }
+  if (p.f) faceDir = p.f; if (p.mv != null) moving = !!p.mv; if (p.sp) speed = p.sp;
+});
+
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 1 / 30), T = clock.elapsedTime; modeT += dt;
+  chii.position.set(0, 0, 0); chii.rotation.z = 0; body.rotation.set(0, 0, 0); armL.rotation.set(0, 0, 0); armR.rotation.set(0, 0, 0);
+  legs[0].position.set(-.42, .06, .45); legs[1].position.set(.42, .06, .45); sparkles.visible = false; chair.visible = false; tears.forEach(t => t.m.visible = false);
+  const br = 1 + Math.sin(T * 2.2) * .02; body.scale.set(1 / Math.sqrt(br), br, 1 / Math.sqrt(br));
+  let turn = 0, eyeOpen = 1;
+  if (moving && (mode === 'walk' || mode === 'run' || mode === 'toLadder')) {
+    turn = faceDir * .75; const ph = T * speed * .16; chii.position.y = Math.abs(Math.sin(ph)) * .08; body.rotation.z = Math.sin(ph) * .07;
+    legs[0].position.z = .45 + Math.sin(ph) * .2; legs[1].position.z = .45 - Math.sin(ph) * .2; armL.rotation.x = Math.sin(ph) * .7; armR.rotation.x = -Math.sin(ph) * .7;
+  }
+  switch (mode) {
+    case 'look': turn = Math.sin(modeT * 2.4) * .8; break;
+    case 'climb': { turn = Math.PI; const ph = T * 9; armL.rotation.x = -2.6 + Math.sin(ph) * .5; armR.rotation.x = -2.6 - Math.sin(ph) * .5;
+      legs[0].position.y = .06 + Math.max(0, Math.sin(ph)) * .25; legs[1].position.y = .06 + Math.max(0, -Math.sin(ph)) * .25; break; }
+    case 'held': { const ph = T * 16; armL.rotation.z = -1.2 - Math.sin(ph) * .9; armR.rotation.z = 1.2 + Math.sin(ph + 1) * .9;
+      legs[0].position.y = .06 + Math.abs(Math.sin(ph)) * .3; legs[1].position.y = .06 + Math.abs(Math.sin(ph + 1.5)) * .3;
+      body.rotation.z = Math.sin(T * 7) * .25; chii.rotation.z = Math.sin(T * 3) * .15;
+      tears.forEach(({ m, s }) => { m.visible = true; const k = (T * 1.6 + (s > 0 ? .5 : 0)) % 1; m.position.copy(surf(s * .45, 1.0 - k * .4, .03)); m.material.opacity = 1 - k; }); break; }
+    case 'fall': armL.rotation.z = -1.8; armR.rotation.z = 1.8; break;
+    case 'happy': armL.rotation.z = -1.8; armR.rotation.z = 1.8; sparkles.visible = true; sparkles.rotation.y += dt * 3; break;
+    case 'dizzy': sparkles.visible = true; sparkles.rotation.y += dt * 8; body.rotation.z = Math.sin(T * 6) * .15; eyeOpen = .2; break;
+    case 'sit': chair.visible = true; chii.position.y = .52; legs[0].position.set(-.42, -.02, .85 + Math.sin(T * 3) * .08); legs[1].position.set(.42, -.02, .85 - Math.sin(T * 3) * .08); break;
+    case 'sleep': legs[0].position.set(-.5, .05, .7); legs[1].position.set(.5, .05, .7); chii.position.y = -.12; eyeOpen = .08; body.rotation.z = Math.sin(T * 1.2) * .05; break;
+  }
+  if (landed > 0) { landed -= dt; const k = Math.max(0, landed / .25); body.scale.set(1 + k * .25, 1 - k * .3, 1 + k * .25); }
+  if (eyeOpen === 1 && T > nextBlink) { const k = (T - nextBlink) / .14; eyeOpen = k < 1 ? Math.max(.08, Math.abs(1 - k * 2)) : 1; if (k >= 1) nextBlink = T + 2 + Math.random() * 3; }
+  eyes.forEach(e => e.scale.y = eyeOpen);
+  chii.rotation.y += (turn - chii.rotation.y) * Math.min(1, dt * 10);
+  renderer.render(scene, camera); requestAnimationFrame(frame);
+}
+frame();
+try { parent.postMessage({ pet: { ready: 1 } }, '*'); } catch (_) {}
+</script>
+</body>
+</html>
