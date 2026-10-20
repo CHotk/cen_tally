@@ -417,7 +417,14 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
     return _page(
       context,
       top: AppTopBar(
-        title: '記帳',
+        title: '我的記帳',
+        // 標題直接放 App logo（2026-10-20 使用者要求）。
+        titleWidget: Image.asset(
+          'assets/logo/logo_240.png',
+          height: 36,
+          semanticLabel: '我的記帳',
+          errorBuilder: (_, _, _) => const Text('我的記帳'),
+        ),
         titleIcon: widget.solo ? null : Icons.receipt_long_rounded,
         titleIconColor: tallyAccent,
         showBack: false,

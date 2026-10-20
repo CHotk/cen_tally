@@ -12,6 +12,7 @@ class AppTopBar extends StatelessWidget {
     required this.title,
     this.titleIcon,
     this.titleIconColor = AppColors.accent,
+    this.titleWidget,
     this.actions = const [],
     // 以下沿用 Lume 的參數名，這裡都用不到。
     this.showBack = false,
@@ -22,6 +23,9 @@ class AppTopBar extends StatelessWidget {
   final String title;
   final IconData? titleIcon;
   final Color titleIconColor;
+
+  /// 有給就整個取代文字標題（首頁放 App logo）。
+  final Widget? titleWidget;
   final List<Widget> actions;
   final bool showBack;
   final bool showSettings;
@@ -33,21 +37,23 @@ class AppTopBar extends StatelessWidget {
       children: [
         const SizedBox(width: Gap.xs + Gap.sm),
         Expanded(
-          child: Row(
-            children: [
-              if (titleIcon != null) ...[
-                Icon(titleIcon, size: 19, color: titleIconColor),
-                const SizedBox(width: 6),
-              ],
-              Flexible(
-                child: Text(
-                  title,
-                  style: AppText.title,
-                  overflow: TextOverflow.ellipsis,
+          child: titleWidget != null
+              ? Align(alignment: Alignment.centerLeft, child: titleWidget)
+              : Row(
+                  children: [
+                    if (titleIcon != null) ...[
+                      Icon(titleIcon, size: 19, color: titleIconColor),
+                      const SizedBox(width: 6),
+                    ],
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: AppText.title,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
         for (var i = 0; i < actions.length; i++) ...[
           if (i > 0) const SizedBox(width: 6),
