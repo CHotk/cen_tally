@@ -1,0 +1,30 @@
+name: cen_tally
+description: "記帳：只有收入、支出，匯出 PDF。從 Lume 拆出來的獨立 App。"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+  shared_preferences: ^2.3.3
+  web: ^1.1.1
+  pdf: ^3.12.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+# pdf 帶進來的 image 4.11 跟 archive 4.0.9 不相容（編譯錯 decodeLazy），先固定成 Lume 用的版本。
+dependency_overrides:
+  image: 4.10.1
