@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>記帳吉祥物</title>
+<!--
+  2026-10-20 使用者要求：用 lume/design-history/2026-10-20_吉伊卡哇3D.html 那隻當吉祥物，先出設計稿：
+  讓牠在「我的記帳」裡走來走去，像桌面寵物——自己跑、跳、爬梯子；按著＝捏起來，牠會掙扎；放開會掉下去；
+  不只在畫面底部，整個畫面（卡片上緣、按鈕列）都能站、能走。
+  模型程式直接沿用那份（同一隻），這裡加上 2D 物理（站在卡片上、重力、落地）跟行為。
+  ※ 角色版權屬原作者，私人使用。
+-->
+<style>
+  :root { --bg: #0C0C13; --ink: #F3F2F8; --ink2: #A3A2B2; --ink3: #74738A; --edge: rgba(255,255,255,.14); --plus: #5FE08D; --minus: #FFB066; --accent: #FFC857; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: #05060b; }
+  body { margin: 0; color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    background: radial-gradient(1000px 600px at 15% -10%, #1b2140, transparent 60%), #05060b; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 26px 20px 60px; display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .intro { width: 100%; } .intro h1 { margin: 0; font-size: 24px; } .intro p { margin: 6px 0 0; color: var(--ink2); font-size: 14px; line-height: 1.6; }
+  .phone { flex-shrink: 0; width: 375px; height: 790px; min-height: 790px; border-radius: 46px; padding: 12px; background: #111; box-shadow: 0 0 0 2px #2a2a33, 0 30px 80px rgba(0,0,0,.6); }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 36px; overflow: hidden; background: var(--bg) url(bg/stardust_night.jpg) center/cover; user-select: none; }
+  .scroll { position: absolute; inset: 0; overflow-y: auto; padding: 14px 16px 120px; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+  .status { height: 22px; display: flex; justify-content: space-between; font-size: 12px; color: var(--ink2); padding: 0 10px; margin-bottom: 6px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 4px; }
+  .topbar img { height: 34px; } .cloud { color: var(--ink2); font-size: 19px; }
+  .card { position: relative; border-radius: 20px; background: rgba(255,255,255,.075); border: 1px solid var(--edge); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+  .sumG { margin-top: 8px; padding: 16px 0 14px 18px; display: flex; min-height: 168px; }
+  .sumG .left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .lab { font-size: 15.5px; color: var(--ink2); } .bal { font-size: 40px; font-weight: 900; letter-spacing: -1px; color: var(--plus); margin: 2px 0 10px; }
+  .mini { display: flex; gap: 10px; } .mini div { display: flex; flex-direction: column; } .mini span { font-size: 12.5px; color: var(--ink3); } .mini b { font-size: 16px; }
+  .globe { width: 152px; margin: 8px 12px 8px 0; background: url(bg/globe_snap.png) center/contain no-repeat; }
+  .hint { font-size: 12.5px; color: var(--ink2); margin: 16px 4px 4px; }
+  .day { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 6px 8px; } .day b { font-size: 15px; } .day span { font-size: 12.5px; color: var(--ink3); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,.08); } .row:first-child { border-top: 0; }
+  .date { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; text-align: center; line-height: 1; }
+  .date b { font-size: 16px; display: block; } .date small { font-size: 10px; color: var(--ink2); }
+  .row .t { flex: 1; min-width: 0; } .row .t b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .row .t span { font-size: 12px; color: var(--ink3); }
+  .row .m { text-align: right; } .row .m b { font-size: 15.5px; display: block; } .row .m span { font-size: 11.5px; color: var(--ink3); }
+  .plus { color: var(--plus); } .minus { color: var(--minus); }
+  .dplus { background: rgba(95,224,141,.12); } .dplus b { color: var(--plus); } .dminus { background: rgba(255,176,102,.12); } .dminus b { color: var(--minus); }
+  .bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 22px; display: flex; gap: 10px; background: rgba(12,12,19,.55); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid rgba(255,255,255,.08); z-index: 5; }
+  .act { flex: 1; border-radius: 16px; padding: 15px 0; text-align: center; font-weight: 800; font-size: 16px; border: 1px solid; cursor: pointer; }
+  .act.p { color: var(--plus); background: rgba(95,224,141,.13); border-color: rgba(95,224,141,.45); } .act.m { color: var(--minus); background: rgba(255,176,102,.13); border-color: rgba(255,176,102,.45); }
+
+  /* 寵物層 */
+  #pet { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8; }
+  #hit { position: absolute; z-index: 9; width: 64px; height: 72px; cursor: grab; border-radius: 40%; touch-action: none; }
+  #hit:active { cursor: grabbing; }
+  .ladder { position: absolute; z-index: 7; width: 26px; pointer-events: none; transform-origin: bottom center;
+    background: linear-gradient(90deg, #8a5a32 0 4px, transparent 4px 22px, #8a5a32 22px 26px),
+      repeating-linear-gradient(0deg, transparent 0 10px, #b07a45 10px 14px); filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+  .shadow { position: absolute; z-index: 7; height: 8px; border-radius: 50%; background: rgba(0,0,0,.35); filter: blur(2px); pointer-events: none; transform: translate(-50%, -50%); }
+  .bubble { position: absolute; z-index: 10; pointer-events: none; font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); transform: translate(-50%, -100%); white-space: nowrap; }
+
+  aside { width: 400px; max-width: 100%; }
+  aside .box { border-radius: 20px; padding: 20px 22px; background: rgba(255,255,255,.06); border: 1px solid var(--edge); }
+  aside h2 { margin: 0 0 6px; font-size: 19px; } aside h3 { margin: 16px 0 6px; font-size: 14.5px; color: var(--accent); }
+  aside ul { margin: 0; padding-left: 18px; color: var(--ink2); font-size: 14px; line-height: 1.75; }
+  .ctrl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .ctrl button { border: 1px solid var(--edge); background: rgba(255,255,255,.06); color: var(--ink); border-radius: 12px; padding: 9px 12px; font-family: inherit; font-size: 13.5px; cursor: pointer; }
+  .ctrl button:hover { border-color: rgba(255,200,87,.6); }
+  .sz { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--ink2); } .sz input { accent-color: var(--accent); flex: 1; }
+  #state { margin-top: 10px; font-size: 13px; color: var(--ink3); }
+  @media (max-width: 440px) { .page { padding: 16px 8px 40px; } .phone { width: 100%; padding: 8px; border-radius: 38px; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div class="page">
+  <div class="intro">
+    <h1>🐹 記帳吉祥物・桌面寵物設計稿</h1>
+    <p>牠會自己在畫面裡逛：走、跑、跳、坐下、睡覺，<b>拿梯子爬到上面的卡片</b>、從卡片邊緣跳下來。<b>按住牠＝捏起來</b>（會掙扎），拖著走，<b>放開會掉下去</b>（甩出去會飛一段）；摔太大力會頭暈。點一下牠會開心跳。明細可以捲，牠站的卡片捲走了也會跟著掉。</p>
+  </div>
+
+  <div class="phone"><div class="screen" id="screen">
+    <div class="scroll" id="scroll">
+      <div class="status"><span>9:41</span><span>●●● 5G 🔋</span></div>
+      <div class="topbar"><img src="../assets/logo/logo_240.png" alt="我的記帳"><div class="cloud">☁</div></div>
+      <div class="card sumG" data-plat><div class="left"><div class="lab">目前結餘</div><div class="bal">+NT$543</div>
+        <div class="mini"><div><span>豪支出</span><b class="plus">9,337</b></div><div><span>岑支出</span><b class="minus">8,794</b></div><div><span>筆數</span><b>29</b></div></div></div><div class="globe"></div></div>
+      <div class="hint">明細・新的在上面・點一筆看詳細</div>
+      <div class="day"><b>今天・10/20（二）</b><span>28 筆・<b class="plus">+NT$795</b></span></div>
+      <div class="card" id="list"></div>
+      <div class="day"><b>10/9（五）</b><span>1 筆・<b class="minus">−NT$252</b></span></div>
+      <div class="card" data-plat><div class="row"><div class="date dminus"><div><b>9</b><small>10月</small></div></div><div class="t"><b>伏特加 459/2＋可樂 45/2</b><span>岑支出・2026</span></div><div class="m"><b class="minus">−NT$252</b><span>結餘 −NT$252</span></div></div></div>
+    </div>
+    <div class="bottom" id="bottom" data-plat><div class="act p">＋ 豪支出</div><div class="act m">− 岑支出</div></div>
+    <canvas id="pet"></canvas>
+    <div id="hit" title="按住可以捏起來"></div>
+  </div></div>
+
+  <aside><div class="box">
+    <h2>吉祥物（桌面寵物）</h2>
+    <div style="color:var(--ink2);font-size:14px;line-height:1.6">就是那隻 3D 吉伊卡哇，縮小到約 64 像素高，在記帳畫面上到處晃，不擋你按按鈕（只有點到牠本身才有反應）。</div>
+    <h3>自己會做的事</h3><ul>
+      <li>在卡片上緣、按鈕列上面走來走去、偶爾跑一下。</li>
+      <li>想去上面的卡片：拿出梯子爬上去，爬完梯子收起來。</li>
+      <li>走到卡片邊緣跳下去，落地壓扁一下。</li>
+      <li>發呆、東張西望、坐下、睡覺（冒 zZ）。</li>
+    </ul>
+    <h3>你可以對牠做的事</h3><ul>
+      <li><b>按住</b>：捏起來，手腳亂揮掙扎、晃來晃去。</li>
+      <li><b>拖著走再放開</b>：照你甩的方向飛出去、掉下來；摔太大力會頭暈轉星星。</li>
+      <li><b>點一下</b>：開心跳一下。</li>
+      <li>記一筆（按豪支出／岑支出）：牠會跑過去看。</li>
+    </ul>
+    <h3>直接叫牠做（看效果用）</h3>
+    <div class="ctrl"><button data-do="walk">🚶 走路</button><button data-do="run">🏃 跑步</button><button data-do="hop">⤴ 跳</button><button data-do="climb">🪜 爬梯子</button><button data-do="jumpdown">⤵ 跳下去</button><button data-do="sleep">💤 睡覺</button><button data-do="sit">🪑 坐下</button></div>
+    <div class="sz">大小 <input type="range" id="size" min="22" max="48" value="32"><span id="szv"></span></div>
+    <div id="state"></div>
+    <h3>放進 App</h3><ul><li>跟雪球一樣：3D 打包在 App 裡，用一整層透明的網頁疊在記帳畫面上；只有牠本身那一小塊會接手指，其他地方照常點得到。</li><li>設定可以關掉、可以調大小。</li></ul>
+  </div></aside>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+const screen = document.getElementById('screen'), scrollEl = document.getElementById('scroll');
+// 明細
+const items = [['豪點的外送（幾次合併）', 1, 400], ['唱歌', 1, 493], ['酒', 0, 238], ['百家樂', 1, 100], ['豪給我', 1, 1000], ['家樂福 524/2', 0, 262], ['燒烤', 0, 290]];
+const money = v => 'NT$' + Math.abs(v).toLocaleString('en-US');
+document.getElementById('list').innerHTML = items.map(([n, p, a]) => `<div class="row" data-plat><div class="date ${p ? 'dplus' : 'dminus'}"><div><b>20</b><small>10月</small></div></div><div class="t"><b>${n}</b><span>${p ? '豪支出' : '岑支出'}・2026</span></div><div class="m"><b class="${p ? 'plus' : 'minus'}">${p ? '+' : '−'}${money(a)}</b><span>&nbsp;</span></div></div>`).join('');
+
+// ═══════ 3D（正交鏡頭，世界座標＝螢幕像素） ═══════
+const canvas = document.getElementById('pet');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+let W = 1, H = 1;
+const camera = new THREE.OrthographicCamera(0, 1, 0, -1, -500, 500);
+function resize() { W = screen.clientWidth; H = screen.clientHeight; renderer.setSize(W, H, false); camera.right = W; camera.bottom = -H; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(screen); resize();
+
+// ── 模型：照抄 lume/design-history/2026-10-20_吉伊卡哇3D.html（同一隻） ──
+// 光：卡通上色只看主光方向，柔和一點
+scene.add(new THREE.AmbientLight(0xffffff, 1.35));
+const sun = new THREE.DirectionalLight(0xffffff, 1.35); sun.position.set(2.5, 5, 4); sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 }); sun.shadow.radius = 6; scene.add(sun);
+
+// 卡通上色用的三階漸層（白→淡粉灰→粉灰），看起來像手繪上色
+const grad = (() => { const c = new Uint8Array([205, 250, 255]); const t = new THREE.DataTexture(c, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const toon = (color) => new THREE.MeshToonMaterial({ color, gradientMap: grad });
+const black = new THREE.MeshBasicMaterial({ color: 0x241a20 });
+const outlineMat = new THREE.MeshBasicMaterial({ color: 0x241a20, side: THREE.BackSide });
+// 粗黑描邊：同一個形狀放大一點、只畫背面（反轉外殼）
+function withOutline(mesh, k = 1.045) {
+  const o = new THREE.Mesh(mesh.geometry, outlineMat); o.scale.setScalar(k); mesh.add(o); mesh.castShadow = true; return mesh;
+}
+
+// ── 身體：麻糬形（下面寬、頭頂圓） ──
+// 大福形：上下都圓、兩側飽滿（超橢圓轉一圈），底部稍微壓平坐在地上
+const A = 1.12, B = .98, CY0 = .98, NE = 2.5;
+const pts = [];
+for (let i = 0; i <= 64; i++) {
+  const th = -Math.PI / 2 + Math.PI * i / 64, c = Math.cos(th), sn = Math.sin(th);
+  const x = A * Math.pow(Math.abs(c), 2 / NE), y = CY0 + B * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / NE);
+  pts.push(new THREE.Vector2(Math.max(x, .001), Math.max(y, .03)));
+}
+const topY = x => CY0 + B * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(x) / A, NE)), 1 / NE);
+pts[0].x = .001; pts[pts.length - 1].x = .001;
+const bodyGeo = new THREE.LatheGeometry(pts, 96); bodyGeo.computeVertexNormals();
+const R = y => { // 某高度的半徑（給臉上零件貼表面用）
+  const t = y / 1.9; for (let i = 1; i < pts.length; i++) if (pts[i].y >= y) { const a = pts[i - 1], b = pts[i]; return a.x + (b.x - a.x) * ((y - a.y) / (b.y - a.y)); } return .001; };
+const surf = (x, y, out = 0) => { const r = R(y); const z = Math.sqrt(Math.max(r * r - x * x, 0)); return new THREE.Vector3(x, y, z + out); };
+
+const chii = new THREE.Group(); scene.add(chii);
+const body = new THREE.Group(); chii.add(body);
+const bodyMesh = withOutline(new THREE.Mesh(bodyGeo, toon(0xfffdfb)), 1.035); body.add(bodyMesh);
+
+// 耳朵：頭頂兩個小圓
+for (const s of [-1, 1]) {
+  const ear = withOutline(new THREE.Mesh(new THREE.SphereGeometry(.2, 32, 24), toon(0xfffdfb)), 1.09);
+  // 黏在頭頂表面上（往裡埋一點）
+  ear.scale.set(1.05, .9, .85); ear.position.set(s * .5, topY(.5) - .02, .02); ear.rotation.z = s * -.4; body.add(ear);
+}
+
+// ── 臉 ──
+const face = new THREE.Group(); body.add(face);
+const eyes = [];
+for (const s of [-1, 1]) {
+  const p = surf(s * .34, 1.12, -.02);
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(.13, 32, 24), black); eye.scale.set(.86, 1, .45); eye.position.copy(p);
+  eye.lookAt(p.clone().multiplyScalar(2).setY(p.y)); face.add(eye); eyes.push(eye);
+  const hl = new THREE.Mesh(new THREE.SphereGeometry(.045, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  hl.position.set(.035, .045, .11); eye.add(hl);
+  const hl2 = new THREE.Mesh(new THREE.SphereGeometry(.02, 12, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  hl2.position.set(-.04, -.05, .11); eye.add(hl2);
+  // 眉毛：細細的弧線
+  const brow = new THREE.Mesh(new THREE.TorusGeometry(.14, .018, 8, 24, Math.PI * .7), black);
+  const bp = surf(s * .36, 1.36, .005); brow.position.copy(bp); brow.rotation.set(-.25, s * .32, Math.PI * .15 + (s < 0 ? 0 : .02)); face.add(brow);
+  // 臉頰：粉紅橢圓＋三條斜線
+  const cp = surf(s * .66, .92, .03); // 往外推，不然一半陷進身體變月牙
+  const cheek = new THREE.Mesh(new THREE.CircleGeometry(.17, 32), new THREE.MeshBasicMaterial({ color: 0xffa9bd, transparent: true, opacity: .92 }));
+  cheek.scale.set(1.35, .8, 1); cheek.position.copy(cp); cheek.lookAt(cp.clone().multiplyScalar(2).setY(cp.y)); face.add(cheek);
+  for (let k = -1; k <= 1; k++) {
+    const line = new THREE.Mesh(new THREE.CapsuleGeometry(.012, .09, 4, 8), black);
+    line.position.set(k * .085, 0, .003); line.rotation.z = -.5; cheek.add(line);
+  }
+}
+// 嘴：ω（兩個小弧）＋一點點舌頭
+{ const mp = surf(0, .92, .005);
+  const mouth = new THREE.Group(); mouth.position.copy(mp); mouth.scale.setScalar(1.7); face.add(mouth);
+  for (const s of [-1, 1]) { const arc = new THREE.Mesh(new THREE.TorusGeometry(.045, .012, 8, 20, Math.PI), black); arc.rotation.z = Math.PI; arc.position.x = s * .045; mouth.add(arc); }
+  const tongue = new THREE.Mesh(new THREE.SphereGeometry(.03, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff7f98 })); tongue.scale.set(1, .7, .4); tongue.position.set(0, -.055, 0); mouth.add(tongue); }
+
+// 眼淚（哭哭時才出現）
+const tears = [];
+for (const s of [-1, 1]) { const t = new THREE.Mesh(new THREE.SphereGeometry(.06, 16, 12), new THREE.MeshToonMaterial({ color: 0x8fd3ff, gradientMap: grad, transparent: true, opacity: .9 }));
+  t.scale.set(.8, 1.2, .8); t.visible = false; face.add(t); tears.push({ m: t, s }); }
+
+// ── 手腳：小小圓圓 ──
+const armL = new THREE.Group(), armR = new THREE.Group();
+for (const [g, s] of [[armL, -1], [armR, 1]]) {
+  const p = surf(s * .98, .62, -.12); g.position.copy(p); body.add(g);
+  const hand = withOutline(new THREE.Mesh(new THREE.SphereGeometry(.17, 24, 18), toon(0xfffdfb)), 1.1); hand.scale.set(.85, 1, .85); hand.position.set(s * .06, -.04, .02); g.add(hand);
+}
+const legs = [];
+for (const s of [-1, 1]) { const leg = withOutline(new THREE.Mesh(new THREE.SphereGeometry(.2, 24, 18), toon(0xfffdfb)), 1.08); leg.scale.set(1, .55, 1.1); leg.position.set(s * .42, .06, .45); chii.add(leg); legs.push(leg); }
+
+// 頭頂的小星星（開心時轉）
+const sparkles = new THREE.Group(); chii.add(sparkles); sparkles.visible = false;
+for (let i = 0; i < 5; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(.09), new THREE.MeshBasicMaterial({ color: [0xffd36b, 0xff9fbe, 0x8fd3ff][i % 3] }));
+  const a = i / 5 * Math.PI * 2; st.position.set(Math.cos(a) * 1.25, 2.1 + Math.sin(i) * .15, Math.sin(a) * 1.25); sparkles.add(st); }
+
+
+
+const pet = new THREE.Group(); scene.remove(chii); pet.add(chii); scene.add(pet);
+chii.rotation.x = .18; // 稍微從上面看一點
+let S = 32; // 每單位幾像素（牠大約 2 單位高 → 64px）
+
+// ═══════ 物理：平台＝有 data-plat 的元素上緣 ═══════
+const sr = () => screen.getBoundingClientRect();
+function platforms() {
+  const s = sr(), out = [];
+  for (const el of screen.querySelectorAll('[data-plat]')) {
+    const r = el.getBoundingClientRect(), y = r.top - s.top;
+    if (y < 70 || y > H - 20) continue;           // 捲出畫面的不算（被上面狀態列擋住也不算）
+    out.push({ el, x1: r.left - s.left + 10, x2: r.right - s.left - 10, y });
+  }
+  return out;
+}
+const P = { x: 120, y: 200, vx: 0, vy: 0, plat: null, face: 1, mode: 'fall', t: 0, until: 0, target: 0, speed: 0, ladder: null, climbTo: null, next: null };
+const say = (txt, sec = 1.6) => { P.bubble = { txt, until: performance.now() / 1000 + sec }; };
+const bubble = document.createElement('div'); bubble.className = 'bubble'; screen.appendChild(bubble);
+const shadow = document.createElement('div'); shadow.className = 'shadow'; screen.appendChild(shadow);
+const hit = document.getElementById('hit');
+
+function platOf(el) { return platforms().find(p => p.el === el); }
+function setMode(m, extra = {}) { Object.assign(P, { mode: m, t: 0 }, extra); stateEl.textContent = '現在：' + ({ idle: '發呆', walk: '走路', run: '跑步', fall: '掉下來', held: '被捏著（掙扎中）', climb: '爬梯子', dizzy: '頭暈', sleep: '睡覺', sit: '坐著', happy: '開心', look: '東張西望', toLadder: '走去放梯子' }[m] || m); }
+const stateEl = document.getElementById('state');
+
+// 想下一件事
+function think() {
+  const here = platOf(P.plat); if (!here) return setMode('fall', { vx: 0, vy: 0 });
+  const r = Math.random();
+  const above = platforms().filter(p => p.y < here.y - 40 && p.y > here.y - 330 && Math.min(p.x2, here.x2) - Math.max(p.x1, here.x1) > 40);
+  if (r < .16 && above.length) return planClimb(here, above[Math.floor(Math.random() * above.length)]);
+  if (r < .27 && here.el.id !== 'bottom') return planJumpDown(here);
+  if (r < .5) return setMode('walk', { target: here.x1 + Math.random() * (here.x2 - here.x1), speed: 42 });
+  if (r < .6) return setMode('run', { target: here.x1 + Math.random() * (here.x2 - here.x1), speed: 120 });
+  if (r < .72) return setMode('look', { until: 2.2 });
+  if (r < .8) return setMode('sit', { until: 4 });
+  if (r < .86) return setMode('sleep', { until: 6 });
+  if (r < .93) return setMode('happy', { vy: -330 });
+  setMode('idle', { until: 1.5 + Math.random() * 2 });
+}
+function planClimb(here, top) {
+  const lo = Math.max(here.x1, top.x1) + 16, hi = Math.min(here.x2, top.x2) - 16;
+  setMode('toLadder', { target: lo + Math.random() * Math.max(1, hi - lo), speed: 60, climbTo: top.el });
+  say('爬上去看看！');
+}
+function planJumpDown(here) {
+  const edge = Math.random() < .5 ? here.x1 + 4 : here.x2 - 4;
+  setMode('walk', { target: edge, speed: 55, next: 'jumpdown' });
+}
+function jumpOff() { const here = platOf(P.plat); const dir = P.x < (here.x1 + here.x2) / 2 ? -1 : 1; P.face = dir; setMode('fall', { vx: dir * 90, vy: -260, plat: null }); say('嘿咻！', 1); }
+
+// 梯子
+function placeLadder(x, yTop, yBot) {
+  const l = document.createElement('div'); l.className = 'ladder'; screen.appendChild(l);
+  Object.assign(l.style, { left: x - 13 + 'px', top: yTop - 6 + 'px', height: yBot - yTop + 6 + 'px' });
+  l.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], { duration: 350, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+  return l;
+}
+
+// ═══════ 手指：點＝開心；按住＝捏起來；放開＝掉 ═══════
+let press = null;
+hit.addEventListener('pointerdown', e => { hit.setPointerCapture(e.pointerId); press = { x: e.clientX, y: e.clientY, t: performance.now(), held: false, hist: [] }; });
+hit.addEventListener('pointermove', e => {
+  if (!press) return; const s = sr();
+  press.hist.push({ x: e.clientX, y: e.clientY, t: performance.now() }); if (press.hist.length > 6) press.hist.shift();
+  if (!press.held && (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 5 || performance.now() - press.t > 220)) { press.held = true; grab(); }
+  if (press.held) { P.x = e.clientX - s.left; P.y = e.clientY - s.top + 2.0 * S * .9; }
+});
+hit.addEventListener('pointerup', e => {
+  if (!press) return;
+  if (press.held) { const h = press.hist, a = h[0], b = h[h.length - 1]; const dt = a && b ? Math.max(16, b.t - a.t) / 1000 : 1;
+    const vx = a && b ? (b.x - a.x) / dt : 0, vy = a && b ? (b.y - a.y) / dt : 0;
+    setMode('fall', { vx: THREE.MathUtils.clamp(vx, -900, 900), vy: THREE.MathUtils.clamp(vy, -900, 900), plat: null }); say('哇啊——', 1); }
+  else if (P.mode !== 'held') { if (P.plat) setMode('happy', { vy: -340 }); say('♪', .8); }
+  press = null;
+});
+setInterval(() => { if (press && !press.held && performance.now() - press.t > 220) { press.held = true; grab(); } }, 50);
+function grab() { removeLadder(); setMode('held', { plat: null }); say('放開我～！', 1.4); }
+function removeLadder() { if (P.ladder) { const l = P.ladder; l.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250 }).onfinish = () => l.remove(); P.ladder = null; } }
+
+// 記一筆 → 跑過去看
+document.querySelectorAll('.act').forEach(b => b.onclick = () => { if (P.mode === 'held') return; const s = sr(), r = b.getBoundingClientRect(); const bot = platOf(document.getElementById('bottom'));
+  if (P.plat === bot?.el) setMode('run', { target: r.left - s.left + r.width / 2, speed: 140, next: 'happy' }); say('記好了嗎？'); });
+// 直接叫牠做
+document.querySelectorAll('[data-do]').forEach(b => b.onclick = () => {
+  const here = platOf(P.plat); if (!here && b.dataset.do !== 'hop') return;
+  const d = b.dataset.do;
+  if (d === 'walk') setMode('walk', { target: here.x1 + Math.random() * (here.x2 - here.x1), speed: 42 });
+  if (d === 'run') setMode('run', { target: P.x < (here.x1 + here.x2) / 2 ? here.x2 - 6 : here.x1 + 6, speed: 130 });
+  if (d === 'hop') setMode('happy', { vy: -360 });
+  if (d === 'climb') { const above = platforms().filter(p => p.y < here.y - 40 && p.y > here.y - 330 && Math.min(p.x2, here.x2) - Math.max(p.x1, here.x1) > 40); if (above.length) planClimb(here, above[above.length - 1]); else say('上面沒地方爬…'); }
+  if (d === 'jumpdown') { if (here.el.id === 'bottom') say('已經在最下面了'); else planJumpDown(here); }
+  if (d === 'sleep') setMode('sleep', { until: 6 }); if (d === 'sit') setMode('sit', { until: 5 });
+});
+const sz = document.getElementById('size'); sz.oninput = () => { S = +sz.value; document.getElementById('szv').textContent = Math.round(S * 2) + 'px'; hit.style.width = S * 2 + 'px'; hit.style.height = S * 2.3 + 'px'; }; sz.oninput();
+
+// ═══════ 每一幀 ═══════
+const clock = new THREE.Clock(); let nextBlink = 2;
+function frame() {
+  const dt = Math.min(clock.getDelta(), 1 / 30), T = clock.elapsedTime; P.t += dt;
+  const plats = platforms();
+  // 站在平台上：跟著平台（捲動）走；平台捲出畫面就掉
+  if (P.plat) { const p = plats.find(q => q.el === P.plat); if (!p) setMode('fall', { plat: null, vx: 0, vy: 0 }); else { P.y = p.y; P.x = THREE.MathUtils.clamp(P.x, p.x1, p.x2); } }
+
+  // 姿勢先歸零
+  chii.position.set(0, 0, 0); chii.rotation.z = 0; body.rotation.set(0, 0, 0); armL.rotation.set(0, 0, 0); armR.rotation.set(0, 0, 0);
+  legs[0].position.set(-.42, .06, .45); legs[1].position.set(.42, .06, .45); sparkles.visible = false; tears.forEach(t => t.m.visible = false);
+  const br = 1 + Math.sin(T * 2.2) * .02; body.scale.set(1 / Math.sqrt(br), br, 1 / Math.sqrt(br));
+  let turn = 0, eyeOpen = 1;
+
+  const step = (spd) => { const d = P.target - P.x; if (Math.abs(d) < 2) return true; P.face = Math.sign(d); P.x += Math.sign(d) * Math.min(Math.abs(d), spd * dt); turn = P.face * .75;
+    const ph = T * spd * .16; chii.position.y = Math.abs(Math.sin(ph)) * .08; body.rotation.z = Math.sin(ph) * .07;
+    legs[0].position.z = .45 + Math.sin(ph) * .2; legs[1].position.z = .45 - Math.sin(ph) * .2; armL.rotation.x = Math.sin(ph) * .7; armR.rotation.x = -Math.sin(ph) * .7; return false; };
+
+  switch (P.mode) {
+    case 'idle': if (P.t > P.until) think(); break;
+    case 'look': turn = Math.sin(P.t * 2.4) * .8; if (P.t > P.until) think(); break;
+    case 'walk': case 'run': if (step(P.speed)) { if (P.next === 'jumpdown') { P.next = null; jumpOff(); } else if (P.next === 'happy') { P.next = null; setMode('happy', { vy: -300 }); } else setMode('idle', { until: .6 + Math.random() * 1.5 }); } break;
+    case 'toLadder': if (step(P.speed)) { const top = platOf(P.climbTo), here = platOf(P.plat); if (!top || !here) { setMode('idle', { until: 1 }); break; }
+        P.ladder = placeLadder(P.x, top.y, here.y); setMode('climb', { climbTo: P.climbTo }); } break;
+    case 'climb': { const top = platOf(P.climbTo); if (!top) { removeLadder(); setMode('fall', { plat: null, vx: 0, vy: 0 }); break; }
+        if (P.t < .35) break; P.plat = null; P.y -= 52 * dt; turn = Math.PI; // 背對我們爬
+        const ph = T * 9; armL.rotation.x = -2.6 + Math.sin(ph) * .5; armR.rotation.x = -2.6 - Math.sin(ph) * .5; legs[0].position.y = .06 + Math.max(0, Math.sin(ph)) * .25; legs[1].position.y = .06 + Math.max(0, -Math.sin(ph)) * .25;
+        if (P.ladder) P.ladder.style.top = top.y - 6 + 'px';
+        if (P.y <= top.y) { P.y = top.y; P.plat = top.el; removeLadder(); setMode('happy', { vy: -220 }); say('到了！', 1.2); } break; }
+    case 'held': { // 捏著：手腳亂揮、身體晃
+      const ph = T * 16; armL.rotation.z = -1.2 - Math.sin(ph) * .9; armR.rotation.z = 1.2 + Math.sin(ph + 1) * .9;
+      legs[0].position.y = .06 + Math.abs(Math.sin(ph)) * .3; legs[1].position.y = .06 + Math.abs(Math.sin(ph + 1.5)) * .3;
+      body.rotation.z = Math.sin(T * 7) * .25; chii.rotation.z = Math.sin(T * 3) * .15; tears.forEach(({ m, s }) => { m.visible = true; const k = (T * 1.6 + (s > 0 ? .5 : 0)) % 1; m.position.copy(surf(s * .45, 1.0 - k * .4, .03)); m.material.opacity = 1 - k; }); break; }
+    case 'fall': case 'happy': {
+      if (P.mode === 'happy' && P.t < dt * 1.5 && P.plat) { P.plat = null; }
+      const prevY = P.y; P.vy += 1700 * dt; P.x += P.vx * dt; P.y += P.vy * dt;
+      if (P.x < 20) { P.x = 20; P.vx = Math.abs(P.vx) * .5; } if (P.x > W - 20) { P.x = W - 20; P.vx = -Math.abs(P.vx) * .5; }
+      armL.rotation.z = -1.8; armR.rotation.z = 1.8; if (P.mode === 'happy') sparkles.visible = true;
+      if (P.vy > 0) for (const p of plats) if (P.x >= p.x1 - 6 && P.x <= p.x2 + 6 && prevY <= p.y && P.y >= p.y) {
+        const impact = P.vy; P.y = p.y; P.plat = p.el; P.vx = 0; P.vy = 0;
+        if (impact > 1100) { setMode('dizzy', { until: 1.8 }); say('頭好暈…'); } else setMode('idle', { until: .5 + Math.random() * 1.2, landed: .25 });
+        break; }
+      if (P.y > H + 80) { P.x = W / 2; P.y = -40; P.vy = 0; } // 掉出畫面就從上面重來
+      break; }
+    case 'dizzy': sparkles.visible = true; sparkles.rotation.y += dt * 8; body.rotation.z = Math.sin(T * 6) * .15; eyeOpen = .2; if (P.t > P.until) setMode('idle', { until: 1 }); break;
+    case 'sit': legs[0].position.set(-.5, .05, .75); legs[1].position.set(.5, .05, .75); chii.position.y = -.12; if (P.t > P.until) think(); break;
+    case 'sleep': legs[0].position.set(-.5, .05, .7); legs[1].position.set(.5, .05, .7); chii.position.y = -.12; eyeOpen = .08; body.rotation.z = Math.sin(T * 1.2) * .05;
+      if (P.t > P.until) { setMode('idle', { until: 1 }); say('嗯…睡飽了', 1.2); } break;
+  }
+  if (P.landed > 0) { P.landed -= dt; const k = P.landed / .25; body.scale.set(1 + k * .25, 1 - k * .3, 1 + k * .25); }
+  // 眨眼
+  if (eyeOpen === 1 && T > nextBlink) { const k = (T - nextBlink) / .14; eyeOpen = k < 1 ? Math.max(.08, Math.abs(1 - k * 2)) : 1; if (k >= 1) nextBlink = T + 2 + Math.random() * 3; }
+  eyes.forEach(e => e.scale.y = eyeOpen);
+  // 轉向（走路側一點、爬梯子背對）
+  chii.rotation.y = THREE.MathUtils.lerp(chii.rotation.y, turn, Math.min(1, dt * 10));
+
+  pet.scale.setScalar(S); pet.position.set(P.x, -P.y, 0);
+  // 影子、點擊範圍、泡泡
+  const under = P.plat ? P.y : (plats.filter(p => P.x >= p.x1 && P.x <= p.x2 && p.y >= P.y).sort((a, b) => a.y - b.y)[0]?.y ?? null);
+  if (under != null && P.mode !== 'climb') { const hgt = under - P.y, k = Math.max(.3, 1 - hgt / 300); Object.assign(shadow.style, { display: 'block', left: P.x + 'px', top: under + 'px', width: S * 2.2 * k + 'px', opacity: k }); } else shadow.style.display = 'none';
+  Object.assign(hit.style, { left: P.x - S + 'px', top: P.y - S * 2.3 + 'px' });
+  const now = performance.now() / 1000;
+  if (P.bubble && now < P.bubble.until) { bubble.style.display = 'block'; bubble.textContent = P.bubble.txt; bubble.style.left = P.x + 'px'; bubble.style.top = P.y - S * 2.5 + 'px'; }
+  else if (P.mode === 'sleep') { bubble.style.display = 'block'; bubble.textContent = 'z'.repeat(1 + Math.floor(P.t * 1.5) % 3) + 'Z'; bubble.style.left = P.x + S * .8 + 'px'; bubble.style.top = P.y - S * 2.2 + 'px'; }
+  else bubble.style.display = 'none';
+
+  renderer.render(scene, camera); requestAnimationFrame(frame);
+}
+P.x = 90; P.y = 120; setMode('fall', { vx: 40, vy: 0 });
+frame();
+window.petDemo = { P, setMode, think };
+</script>
+</body>
+</html>
