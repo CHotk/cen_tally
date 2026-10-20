@@ -19,6 +19,7 @@ import '../../shared/widgets/app_notice.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/glass_card.dart';
 import '../../shared/widgets/tally_loading.dart';
+import 'globe/tally_globe.dart';
 import '../../shared/widgets/inline_empty_card.dart';
 
 /// 記帳（2026-10-19 使用者要求）：跟朋友算錢，一個帳本一個人，只有 ＋／−。
@@ -299,6 +300,9 @@ class TallyBookPage extends ConsumerStatefulWidget {
 }
 
 class _TallyBookPageState extends ConsumerState<TallyBookPage> {
+  /// 記一筆就 +1，雪球搖一下。
+  final _shakes = ValueNotifier<int>(0);
+
   TallyBook? _book;
   List<TallyItem> _items = const [];
   bool _loaded = false;
@@ -313,6 +317,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
 
   @override
   void dispose() {
+    _shakes.dispose();
     tallyRevision.removeListener(_load);
     super.dispose();
   }
@@ -358,6 +363,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         at: r.at,
       );
     }
+    _shakes.value++;
     _load();
   }
 
@@ -442,47 +448,58 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         ],
       ),
       children: [
+        // 結餘在左、雪球在右（2026-10-20 使用者選的設計）。數字到十萬、百萬
+        // 也塞得下：放不下就整行等比例縮小（FittedBox）。
         GlassCard(
-          padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '目前結餘',
-                style: const TextStyle(fontSize: 15, color: AppColors.ink2),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                tallySigned(bal),
-                style: TextStyle(
-                  fontSize: 42,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1,
-                  color: _statusColor(bal),
-                  fontFeatures: const [FontFeature.tabularFigures()],
+          padding: const EdgeInsets.fromLTRB(20, 18, 8, 14),
+          child: SizedBox(
+            height: 150,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '目前結餘',
+                        style: TextStyle(fontSize: 14, color: AppColors.ink2),
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          tallySigned(bal),
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                            color: _statusColor(bal),
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          children: [
+                            _MiniStat('豪支出', tallyMoney(plusSum), _plusColor),
+                            const SizedBox(width: 12),
+                            _MiniStat('岑支出', tallyMoney(minusSum), _minusColor),
+                            const SizedBox(width: 12),
+                            _MiniStat('筆數', '${_items.length}', AppColors.ink),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  _Stat(
-                    label: '豪支出',
-                    value: tallyMoney(plusSum),
-                    color: _plusColor,
-                  ),
-                  _Stat(
-                    label: '岑支出',
-                    value: tallyMoney(minusSum),
-                    color: _minusColor,
-                  ),
-                  _Stat(
-                    label: '筆數',
-                    value: '${_items.length}',
-                    color: AppColors.ink,
-                  ),
-                ],
-              ),
-            ],
+                SizedBox(width: 156, child: TallyGlobe(shakes: _shakes)),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: Gap.lg),
@@ -616,34 +633,32 @@ class _DayHeader extends StatelessWidget {
   }
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, required this.color});
+/// 結餘卡下面那排小字（豪支出／岑支出／筆數）。
+class _MiniStat extends StatelessWidget {
+  const _MiniStat(this.label, this.value, this.color);
 
   final String label;
   final String value;
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12.5, color: AppColors.ink3),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(fontSize: 11.5, color: AppColors.ink3),
+      ),
+      Text(
+        value,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: color,
+          fontFeatures: const [FontFeature.tabularFigures()],
         ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: color,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-      ],
-    ),
+      ),
+    ],
   );
 }
 
