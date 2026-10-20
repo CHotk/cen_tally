@@ -77,7 +77,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     '馨岑辛苦了～',
     '鑫鑫腸買了沒？',
     '今天有好好吃飯嗎？',
-    '記帳好棒！',
+    '馨岑快記帳！',
     '要早點睡喔',
     '嘿嘿',
   ];
