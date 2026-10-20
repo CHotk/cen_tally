@@ -8706,9 +8706,9 @@ _.y=j
 _.z=k
 _.Q=l
 _.as=m},
-bbg(){var s="tally-globe-2.6-0.9"
+bbg(){var s="tally-globe-2.6-0.75"
 if($.baj.E(0,s)){$.aYJ()
-$.Lq().M5(s,new A.aJe(2.6,0.9),!0)}return A.b2F(null,B.FY,s)},
+$.Lq().M5(s,new A.aJe(2.6,0.75),!0)}return A.b2F(null,B.FY,s)},
 bcH(a){var s=A.kt(new A.aJR(a))
 v.G.window.addEventListener("message",s)
 return new A.aJS(s)},
