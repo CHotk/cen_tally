@@ -25,7 +25,13 @@ class TallyGlobe extends StatefulWidget {
 /// none＝不是網頁（測試）：什麼都不放。
 enum _Phase { none, waiting, loading, ready, flat }
 
-class _TallyGlobeState extends State<TallyGlobe> {
+// 捲走也留著（2026-10-20 使用者回報：往下捲再回到上面，雪球要重新載入）：
+// 明細清單捲出畫面的東西會被拆掉，雪球一拆就要整個 3D 重來，所以要它留著。
+class _TallyGlobeState extends State<TallyGlobe>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   var _phase = globeSupported ? _Phase.waiting : _Phase.none;
   final _flatKey = GlobalKey<_FlatGlobeState>();
   void Function()? _unlisten;
@@ -77,6 +83,7 @@ class _TallyGlobeState extends State<TallyGlobe> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_phase == _Phase.none) return const SizedBox.shrink();
     if (_phase == _Phase.flat) return _FlatGlobe(key: _flatKey);
     return Stack(

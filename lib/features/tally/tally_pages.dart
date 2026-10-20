@@ -450,9 +450,8 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
       children: [
         // 結餘在左、雪球在右，照設計稿 design-history/2026-10-20_雪球放結餘卡.html
         // 的尺寸（2026-10-20 使用者：照設計稿做，包括大小）：卡高 168、雪球寬
-        // 160、往上凸出卡片 34。數字到十萬、百萬也塞得下：放不下就整行等比例
-        // 縮小（FittedBox）。上面先留 26 的空，凸出去的雪球才不會被切掉。
-        const SizedBox(height: 26),
+        // 160，整顆收在卡片裡（使用者：設計稿是在卡片內，不要凸出去）。數字到
+        // 十萬、百萬也塞得下：放不下就整行等比例縮小（FittedBox）。
         Stack(
           clipBehavior: Clip.none,
           children: [
@@ -502,9 +501,9 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               ),
             ),
             Positioned(
-              top: -34,
+              top: 2,
               right: 4,
-              bottom: 0,
+              bottom: 2,
               width: 160,
               child: TallyGlobe(shakes: _shakes),
             ),
