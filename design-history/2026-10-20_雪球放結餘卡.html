@@ -137,7 +137,13 @@
   .sumG .left { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
   .sumG .lab { font-size: 13.5px; color: var(--ink2); }
   .sumG .bal { font-size: 31px; font-weight: 900; letter-spacing: -1px; color: var(--plus); font-variant-numeric: tabular-nums; margin: 2px 0 10px; }
-  .mini { display: flex; gap: 12px; }
+  .mini { display: flex; gap: 10px; white-space: nowrap; }
+  .sumG .bal, .mini { transform-origin: left center; }
+  .numToggle { display: flex; gap: 8px; justify-content: center; margin: 4px 0 10px; }
+  .sliders { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin: 0 0 18px; font-size: 13.5px; color: var(--ink2); }
+  .sliders label { display: flex; align-items: center; gap: 8px; }
+  .sliders input { accent-color: var(--accent); width: 160px; }
+  .sliders span { min-width: 54px; color: var(--ink); font-variant-numeric: tabular-nums; }
   .mini div { display: flex; flex-direction: column; }
   .mini span { font-size: 11px; color: var(--ink3); }
   .mini b { font-size: 13.5px; font-variant-numeric: tabular-nums; }
@@ -181,10 +187,12 @@
   <p>雪球塞在結餘卡右邊（豪支出／岑支出／筆數收緊成一排小字讓出位置）。沒有按鈕：<b>手指拖著轉、點一下搖一搖</b>；按「＋ 豪支出／− 岑支出」也會搖一下。右邊是<b>沒網路</b>時的樣子。</p>
 </header>
 <main>
-  <div id="screens"></div>
+  <div style="width:100%"><div class="numToggle"><button class="tab on" data-num="0">數字：一般</button><button class="tab" data-num="1">數字：十萬</button><button class="tab" data-num="2">數字：百萬</button></div>
+    <div class="sliders"><label>雪球大小 <input type="range" id="slotW" min="120" max="200" value="160"><span id="slotWv"></span></label>
+      <label>動物大小 <input type="range" id="petK" min="1" max="4" step=".1" value="2.6"><span id="petKv"></span></label></div><div id="screens"></div></div>
   <aside><div class="card" style="padding:20px 22px">
     <h2 style="margin:0 0 6px;font-size:19px">說明</h2>
-    <h3>球小了，動物放大</h3><ul><li>小熊、兔子、企鵝、狐狸都放大約 2.2 倍，鏡頭拉近，球只露上半身＋底座一點點，裡面看得清楚。</li></ul>
+    <h3>球小了，動物放大</h3><ul><li>小熊、兔子、企鵝、狐狸都放大約 2.6 倍，鏡頭拉近，球只露上半身＋底座一點點，裡面看得清楚。</li></ul>
     <h3>操作</h3><ul><li>拖著左右轉（會自己慢慢轉）。</li><li>點一下：整顆晃一下、雪花捲起來、小動物跳起來。</li><li>記一筆（豪支出／岑支出）也會搖一下，當作「記好了」的回饋。</li></ul>
     <h3>沒網路的時候</h3><ul>
       <li><b>其實大多時候沒網路也看得到 3D</b>：放進 App 時，3D 引擎跟狐狸模型會打包進 App 裡（不從網路下載），開過一次就有快取，離線照樣是左邊那顆 3D。</li>
@@ -384,10 +392,10 @@ function makeGlobe(canvas, opts = {}) {
   ];
   // 小區域放雪球時動物放大（2026-10-20 使用者：球小了動物要大一點才看得清楚）。
   animals.forEach(a => { a.o.scale.setScalar(o.petScale); globe.add(a.o); });
-  let fox = null;
+  let fox = null, foxModel = null;
   loadFox().then(gltf => {
     if (!gltf) return;
-    const m = SkeletonUtils.clone(gltf.scene); m.scale.setScalar(.0017 * o.petScale);
+    const m = SkeletonUtils.clone(gltf.scene); m.scale.setScalar(.0017 * o.petScale); foxModel = m;
     m.traverse(x => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = true; } });
     const holder = new THREE.Group(); holder.add(m); globe.add(holder);
     const mixer = new THREE.AnimationMixer(m), clip = n => mixer.clipAction(gltf.animations.find(a => a.name === n));
@@ -475,6 +483,9 @@ function makeGlobe(canvas, opts = {}) {
     shake,
     setActive(v) { if (v === active) return; active = v; if (v) { clock.getDelta(); requestAnimationFrame(frame); } },
     resize,
+    // 設計稿拉桿用：動物大小、鏡頭遠近（雪球在格子裡的大小）即時調。
+    setPetScale(k) { o.petScale = k; animals.forEach(a => a.o.scale.setScalar(k)); foxModel?.scale.setScalar(.0017 * k); },
+    setFit(k) { o.fit = k; resize(); },
     dispose() { active = false; renderer.dispose(); renderer.forceContextLoss(); },
   };
 }
@@ -533,7 +544,7 @@ screens.innerHTML = `
   <figure><div class="phone"><div class="screen"><div class="amb"></div><div class="scroll">${top.replace('☁', '<span style="color:#FF938B">☁̸</span>')}${card(flat)}${listHtml()}</div>${bottom('B')}</div></div>
     <figcaption><b>沒網路：2D 備用雪球</b>3D 載不到時自動換成這個，點一下一樣會搖</figcaption></figure>`;
 
-const g = makeGlobe(document.getElementById('g'), { fit: .9, orbit: true, flakes: 700, petScale: 2.2, autoRotate: .9, lift: 2.0, clearGlass: true });
+const g = makeGlobe(document.getElementById('g'), { fit: .9, orbit: true, flakes: 700, petScale: 2.6, autoRotate: .9, lift: 2.0, clearGlass: true });
 // 點一下＝搖一搖；拖動＝轉（有拖就不算點）
 function tapToShake(el, fn) {
   let x0 = 0, y0 = 0, t0 = 0;
@@ -554,7 +565,42 @@ document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
   if (id === 'A') g.shake(); else flatShake();
   toast(id, b.classList.contains('p') ? '已記一筆豪支出（示意）' : '已記一筆岑支出（示意）');
 });
-window.globeDemo = { g, flatShake };
+// 數字很大時：結餘、小字那排自動縮小塞得下（App 裡用 FittedBox 一樣做法）
+const nums = [
+  { bal: '+NT$543', a: '9,337', b: '8,794', n: '29' },
+  { bal: '−NT$128,450', a: '356,920', b: '485,370', n: '1,204' },
+  { bal: '+NT$2,684,300', a: '4,812,650', b: '2,128,350', n: '12,480' },
+];
+function fit(el) { el.style.transform = ''; const box = el.parentElement.clientWidth; const w = el.scrollWidth; el.style.transform = w > box ? 'scale(' + (box / w) + ')' : ''; }
+function setNum(i) {
+  document.querySelectorAll('[data-num]').forEach(b => b.classList.toggle('on', +b.dataset.num === i));
+  const v = nums[i];
+  document.querySelectorAll('.sumG').forEach(c => {
+    const bal = c.querySelector('.bal'); bal.textContent = v.bal; bal.style.color = v.bal.startsWith('−') ? 'var(--minus)' : 'var(--plus)';
+    const bs = c.querySelectorAll('.mini b'); bs[0].textContent = v.a; bs[1].textContent = v.b; bs[2].textContent = v.n;
+    bal.style.display = 'inline-block'; c.querySelector('.mini').style.width = 'max-content';
+    fit(bal); fit(c.querySelector('.mini'));
+  });
+}
+document.querySelectorAll('[data-num]').forEach(b => b.onclick = () => setNum(+b.dataset.num));
+setNum(0);
+
+// 拉桿：雪球大小（格子寬度＋鏡頭遠近）、動物大小，拉的時候兩支手機一起變
+const slotW = document.getElementById('slotW'), petK = document.getElementById('petK');
+function applySliders() {
+  const w = +slotW.value, k = +petK.value;
+  document.querySelectorAll('.globeSlot').forEach(s => s.style.width = w + 'px');
+  document.querySelectorAll('.flatGlobe .ball').forEach(b => { b.style.width = b.style.height = Math.round(w * .77) + 'px'; });
+  document.querySelectorAll('.flatGlobe .base').forEach(b => b.style.width = Math.round(w * .8) + 'px');
+  document.querySelectorAll('.flatGlobe .pet').forEach(p => p.style.width = Math.round(44 * k / 2.6) + 'px');
+  g.setPetScale(k); g.resize();
+  document.getElementById('slotWv').textContent = w + 'px';
+  document.getElementById('petKv').textContent = k.toFixed(1) + ' 倍';
+  setNum(+document.querySelector('[data-num].on').dataset.num);
+}
+slotW.oninput = petK.oninput = applySliders;
+applySliders();
+window.globeDemo = { g, flatShake, setNum };
 </script>
 </body>
 </html>
