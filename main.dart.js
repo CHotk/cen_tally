@@ -48811,14 +48811,15 @@ r.colorScheme="normal"
 return $.aVU=s},
 $S:190}
 A.aJo.prototype={
-$0(){var s,r=v.G,q=""+this.b,p=r.document.querySelector('flt-platform-view[slot="flt-pv-slot-'+q+'"]')
-q=r.document.querySelector('slot[name="flt-pv-slot-'+q+'"]')
-s=q==null?null:q.parentElement
-r=p==null
-if(!r)p.style.pointerEvents="none"
-q=s==null
-if(!q)s.style.pointerEvents="none"
-if((r||q)&&++this.a.a<50)A.ou(B.br,this,t.H)},
+$0(){var s,r,q,p=v.G,o=""+this.b,n=p.document.querySelector('flt-platform-view[slot="flt-pv-slot-'+o+'"]'),m=n==null
+if(!m)n.style.pointerEvents="none"
+s=p.document.querySelector("flt-glass-pane")
+r=s==null?null:s.shadowRoot
+s=r==null
+if(!s&&r.querySelector("#pet-pass")==null){q=p.document.createElement("style")
+q.id="pet-pass"
+q.textContent='flt-platform-view-slot:has(> slot[name="flt-pv-slot-'+o+'"]){pointer-events:none !important}'
+r.appendChild(q)}if((m||s)&&++this.a.a<50)A.ou(B.br,this,t.H)},
 $S:0}
 A.aKu.prototype={
 $1(a){var s,r=A.a9H(a.data),q=t.f
