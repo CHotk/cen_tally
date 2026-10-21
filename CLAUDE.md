@@ -53,3 +53,11 @@
 - 放 `design-history/`，**每個新設計一個新檔案**（不要塞進既有的設計稿檔裡），
   做完不要幫使用者打開、不要發佈，告訴他路徑就好。
 - 設計問題先出設計稿給使用者挑，挑完才做進 App。
+
+## 雪球（web/globe/index.html）
+
+App 裡的雪球程式是從設計稿 `design-history/2026-10-21_雪球底座與動物.html` 搬過來的（同一套）：
+改雪球要**先改設計稿**，再跑 `node tools/port_globe.cjs` 重新產生 `web/globe/index.html`，不要直接改
+產生出來的檔。模型在 `web/globe/models/`（Kenney 的放 `h/`、`p/`，旁邊要有 `Textures/colormap.png`）；
+設計稿用的是同一批模型打包成的 `design-history/assets/globe_models.js`（file:// 開也能載），加模型兩邊都要放。
+單獨測雪球：`go: "globe/index.html?scene=train"`，`window.__globe.stats()` 讀效果／粒子數。

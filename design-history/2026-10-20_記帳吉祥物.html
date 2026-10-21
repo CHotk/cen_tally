@@ -362,7 +362,7 @@ const sz = document.getElementById('size'); sz.oninput = () => { S = +sz.value; 
 // ═══════ 進場（2026-10-20 使用者：剛打開不要直接在畫面上，要從某處出來；先出幾種給他選，要有開門） ═══════
 const ENTRANCES = { random: '🎲 隨機（預設，每次開都不一樣）', drop: '✨ 淡入掉下來（原本的）', door: '🚪 開門走出來', chute: '🪂 撐降落傘飄下來', globe: '❄ 從雪球裡跳出來', run: '🏃 從旁邊跑進來', poof: '💨 魔法煙霧變出來' };
 let entrance = 'random', pScale = 1, hidden = true, popT = -1;
-const GREET = ['馨岑今天過得怎麼樣？', '馨岑～我來了！', '今天也要好好記帳喔'];
+const GREET = ['馨岑妳好啊♡']; // 2026-10-21 使用者：出場固定說這句
 const greet = () => say(GREET[Math.floor(Math.random() * GREET.length)], 2.6);
 const later = (ms, fn) => setTimeout(fn, ms);
 document.getElementById('ents').innerHTML = Object.entries(ENTRANCES).map(([k, v]) => `<button data-ent="${k}">${v}</button>`).join('');

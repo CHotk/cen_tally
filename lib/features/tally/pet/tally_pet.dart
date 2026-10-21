@@ -113,8 +113,8 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   void Function()? _unready;
 
   // ── 進場（2026-10-20 使用者：六種隨機，設計稿同一套） ──
-  static const _greets = ['馨岑今天過得怎麼樣？', '馨岑～我來了！', '今天也要好好記帳喔'];
-  void _greet() => _say(_greets[_rng.nextInt(_greets.length)], 2.6);
+  // 出場固定說這句（2026-10-21 使用者要求，愛心是粉紅色）。
+  void _greet() => _say('馨岑妳好啊♡', 2.8);
 
   /// 照 [clock] 排的待辦（不用 Timer：關頁面就跟著 ticker 一起停）。
   final _todo = <(double, void Function())>[];
@@ -603,10 +603,27 @@ class _TallyPetLayerState extends State<TallyPetLayer>
           top: y - _s * 2.9,
           width: 120,
           child: IgnorePointer(
-            child: Text(
-              mode == 'sleep' && !(bubble != null && clock < bubbleUntil)
-                  ? '${'z' * (1 + (t * 1.5).floor() % 3)}Z'
-                  : (bubble != null && clock < bubbleUntil ? bubble! : ''),
+            // 「♡」用粉紅色（打招呼那句）
+            child: Text.rich(
+              () {
+                final s =
+                    mode == 'sleep' && !(bubble != null && clock < bubbleUntil)
+                    ? '${'z' * (1 + (t * 1.5).floor() % 3)}Z'
+                    : (bubble != null && clock < bubbleUntil ? bubble! : '');
+                final parts = s.split('♡');
+                return TextSpan(
+                  children: [
+                    for (var i = 0; i < parts.length; i++) ...[
+                      if (i > 0)
+                        const TextSpan(
+                          text: '♡',
+                          style: TextStyle(color: Color(0xFFFF6FA5)),
+                        ),
+                      TextSpan(text: parts[i]),
+                    ],
+                  ],
+                );
+              }(),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 12.5,
