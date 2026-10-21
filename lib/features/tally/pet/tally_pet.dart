@@ -603,34 +603,14 @@ class _TallyPetLayerState extends State<TallyPetLayer>
           top: y - _s * 2.9,
           width: 120,
           child: IgnorePointer(
-            // 「♡」用粉紅色（打招呼那句）
-            child: Text.rich(
-              () {
-                final s =
-                    mode == 'sleep' && !(bubble != null && clock < bubbleUntil)
-                    ? '${'z' * (1 + (t * 1.5).floor() % 3)}Z'
-                    : (bubble != null && clock < bubbleUntil ? bubble! : '');
-                final parts = s.split('♡');
-                return TextSpan(
-                  children: [
-                    for (var i = 0; i < parts.length; i++) ...[
-                      if (i > 0)
-                        const TextSpan(
-                          text: '♡',
-                          style: TextStyle(color: Color(0xFFFF6FA5)),
-                        ),
-                      TextSpan(text: parts[i]),
-                    ],
-                  ],
-                );
-              }(),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                shadows: [Shadow(blurRadius: 3, color: Colors.black54)],
-              ),
+            child: Stack(
+              children: [
+                // 先把所有台詞的字排版一次（不畫出來）：網頁版的中文字型是用到哪些字才去
+                // 下載，某句第一次說時有幾個字還沒下載就會先空白（2026-10-21 使用者回報），
+                // 開頁時先排一次，字就提前下載好了。
+                const Offstage(child: Text(_allSaid, style: _bubbleStyle)),
+                _bubbleText(),
+              ],
             ),
           ),
         ),
@@ -815,6 +795,43 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       width: 120,
       height: 100,
       child: IgnorePointer(child: CustomPaint(painter: _PuffPainter(k))),
+    );
+  }
+
+  static const _bubbleStyle = TextStyle(
+    fontSize: 12.5,
+    fontWeight: FontWeight.w800,
+    color: Colors.white,
+    shadows: [Shadow(blurRadius: 3, color: Colors.black54)],
+  );
+
+  /// 牠會說的每一句（字型預先下載用）：台詞＋各動作的話。新增 _say 的話要加進來。
+  static const _allSaid =
+      '馨岑妳好啊♡馨岑今天過得怎麼樣？馨岑辛苦了～鑫鑫腸買了沒？今天有好好吃飯嗎？'
+      '馨岑快記帳！要早點睡喔嘿嘿♪到了！哇啊——嗯…睡飽了嘿咻！放開我～！'
+      '爬上去看看！登登！記好了！頭好暈…zZ';
+
+  /// 對話泡泡：「♡」用粉紅色（打招呼那句）。
+  Widget _bubbleText() {
+    final s = mode == 'sleep' && !(bubble != null && clock < bubbleUntil)
+        ? '${'z' * (1 + (t * 1.5).floor() % 3)}Z'
+        : (bubble != null && clock < bubbleUntil ? bubble! : '');
+    final parts = s.split('♡');
+    return Text.rich(
+      TextSpan(
+        children: [
+          for (var i = 0; i < parts.length; i++) ...[
+            if (i > 0)
+              const TextSpan(
+                text: '♡',
+                style: TextStyle(color: Color(0xFFFF6FA5)),
+              ),
+            TextSpan(text: parts[i]),
+          ],
+        ],
+      ),
+      textAlign: TextAlign.center,
+      style: _bubbleStyle,
     );
   }
 
