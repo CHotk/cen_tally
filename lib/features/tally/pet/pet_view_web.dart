@@ -37,21 +37,26 @@ Widget buildPetView() {
 
 /// 這個窗格蓋滿整個畫面，只把 iframe 設成不接手指不夠：Flutter 包在外面的
 /// flt-platform-view／slot 也會接，底下雪球的 iframe 就點不到、轉不動（2026-10-20
-/// 使用者回報）。掛上畫面後把外面這兩層也設成不接手指。
+/// 使用者回報）。slot 在 Flutter 畫面層（flt-glass-pane 的 shadow root）裡，而且
+/// Flutter 每次重畫都會把它的 pointer-events 寫回 auto（2026-10-21 查到：直接改
+/// style 沒用），所以在那個 shadow root 裡加一條 !important 的規則壓過去。
 void _passThrough(int id) {
   var tries = 0;
   void fix() {
     final host =
         web.document.querySelector('flt-platform-view[slot="flt-pv-slot-$id"]')
             as web.HTMLElement?;
-    final slot =
-        web.document
-                .querySelector('slot[name="flt-pv-slot-$id"]')
-                ?.parentElement
-            as web.HTMLElement?;
     host?.style.pointerEvents = 'none';
-    slot?.style.pointerEvents = 'none';
-    if ((host == null || slot == null) && ++tries < 50) {
+    final root = web.document.querySelector('flt-glass-pane')?.shadowRoot;
+    if (root != null && root.querySelector('#pet-pass') == null) {
+      final css = web.document.createElement('style') as web.HTMLStyleElement
+        ..id = 'pet-pass'
+        ..textContent =
+            'flt-platform-view-slot:has(> slot[name="flt-pv-slot-$id"])'
+            '{pointer-events:none !important}';
+      root.appendChild(css);
+    }
+    if ((host == null || root == null) && ++tries < 50) {
       Future.delayed(const Duration(milliseconds: 100), fix);
     }
   }
