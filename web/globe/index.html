@@ -14,7 +14,10 @@
     送 {globe:'error', message}   開不起來（不支援 3D 等）→ Flutter 換成 2D 備用雪球
   網址參數：?pet=動物大小倍數&fit=鏡頭遠近
   狐狸模型：Khronos glTF Sample Assets「Fox」（模型 PixelMannen CC0、動畫 tomkranis CC-BY 4.0、
-  轉檔 @AsoboStudio @scurest CC-BY 4.0）。Three.js：MIT（vendor/LICENSE-three.txt）。
+  轉檔 @AsoboStudio @scurest CC-BY 4.0）。海鷗：three.js 範例的 Stork（ro.me／mirada）改顏色。
+  Three.js：MIT（vendor/LICENSE-three.txt）。
+  2026-10-21（設計稿 design-history/2026-10-21_雪球底座與動物.html）：底座換「黑曜石切面」、雪花 160%、
+  多一隻銀狐、一隻海鷗。
 -->
 <style>
   html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
@@ -41,6 +44,8 @@ const post = (m) => { try { parent.postMessage(m, '*'); } catch (_) {} };
 const FOX_URL = './Fox.glb'; // 打包在 App 裡，離線也有
 let foxPromise = null;
 const loadFox = () => foxPromise ??= new GLTFLoader().loadAsync(FOX_URL).catch(() => null);
+let storkPromise = null;
+const loadStork = () => storkPromise ??= new GLTFLoader().loadAsync('./Stork.glb').catch(() => null);
 
 function flakeTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -65,7 +70,7 @@ function softEnv(renderer) {
   sr.addColorStop(0, '#fff'); sr.addColorStop(.35, 'rgba(255,255,255,.55)'); sr.addColorStop(1, 'rgba(255,255,255,0)');
   sg.fillStyle = sr; sg.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(soft);
-  for (const [w, h, c, x, y, z] of [[7, 4.5, new THREE.Color(.95, .82, .66), 5, 6, 5], [5, 7, new THREE.Color(.35, .45, .7), -7, 2, -4]]) {
+  for (const [w, h, c, x, y, z] of [[7, 4.5, new THREE.Color(.95, .82, .66), 5, 6, 5], [5, 7, new THREE.Color(.35, .45, .7), -7, 2, -4], [12, 1.2, new THREE.Color(1, 1, 1), 0, 1.5, 8], [2, 9, new THREE.Color(.8, .85, 1), -6, 0, 6]]) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, map: tex, transparent: true, side: THREE.DoubleSide }));
     m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m);
   }
@@ -96,7 +101,9 @@ function makeGlobe(canvas, opts = {}) {
   const key = new THREE.DirectionalLight(0xffd9b0, 1.4); key.position.set(3.5, 6.5, 4); key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024); Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 }); key.shadow.bias = -.0005;
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x8fb4ff, .9); rim.position.set(-4, 3, -4); scene.add(rim);
+  const rim = new THREE.DirectionalLight(0x8fb4ff, 1.1); rim.position.set(-4, 3, -4); scene.add(rim);
+  // 黑底座要有一道從前下方打的冷光勾邊，不然在深色卡片上黑成一團
+  const under = new THREE.DirectionalLight(0xc8d4ff, .5); under.position.set(0, -.5, 5); scene.add(under);
 
   const globe = new THREE.Group(); scene.add(globe);
   const R = 1.45, BASE_H = o.base ? .62 : .0, CY = BASE_H + R * .72, GY = CY - R * .55;
@@ -111,13 +118,14 @@ function makeGlobe(canvas, opts = {}) {
   const groundY = (x, z) => GY + hAt(x, z);
   const place = (obj, x, z, ry = 0) => { obj.position.set(x, groundY(x, z), z); obj.rotation.y = ry; globe.add(obj); return obj; };
 
-  if (o.base) {
-    const pts = [[0, 0], [1.62, 0], [1.66, .04], [1.66, .12], [1.6, .16], [1.52, .2], [1.5, .46], [1.42, .52], [1.36, .58], [1.3, BASE_H], [0, BASE_H]].map(([x, y]) => new THREE.Vector2(x, y));
-    const base = mesh(new THREE.LatheGeometry(pts, 96), new THREE.MeshPhysicalMaterial({ color: 0x5a3220, roughness: .38, clearcoat: .8, clearcoatRoughness: .25 }));
-    globe.add(base);
-    const gold = new THREE.MeshStandardMaterial({ color: 0xd9a74e, metalness: 1, roughness: .22 });
-    for (const [y, r, t] of [[.17, 1.56, .028], [.5, 1.47, .025]]) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, t, 12, 120), gold); ring.rotation.x = Math.PI / 2; ring.position.y = y; globe.add(ring);
+  if (o.base) { // 黑曜石切面（2026-10-21 使用者選的）：八角形、黑色寶石感、兩圈銀色八角邊
+    const pts = [[0, 0], [1.5, 0], [1.6, .1], [1.6, .36], [1.46, .5], [1.3, BASE_H], [0, BASE_H]].map(([x, y]) => new THREE.Vector2(x, y));
+    const base = mesh(new THREE.LatheGeometry(pts, 8), new THREE.MeshPhysicalMaterial({ color: 0x08080d, roughness: .06, metalness: .35, clearcoat: 1, clearcoatRoughness: .02,
+      iridescence: .35, iridescenceIOR: 1.6, envMapIntensity: 2.2, flatShading: true }));
+    base.rotation.y = Math.PI / 8; globe.add(base);
+    const silver = new THREE.MeshStandardMaterial({ color: 0xd8dce6, metalness: 1, roughness: .12 });
+    for (const y of [.1, .36]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, .012, 12, 8), silver); ring.rotation.x = Math.PI / 2; ring.rotation.z = Math.PI / 8; ring.position.y = y; globe.add(ring);
     }
   }
   // 放在卡片上（背景透明）時不能用「透光折射」玻璃：它會把透明背景算成一片白霧。
@@ -220,14 +228,36 @@ function makeGlobe(canvas, opts = {}) {
   ];
   // 小區域放雪球時動物放大（2026-10-20 使用者：球小了動物要大一點才看得清楚）。
   animals.forEach(a => { a.o.scale.setScalar(o.petScale); globe.add(a.o); });
-  let fox = null, foxModel = null;
+  // 狐狸兩隻：原本那隻＋銀狐（2026-10-21 使用者：多一隻跟原本顏色不一樣的）。銀狐是同一個模型，
+  // 貼圖轉灰階再偏冷，胸口、尾巴尖本來就淺，轉完是銀灰色白胸口；反方向、跑內圈。
+  const foxes = [], foxModels = [];
+  const silverize = m => m.traverse(x => { if (!x.isMesh) return; x.material = x.material.clone();
+    x.material.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float l = dot(diffuseColor.rgb, vec3(.3, .59, .11)); diffuseColor.rgb = vec3(.1 + l * 1.15) * vec3(.88, .93, 1.05); }'); }; });
   loadFox().then(gltf => {
     if (!gltf) return;
-    const m = SkeletonUtils.clone(gltf.scene); m.scale.setScalar(.0017 * o.petScale); foxModel = m;
-    m.traverse(x => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = true; } });
-    const holder = new THREE.Group(); holder.add(m); globe.add(holder);
-    const mixer = new THREE.AnimationMixer(m), clip = n => mixer.clipAction(gltf.animations.find(a => a.name === n));
-    fox = { holder, mixer, run: clip('Run'), look: clip('Survey'), th: 2.6, mode: 'run', until: 7 }; fox.run.play();
+    for (const [r, th, dir, sc, silver] of [[.93, 2.6, 1, 1, false], [.74, .6, -1, .95, true]]) {
+      const m = SkeletonUtils.clone(gltf.scene); if (silver) silverize(m);
+      m.scale.setScalar(.0017 * sc * o.petScale); m.userData.sc = sc; foxModels.push(m);
+      m.traverse(x => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = true; } });
+      const holder = new THREE.Group(); holder.add(m); globe.add(holder);
+      const mixer = new THREE.AnimationMixer(m), clip = n => mixer.clipAction(gltf.animations.find(a => a.name === n));
+      const f = { holder, mixer, run: clip('Run'), look: clip('Survey'), th, r, dir, mode: 'run', until: silver ? 4 : 7 }; f.run.play(); foxes.push(f);
+    }
+  });
+  // 海鷗（使用者要的）：找不到可用的海鷗模型，拿鸛的模型改顏色——白身體、灰翅膀、黃嘴黃腳，在球裡繞圈飛
+  let gull = null;
+  loadStork().then(gltf => {
+    if (!gltf) return;
+    const m = SkeletonUtils.clone(gltf.scene), col = new THREE.Color();
+    m.traverse(x => { if (!x.isMesh || !x.geometry.attributes.color) return; x.castShadow = true; x.geometry = x.geometry.clone(); const c = x.geometry.attributes.color;
+      for (let i = 0; i < c.count; i++) { col.fromBufferAttribute(c, i); const l = col.r * .3 + col.g * .59 + col.b * .11;
+        if (col.r > col.g * 1.4 && col.r > .25) col.set(0xf2c14e); else if (l < .3) col.set(0x8792a2); else col.set(0xf7f8fa); c.setXYZ(i, col.r, col.g, col.b); }
+      c.needsUpdate = true; });
+    const size = new THREE.Vector3(); new THREE.Box3().setFromObject(m).getSize(size); m.scale.setScalar(.3 / size.x);
+    const inner = new THREE.Group(); inner.add(m); inner.scale.setScalar(o.petScale);
+    const holder = new THREE.Group(); holder.add(inner); globe.add(holder);
+    const mixer = new THREE.AnimationMixer(m); mixer.clipAction(gltf.animations[0]).play();
+    gull = { holder, inner, mixer, th: 1.2 };
   });
 
   // 雪花
@@ -237,7 +267,8 @@ function makeGlobe(canvas, opts = {}) {
     if (x * x + (y - CY) ** 2 + z * z < (R * .92) ** 2 && y > groundY(x, z) + .02) { fP.set([x, y, z], i * 3); fV.set([0, -.03, 0], i * 3); fR[i] = 0; return; } } };
   for (let i = 0; i < N; i++) spawn(i, true);
   const fG = new THREE.BufferGeometry(); fG.setAttribute('position', new THREE.BufferAttribute(fP, 3));
-  const fl = new THREE.Points(fG, new THREE.PointsMaterial({ size: .034, map: flakeTex, transparent: true, depthWrite: false, color: 0xdfe6f2 }));
+  // 雪花 1.6 倍大（2026-10-21 使用者：原本的雪不明顯）
+  const fl = new THREE.Points(fG, new THREE.PointsMaterial({ size: .034 * 1.6, map: flakeTex, transparent: true, depthWrite: false, color: 0xeef2fa }));
   fl.renderOrder = 3; globe.add(fl);
 
   let swirl = 0, wobble = 0, hopUntil = 0;
@@ -276,12 +307,17 @@ function makeGlobe(canvas, opts = {}) {
       else if (a.kind === 'hop') { const p = (t * 1.9 + a.ph) % 1, up = Math.sin(p * Math.PI); b.position.y = up * .11; const sq = p < .12 || p > .9 ? .82 : 1 + up * .08; b.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq)); }
       else { b.rotation.z = Math.sin(t * 7) * .16; b.position.y = Math.abs(Math.sin(t * 7)) * .01; }
     }
-    if (fox) {
+    for (const fox of foxes) {
       fox.mixer.update(dt);
       if (t > fox.until) { const nx = fox.mode === 'run' ? 'look' : 'run'; fox[nx].reset().play(); fox[fox.mode].crossFadeTo(fox[nx], .35, false); fox.mode = nx; fox.until = t + (nx === 'run' ? 7 : 3); }
-      if (fox.mode === 'run') fox.th += dt * .5;
-      const x = Math.cos(fox.th) * .93, z = Math.sin(fox.th) * .93;
-      fox.holder.position.set(x, groundY(x, z), z); fox.holder.rotation.y = Math.atan2(-Math.sin(fox.th), Math.cos(fox.th));
+      if (fox.mode === 'run') fox.th += dt * .5 * fox.dir;
+      const x = Math.cos(fox.th) * fox.r, z = Math.sin(fox.th) * fox.r;
+      fox.holder.position.set(x, groundY(x, z) + (excited ? Math.abs(Math.sin(t * 12 + fox.r * 9)) * .08 : 0), z);
+      fox.holder.rotation.y = Math.atan2(-Math.sin(fox.th) * fox.dir, Math.cos(fox.th) * fox.dir);
+    }
+    if (gull) {
+      gull.mixer.update(dt); gull.th += dt * .5 * (excited ? 2.2 : 1); const x = Math.cos(gull.th) * .7, z = Math.sin(gull.th) * .7;
+      gull.holder.position.set(x, CY + .55 + Math.sin(t * 1.3) * .1 + (excited ? .18 : 0), z); gull.holder.rotation.set(0, Math.atan2(-Math.sin(gull.th), Math.cos(gull.th)), -.28);
     }
     for (const k of twinkles) k.m.emissiveIntensity = k.base * (.55 + .45 * Math.sin(t * k.sp + k.ph));
     swirl *= Math.pow(.35, dt);
@@ -312,7 +348,7 @@ function makeGlobe(canvas, opts = {}) {
     setActive(v) { if (v === active) return; active = v; if (v) { clock.getDelta(); requestAnimationFrame(frame); } },
     resize,
     // 設計稿拉桿用：動物大小、鏡頭遠近（雪球在格子裡的大小）即時調。
-    setPetScale(k) { o.petScale = k; animals.forEach(a => a.o.scale.setScalar(k)); foxModel?.scale.setScalar(.0017 * k); },
+    setPetScale(k) { o.petScale = k; animals.forEach(a => a.o.scale.setScalar(k)); foxModels.forEach(m => m.scale.setScalar(.0017 * m.userData.sc * k)); gull?.inner.scale.setScalar(k); },
     setFit(k) { o.fit = k; resize(); },
     dispose() { active = false; renderer.dispose(); renderer.forceContextLoss(); },
   };

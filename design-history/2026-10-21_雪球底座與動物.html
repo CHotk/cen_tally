@@ -85,7 +85,7 @@
       </div>
     <div class="now"><b id="nowName"></b><span id="nowDesc"></span></div>
     <div class="row"><label><input type="checkbox" id="spin" checked> 自動慢慢轉</label>
-      <span style="margin-left:auto">雪花大小</span><input type="range" id="flake" min=".03" max=".11" step=".005" value=".06" style="max-width:160px"><span id="flakev"></span></div>
+      <span style="margin-left:auto">雪花大小</span><input type="range" id="flake" min=".03" max=".11" step=".0034" value=".0544" style="max-width:160px"><span id="flakev"></span></div>
     <div class="row">
       <span style="margin-left:auto">動物大小</span><input type="range" id="pet" min="1" max="3" step=".05" value="1.6" style="max-width:200px"><span id="petv">1.6×</span></div>
   </div>
@@ -107,8 +107,9 @@
       <div class="row"><button class="btn" id="tiltBtn">📱 開啟手機傾斜</button><span id="tiltv"></span></div>
     </div>
     <div class="box"><h3>底座（選一個）</h3><div class="opts" id="bases"></div></div>
-    <div class="box"><h3>球裡的動物</h3><div class="opts" id="zoos"></div>
-      <div class="note">新版：狐狸（原本那隻）＋白馬在雪地上跑，鸛、鸚鵡在玻璃球裡繞圈飛；點一下搖的時候大家會跳／飛高一點。</div></div>
+    <div class="box"><h3>球裡的內容（選一個場景）</h3><div class="opts" id="zoos"></div>
+      <div class="note">新場景的模型來自網路公開、可免費使用的素材：Kenney「Holiday Kit」（馴鹿、雪橇、薑餅人、胡桃鉗、火車、禮物、燈籠、聖誕樹…）、Kenney「Cube Pets」（會跳舞的方塊動物），都是 CC0。
+        聖誕老人、海鷗找不到可用的公開模型：聖誕老人用方塊拼（跟 Kenney 同風格），海鷗用鸛的模型改顏色。每個場景裡的東西都可以點。</div></div>
     <div class="box"><h3>放在結餘卡上（實際大小）</h3>
       <div class="phone"><div class="title">我的記帳</div>
         <div class="card"><div class="lab">目前結餘</div><div class="bal">+543</div>
@@ -121,6 +122,7 @@
   </aside>
 </div>
 
+<script src="assets/globe_models.js"></script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -128,16 +130,19 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 // ════════ 模型 ════════
-const MODELS = {
-  fox: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Assets@main/Models/Fox/glTF-Binary/Fox.glb',
-  horse: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Horse.glb',
-  stork: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Stork.glb',
-  parrot: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Parrot.glb',
-  flamingo: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Flamingo.glb',
-};
-const loader = new GLTFLoader(), cache = {};
-const loadModel = k => cache[k] ??= loader.loadAsync(MODELS[k]).catch(e => { console.warn(k, e); return null; });
-Promise.all(Object.keys(MODELS).map(loadModel)).then(() => document.getElementById('loading').remove());
+// 模型都打包在 assets/globe_models.js（base64），直接雙擊開設計稿（file://）也載得到、不用網路。
+// Kenney 的模型共用一張 colormap 貼圖（Holiday Kit、Cube Pets 各一張），載入時換成打包裡那張。
+const b64 = x => Uint8Array.from(atob(x), c => c.charCodeAt(0)).buffer;
+const texUrl = {};
+const packTex = p => texUrl[p] ??= URL.createObjectURL(new Blob([b64(GLOBE_MODELS[p + '/colormap'])], { type: 'image/png' }));
+const cache = {};
+const loadModel = k => cache[k] ??= new Promise(res => {
+  if (!window.GLOBE_MODELS?.[k]) { console.warn('沒有模型', k); return res(null); }
+  const pack = k.includes('/') ? k.split('/')[0] : null, mgr = new THREE.LoadingManager();
+  mgr.setURLModifier(u => pack && u.endsWith('colormap.png') ? packTex(pack) : u);
+  new GLTFLoader(mgr).parse(b64(GLOBE_MODELS[k]), '', res, e => { console.warn(k, e); res(null); });
+});
+loadModel('fox').then(() => document.getElementById('loading')?.remove());
 
 // ════════ 貼圖（程式畫，不用下載） ════════
 function canvasTex(w, h, draw, repeat = [1, 1]) {
@@ -209,10 +214,18 @@ const METALS = {
   gun: () => new THREE.MeshStandardMaterial({ color: 0x5b5f68, metalness: 1, roughness: .28 }),
   silver: () => new THREE.MeshStandardMaterial({ color: 0xd8dce6, metalness: 1, roughness: .12 }),
 };
-const ZOOS = {
-  models: { name: '新：跟狐狸同一種的 3D 模型', desc: '狐狸＋白馬在地上跑，鸛、鸚鵡在球裡繞圈飛。真的動畫。' },
-  modelsB: { name: '新：換紅鶴', desc: '同上，但鸚鵡換成粉紅色的紅鶴，顏色比較跳。' },
-  old: { name: '原本：圓圓手捏的', desc: '現在 App 裡的（對照用）：小熊、兩隻兔子、企鵝＋狐狸。' },
+// 球裡的內容（2026-10-21 使用者：出幾版可以用按鈕換、多抓網路公開資源參考）。
+// house／classicTrees／snowman：要不要放原本的小屋、六棵樹、雪人。
+const SCENES = {
+  appNext: { name: '★ App 這次要改成的', desc: '原本的內容不動，多一隻銀狐（跟原本的狐狸不同色）跟一隻海鷗。', house: 1, classicTrees: 1, snowman: 1 },
+  village: { name: '🎅 聖誕村', desc: '聖誕老人坐雪橇、兩隻馴鹿拉著繞圈；薑餅人散步；裝飾聖誕樹、禮物、燈籠、雪人。', house: 1 },
+  train: { name: '🚂 玩具火車', desc: '小火車繞著鐵軌跑、會冒煙，企鵝坐在車廂上；中間一棵大聖誕樹、禮物堆。' },
+  pets: { name: '🐧 方塊動物園', desc: '企鵝、北極熊、兔子、狐狸、鹿、熊貓、小雞、貓自己逛、停下來、跳舞（點了會跳舞或比讚）。' },
+  forest: { name: '🦊 雪林狐狸', desc: '一整片雪松林，兩隻狐狸（原本＋銀狐）、白馬在林間跑，海鷗跟鸛在上面飛。' },
+  nutcracker: { name: '💂 胡桃鉗之夜', desc: '兩個胡桃鉗士兵來回巡邏、薑餅人轉圈跳舞、一圈拐杖糖、大聖誕樹跟禮物。' },
+  classic: { name: '新動物：馬＋鸛＋鸚鵡', desc: '原本的小屋場景，動物換成白馬、鸛、鸚鵡＋狐狸（上一版）。', house: 1, classicTrees: 1, snowman: 1 },
+  classicFlamingo: { name: '新動物：換紅鶴', desc: '同上，鸚鵡換成粉紅色紅鶴。', house: 1, classicTrees: 1, snowman: 1 },
+  classicOld: { name: '原本（對照）', desc: '現在 App 裡的：小熊、兩隻兔子、企鵝＋狐狸。', house: 1, classicTrees: 1, snowman: 1 },
 };
 
 // ════════ 雪球（從 web/globe/index.html 搬過來，底座、動物換成可選） ════════
@@ -244,7 +257,8 @@ function softEnv(renderer) {
 }
 
 function makeGlobe(canvas, opts) {
-  const o = { fit: 1, elev: 29, flakes: 800, autoRotate: .8, petScale: 1, base: 'matte', zoo: 'models', flakeSize: .06, ...opts };
+  const o = { fit: 1, elev: 29, flakes: 800, autoRotate: .8, petScale: 1, base: 'obsidian', scene: 'appNext', flakeSize: .0544, ...opts };
+  const SC = SCENES[o.scene];
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -308,7 +322,7 @@ function makeGlobe(canvas, opts) {
     const skirt = new THREE.Mesh(new THREE.CylinderGeometry(GROUND_R, GROUND_R * .9, Math.max(GY - BASE_H, .05) + .02, 80, 1, true), mat(0xe9eef8, { roughness: .9 })); skirt.position.y = (GY + BASE_H) / 2; globe.add(skirt); }
   const targets = []; // 點得到的東西：{ obj, at: 世界座標的點, onTap }
   let house = null, snowman = null; const trees = [];
-  { const h = new THREE.Group(), wood = mat(0x8a3a2c, { roughness: .7 }), snowM = mat(0xf6f9ff, { roughness: .9 });
+  if (SC.house) { const h = new THREE.Group(), wood = mat(0x8a3a2c, { roughness: .7 }), snowM = mat(0xf6f9ff, { roughness: .9 });
     const body = mesh(new THREE.BoxGeometry(.42, .3, .36), wood); body.position.y = .15; h.add(body);
     for (const s of [-1, 1]) { const roof = mesh(new THREE.BoxGeometry(.5, .035, .29), snowM); roof.position.set(0, .37, s * .1); roof.rotation.x = s * .62; h.add(roof);
       const und = mesh(new THREE.BoxGeometry(.48, .02, .27), mat(0x4a2418)); und.position.set(0, .35, s * .095); und.rotation.x = s * .62; h.add(und); }
@@ -330,8 +344,8 @@ function makeGlobe(canvas, opts) {
       for (let i = 0; i < 22; i++) { const k = i / 22, y = .1 + k * .32, r = .15 * (1 - k * .78) + .008, a = k * Math.PI * 7;
         const m = glow(cols[i % 5], 3), b = mesh(new THREE.SphereGeometry(.011, 8, 8), m, false); b.position.set(Math.cos(a) * r, y, Math.sin(a) * r); t.add(b); bulbs.push(m); twinkles.push({ m, base: 3, sp: 1.5 + Math.random() * 3, ph: Math.random() * 6 }); } }
     t.scale.setScalar(s); place(t, x, z, Math.random() * 6); trees.push({ g: t, bulbs, star, s }); };
-  tree(-.86, -.72, 1.12, true); tree(.95, -.62, .9); tree(-1.1, .12, .72); tree(.66, -.95, .68); tree(1.12, .1, .7); tree(-.42, -1.1, .66);
-  { const s = new THREE.Group(), w = mat(0xfafcff, { roughness: .85 });
+  if (SC.classicTrees) tree(-.86, -.72, 1.12, true); if (SC.classicTrees) tree(.95, -.62, .9); if (SC.classicTrees) { tree(-1.1, .12, .72); tree(.66, -.95, .68); tree(1.12, .1, .7); tree(-.42, -1.1, .66); }
+  if (SC.snowman) { const s = new THREE.Group(), w = mat(0xfafcff, { roughness: .85 });
     const b1 = mesh(new THREE.SphereGeometry(.085, 20, 16), w); b1.position.y = .07; s.add(b1); const b2 = mesh(new THREE.SphereGeometry(.06, 20, 16), w); b2.position.y = .18; s.add(b2);
     const scarf = mesh(new THREE.TorusGeometry(.045, .014, 8, 20), mat(0xd23b3b)); scarf.rotation.x = Math.PI / 2; scarf.position.y = .145; s.add(scarf);
     const nose = mesh(new THREE.ConeGeometry(.01, .045, 8), mat(0xff8a2b)); nose.rotation.x = Math.PI / 2; nose.position.set(0, .185, .075); s.add(nose);
@@ -345,16 +359,16 @@ function makeGlobe(canvas, opts) {
   const pets = new THREE.Group(); globe.add(pets);
   const sizeOf = obj => { const b = new THREE.Box3().setFromObject(obj), v = new THREE.Vector3(); b.getSize(v); return v; };
   // 模型：照「高度或長度」縮到指定大小，腳底對齊 0
-  async function addModel(k, size, axis, setup) {
+  async function addModel(k, size, axis, setup, opts = {}) {
     const gltf = await loadModel(k); if (!gltf || disposed) return;
-    const m = SkeletonUtils.clone(gltf.scene); m.traverse(x => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = true;
+    const m = SkeletonUtils.clone(gltf.scene); opts.prep?.(m); m.traverse(x => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = true;
       if (x.material && !x.material.isMeshStandardMaterial) { const old = x.material; x.material = new THREE.MeshStandardMaterial({ vertexColors: !!old.vertexColors, color: old.color, map: old.map, roughness: .7, flatShading: true }); } } });
     const v = sizeOf(m), sc = size / v[axis]; m.scale.setScalar(sc);
-    const b = new THREE.Box3().setFromObject(m); m.position.y -= b.min.y;
+    const b = new THREE.Box3().setFromObject(m); m.position.y -= b.min.y; m.rotation.y = opts.yaw || 0;
     const inner = new THREE.Group(); inner.add(m); inner.scale.setScalar(o.petScale);
     const holder = new THREE.Group(); holder.add(inner); pets.add(holder);
     const mixer = new THREE.AnimationMixer(m), clips = gltf.animations;
-    const mv = { holder, inner, mixer, kind: k, ...setup(mixer, clips, holder) }; movers.push(mv);
+    const mv = { holder, inner, mixer, kind: opts.kind || k, ...setup(mixer, clips, holder) }; movers.push(mv);
     targets.push({ obj: holder, h: size * .6, onTap: () => react(mv) });
   }
   const walker = (r, speed, ph, timeScale) => (mixer, clips) => { const a = mixer.clipAction(clips[0]); a.timeScale = timeScale; a.play();
@@ -365,19 +379,23 @@ function makeGlobe(canvas, opts) {
       th += dt * speed * (ex ? 2.2 : 1) * (1 + boost * 2.2); const x = Math.cos(th) * r, z = Math.sin(th) * r, dir = Math.sign(speed);
       this.holder.position.set(x, CY + hgt + Math.sin(t * 1.3 + ph) * .1 + (ex ? .18 : 0) + boost * .2, z); this.holder.rotation.set(0, Math.atan2(-Math.sin(th) * dir, Math.cos(th) * dir), -dir * .28); } }; };
 
-  if (o.zoo === 'old') addOld(); else {
-    // 狐狸：跑一陣子、停下來東張西望（跟原本一樣）
-    addModel('fox', .2, 'y', (mixer, clips, holder) => { const clip = n => mixer.clipAction(clips.find(a => a.name === n)); const f = { run: clip('Run'), look: clip('Survey'), th: 2.6, mode: 'run', until: 7 }; f.run.play();
+  // 狐狸：跑一陣子、停下來東張西望；被點到 look()
+  function foxSetup(r, ph, dir) { return (mixer, clips, holder) => { const clip = n => mixer.clipAction(clips.find(a => a.name === n)); const f = { run: clip('Run'), look: clip('Survey'), th: ph, mode: 'run', until: 4 + Math.random() * 4 }; f.run.play();
       return { look() { const t = clock.elapsedTime; if (f.mode !== 'look') { f.look.reset().play(); f[f.mode].crossFadeTo(f.look, .25, false); f.mode = 'look'; } f.until = t + 3.2; },
         update(t, dt, ex) { if (t > f.until) { const nx = f.mode === 'run' ? 'look' : 'run'; f[nx].reset().play(); f[f.mode].crossFadeTo(f[nx], .35, false); f.mode = nx; f.until = t + (nx === 'run' ? 7 : 3); }
-        if (f.mode === 'run') f.th += dt * .5; const x = Math.cos(f.th) * .93, z = Math.sin(f.th) * .93;
-        holder.position.set(x, groundY(x, z) + (ex ? Math.abs(Math.sin(t * 12 + 1)) * .08 : 0), z); holder.rotation.y = Math.atan2(-Math.sin(f.th), Math.cos(f.th)); } }; });
-    // 白馬（原本是咖啡色，雪地裡換成白色比較像聖誕）
-    addModel('horse', .26, 'y', (mixer, clips, holder) => { holder.traverse(x => { if (x.isMesh) x.material = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: .6, flatShading: true }); });
-      return walker(.62, .42, .8, 1.1)(mixer, clips); });
-    addModel('stork', .36, 'x', flyer(.78, .45, 0, .62, 1));
-    addModel(o.zoo === 'modelsB' ? 'flamingo' : 'parrot', o.zoo === 'modelsB' ? .34 : .26, 'x', flyer(.6, -.6, 2.4, .32, 1.2));
-  }
+        if (f.mode === 'run') f.th += dt * .5 * dir; const x = Math.cos(f.th) * r, z = Math.sin(f.th) * r;
+        holder.position.set(x, groundY(x, z) + (ex ? Math.abs(Math.sin(t * 12 + 1)) * .08 : 0), z); holder.rotation.y = Math.atan2(-Math.sin(f.th) * dir, Math.cos(f.th) * dir); } }; }; }
+  // 銀狐（2026-10-21 使用者：多一隻跟原本顏色不一樣的狐狸）：同一個模型，貼圖轉成灰階再壓暗＋偏冷，
+  // 胸口、尾巴尖本來就比較淺，轉完是銀灰色、白胸口。
+  const silver = m => m.traverse(x => { if (!x.isMesh) return; x.material = x.material.clone();
+    x.material.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float l = dot(diffuseColor.rgb, vec3(.3, .59, .11)); diffuseColor.rgb = vec3(.1 + l * 1.15) * vec3(.88, .93, 1.05); }'); }; });
+  const addSilverFox = (r = .74, ph = .6, dir = -1) => addModel('fox', .19, 'y', foxSetup(r, ph, dir), { prep: silver, kind: 'fox' });
+  // 海鷗：沒有找到可以用的海鷗模型（CC0 的都沒有），拿鸛的模型改顏色：白身體、灰翅膀、黃嘴黃腳
+  const gull = m => m.traverse(x => { if (!x.isMesh || !x.geometry.attributes.color) return; x.geometry = x.geometry.clone(); const c = x.geometry.attributes.color, col = new THREE.Color();
+    for (let i = 0; i < c.count; i++) { col.fromBufferAttribute(c, i); const l = col.r * .3 + col.g * .59 + col.b * .11;
+      if (col.r > col.g * 1.4 && col.r > .25) col.set(0xf2c14e); else if (l < .3) col.set(0x8792a2); else col.set(0xf7f8fa); c.setXYZ(i, col.r, col.g, col.b); }
+    c.needsUpdate = true; });
+  const addSeagull = (r = .7, sp = .5, ph = 1.2, h = .55) => addModel('stork', .3, 'x', flyer(r, sp, ph, h, 1.15), { prep: gull, kind: 'gull' });
   function addOld() { // 原本的（照 web/globe/index.html）＋狐狸
     const blob = (r, m, sx = 1, sy = 1, sz = 1) => { const x = mesh(new THREE.SphereGeometry(r, 24, 18), m); x.scale.set(sx, sy, sz); return x; };
     const eye = (x, y, z, s = .011) => { const g = new THREE.Group(); g.add(mesh(new THREE.SphereGeometry(s, 12, 10), mat(0x14141a, { roughness: .2 }), false));
@@ -425,6 +443,8 @@ function makeGlobe(canvas, opts) {
     else if (mv.kind === 'horse') { burst(at(), '🎵', 2, { size: .08, up: .4 });
       play(1.1, k => { const a = Math.sin(Math.min(1, k * 1.6) * Math.PI); mv.inner.rotation.x = -a * .65; mv.inner.position.y = a * .05; });
       setTimeout(() => burst(at(), '✨', 6, { color: '#fff3c4', size: .06, up: .3, spread: .6 }), 500); }
+    else if (mv.kind === 'pet') { mv.cheer?.(Math.random() < .55 ? 'dance' : 'yes'); burst(at(), '💗', 4, { size: .06 }); play(.5, k => { mv.inner.position.y = Math.sin(k * Math.PI) * .08; }); }
+    else if (mv.kind === 'gull') { mv.flap?.(); say(at(), '啊～啊～'); burst(at(), '🪶', 4, { size: .06, up: -.1, spread: .4, life: 1.8, grav: -.15 }); play(1, k => { mv.inner.rotation.y = ease(k) * Math.PI * 2; }); }
     else if (mv.kind === 'old') { burst(at(), '💗', 4, { size: .06 }); play(.8, k => { mv.inner.position.y = Math.sin(k * Math.PI) * .14; mv.inner.rotation.y = ease(k) * Math.PI * 2; }); }
     else { mv.flap?.(); burst(at(), '🪶', 5, { size: .06, up: -.1, spread: .4, life: 1.8, grav: -.15 });
       play(1, k => { mv.inner.rotation.y = ease(k) * Math.PI * 2; mv.inner.position.y = Math.sin(k * Math.PI) * .12; }); }
@@ -451,6 +471,133 @@ function makeGlobe(canvas, opts) {
     play(1.2, k => { sm.hat.position.y = .232 + Math.sin(k * Math.PI) * .22; sm.hat.rotation.y = k * Math.PI * 4; sm.hat.rotation.z = Math.sin(k * Math.PI) * .5; sm.g.rotation.z = Math.sin(k * Math.PI * 4) * .12 * (1 - k); }); }
   targets.push({ obj: null, get at() { return house && worldAt(house.g, .2); }, onTap: () => tapHouse() });
   targets.push({ obj: null, get at() { return snowman && worldAt(snowman.g, .15); }, onTap: () => tapSnowman() });
+
+  // ════ 其他場景（Kenney Holiday Kit／Cube Pets，CC0） ════
+  // 把模型放進一個 group：照高度（或長度）縮到 size，腳底對齊
+  // Kenney 的東西整體放大一點；卡片上的小雪球（動物 2.6 倍）再大一點才看得清楚
+  const KS = 1.3 * (1 + (o.petScale - 1) * .35);
+  async function modelInto(g, k, size, axis = 'y', yaw = 0, prep) {
+    size *= KS;
+    const gltf = await loadModel(k); if (!gltf || disposed) return null;
+    const m = SkeletonUtils.clone(gltf.scene); prep?.(m); m.traverse(x => { if (x.isMesh) { x.castShadow = true; x.receiveShadow = true; } });
+    m.scale.setScalar(size / sizeOf(m)[axis]); m.rotation.y = yaw; const bb = new THREE.Box3().setFromObject(m); m.position.y -= bb.min.y; g.add(m); return { m, gltf };
+  }
+  const tangent = (th, dir) => Math.atan2(-Math.sin(th) * dir, Math.cos(th) * dir);
+  // 擺一個不會動的東西；點了就跳一下轉一圈冒東西
+  function prop(k, size, x, z, ry = 0, { ch = '✨', axis = 'y', light = 0, tap } = {}) {
+    const g = new THREE.Group(); place(g, x, z, ry); g.userData.y0 = g.position.y; g.userData.ry0 = ry; modelInto(g, k, size, axis);
+    if (light) { const pl = new THREE.PointLight(0xffb15c, light, .7, 2); pl.position.y = size * .6; g.add(pl); g.userData.light = pl; }
+    targets.push({ obj: g, h: size * .5 * KS, fixed: true, onTap: tap ? () => tap(g) : () => wiggle(g, ch, size) }); return g;
+  }
+  function wiggle(g, ch, size = .2) { burst(worldAt(g, size * .7), ch, 5, { color: '#fff3c4', size: .07, up: .35, spread: .4 });
+    const pl = g.userData.light; play(.8, k => { g.position.y = g.userData.y0 + Math.sin(k * Math.PI) * .1; g.rotation.y = g.userData.ry0 + ease(k) * Math.PI * 2; if (pl) pl.intensity = 2.5 * Math.sin(k * Math.PI) + .9; }); }
+  const ring = (n, r, f0 = 0) => Array.from({ length: n }, (_, i) => { const a = f0 + i / n * Math.PI * 2; return [Math.cos(a) * r, Math.sin(a) * r, a]; });
+  // 會動的方塊動物（Cube Pets）：自己逛、停下來、偶爾跳舞；點了跳舞或比讚
+  const petSetup = (r, ph, dir) => (mixer, clips, holder) => { const A = n => { const c = clips.find(a => a.name === n); return c && mixer.clipAction(c); };
+    const acts = { walk: A('walk'), idle: A('idle'), dance: A('dance'), yes: A('gesture-positive') }; let cur = acts.walk; cur?.play(); let mode = 'walk', until = 2 + Math.random() * 4, th = ph;
+    const go = (m, dur) => { const n = acts[m] || acts.idle; if (n && n !== cur) { n.reset().play(); cur?.crossFadeTo(n, .25, false); cur = n; } mode = m; until = clock.elapsedTime + dur; };
+    return { cheer(m) { go(m, m === 'dance' ? 3.2 : 1.8); }, update(t, dt, ex) {
+      if (t > until) { if (mode === 'walk') go(Math.random() < .3 ? 'dance' : 'idle', 1.6 + Math.random() * 2.4); else go('walk', 2.5 + Math.random() * 4); }
+      if (mode === 'walk') th += dt * .16 * dir / r; const x = Math.cos(th) * r, z = Math.sin(th) * r;
+      holder.position.set(x, groundY(x, z) + (ex ? Math.abs(Math.sin(t * 12 + ph)) * .08 : 0), z);
+      const want = mode === 'walk' ? tangent(th, dir) : Math.atan2(x, z) * .4; let d = want - holder.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); holder.rotation.y += d * Math.min(1, dt * 6); } }; };
+  // 一串跟著繞圈的東西（雪橇隊、火車）：每節在圓上落後一點角度
+  function convoy(r, speed, cars, { bob = 0, tap } = {}) {
+    const groups = cars.map(c => { const g = new THREE.Group(); globe.add(g); modelInto(g, c.k, c.size, c.axis || 'y', c.yaw || 0).then(res => c.after?.(g, res)); if (c.build) c.build(g); return { g, gap: c.gap }; });
+    let th = 0, boost = 0; const cv = { boost(v = 1) { boost = v; } };
+    groups.forEach(({ g }) => targets.push({ obj: g, h: .1, fixed: true, onTap: () => tap?.(cv, g) }));
+    movers.push({ holder: groups[0].g, inner: new THREE.Group(), update(t, dt, ex) { boost = Math.max(0, boost - dt * .5); th += dt * speed * (1 + boost * 1.8); let a = th;
+      groups.forEach(({ g, gap }, i) => { a -= (gap || 0) / r; const x = Math.cos(a) * r, z = Math.sin(a) * r; g.position.set(x, groundY(x, z) + .008 + (bob ? Math.abs(Math.sin(t * 9 + i)) * bob : 0) + (ex ? Math.abs(Math.sin(t * 12 + i)) * .06 : 0), z);
+        g.rotation.y = tangent(a, Math.sign(speed)); }); cv.head = groups[0].g; } });
+    return cv;
+  }
+  // 方塊聖誕老人（找不到公開的聖誕老人模型，用方塊拼，跟 Kenney 的方塊風格一樣）
+  function santa(g) { const red = mat(0xc8262f, { roughness: .6 }), white = mat(0xf8f8f8, { roughness: .8 }), skin = mat(0xf2c7a5), blk = mat(0x1b1b1f), gold = mat(0xe7b440, { metalness: .8, roughness: .3 });
+    const s = new THREE.Group(), box = (w, h, d, m, x, y, z) => { const b = mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); s.add(b); return b; };
+    box(.11, .1, .09, red, 0, .1, 0); box(.115, .018, .095, blk, 0, .075, 0); box(.022, .02, .01, gold, 0, .075, .049);
+    box(.07, .065, .065, skin, 0, .185, 0); box(.074, .045, .02, white, 0, .158, .03); box(.06, .014, .01, white, 0, .19, .033);
+    box(.078, .02, .072, white, 0, .222, 0); const hat = mesh(new THREE.ConeGeometry(.036, .07, 8), red); hat.position.set(0, .262, -.005); hat.rotation.x = -.35; s.add(hat);
+    const pom = mesh(new THREE.SphereGeometry(.013, 10, 8), white); pom.position.set(0, .29, -.022); s.add(pom);
+    for (const sx of [-1, 1]) { const arm = box(.03, .07, .03, red, sx * .07, .12, .015); arm.rotation.z = sx * .5; box(.026, .02, .026, blk, sx * .088, .085, .02); }
+    s.scale.setScalar(KS); s.position.set(0, .05 * KS, -.02 * KS); g.add(s); g.userData.santa = s; return s; }
+  // 文字泡泡（Ho Ho Ho！之類）
+  function say(at, text) { const tex = canvasTex(512, 128, (c, w, h) => { c.font = '900 64px "Segoe UI", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 10; c.strokeStyle = 'rgba(0,0,0,.55)'; c.strokeText(text, w / 2, h / 2); c.fillStyle = '#fff'; c.fillText(text, w / 2, h / 2); });
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })); sp.renderOrder = 6; sp.scale.set(.5, .125, 1); sp.position.copy(at); globe.add(sp);
+    parts.push({ sp, v: new THREE.Vector3(0, .18, 0), age: 0, life: 1.8, grav: 0, s0: .5, text: true }); }
+  // 鐵軌：兩條軌跟枕木，貼著雪地高低
+  function track(r) { const rail = rr => { const pts = []; for (let i = 0; i < 120; i++) { const a = i / 120 * Math.PI * 2, x = Math.cos(a) * rr, z = Math.sin(a) * rr; pts.push(new THREE.Vector3(x, groundY(x, z) + .012, z)); }
+      const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 240, .006, 6, true), new THREE.MeshStandardMaterial({ color: 0xb8bcc6, metalness: .9, roughness: .3 })); globe.add(m); };
+    rail(r - .035); rail(r + .035); const wood = mat(0x6b4a33, { roughness: .9 });
+    for (const [x, z, a] of ring(56, r)) { const sl = mesh(new THREE.BoxGeometry(.1, .01, .022), wood); sl.position.set(x, groundY(x, z) + .004, z); sl.rotation.y = -a; globe.add(sl); } }
+
+  function buildScene(S) {
+    const tapTreeBig = g => { wiggle(g, '✨', .5); shootingStar(); };
+    if (S === 'village') {
+      prop('h/tree-decorated-snow', .62, -.78, -.62, .3, { tap: tapTreeBig });
+      for (const [x, z, a] of ring(7, 1.02, .9)) if (Math.abs(a % (Math.PI * 2) - 4.1) > .5) prop(['h/tree-snow-a', 'h/tree-snow-b', 'h/tree-snow-c'][Math.floor(Math.random() * 3)], .34 + Math.random() * .12, x, z, Math.random() * 6, { ch: '❄️' });
+      prop('h/present-a-cube', .09, -.5, -.42, .4, { ch: '🎉' }); prop('h/present-a-round', .08, -.62, -.36, 1, { ch: '🎉' }); prop('h/present-b-rectangle', .07, -.55, -.3, 2, { ch: '🎁' });
+      prop('h/lantern', .2, .36, .32, 0, { light: .9, ch: '💡' }); prop('h/lantern', .2, -.36, .3, 0, { light: .9, ch: '💡' });
+      prop('h/snowman', .28, .62, .5, -.6, { ch: '⛄' }); prop('h/bench', .14, .66, -.38, -1.2, { ch: '✨' });
+      const ginger = (k, r, ph, dir) => { const g = new THREE.Group(); globe.add(g); modelInto(g, k, .15); let th = ph;
+        movers.push({ holder: g, inner: g, update(t, dt, ex) { th += dt * .22 * dir / r; const x = Math.cos(th) * r, z = Math.sin(th) * r; g.position.set(x, groundY(x, z) + Math.abs(Math.sin(t * 7 + ph)) * .02 + (ex ? Math.abs(Math.sin(t * 12)) * .07 : 0), z); g.rotation.set(0, tangent(th, dir), Math.sin(t * 7 + ph) * .14); } });
+        targets.push({ obj: g, h: .08, fixed: true, onTap: () => { burst(worldAt(g, .15), '🍪', 4, { size: .06 }); play(.8, k => { g.rotation.y += .25; }); } }); };
+      ginger('h/gingerbread-man', .5, 1.2, 1); ginger('h/gingerbread-woman', .5, 1.55, 1);
+      convoy(.92, .32, [{ k: 'h/reindeer', size: .2, gap: 0 }, { k: 'h/reindeer', size: .2, gap: .2 }, { k: 'h/sled', size: .1, gap: .24, build: santa }], { bob: .025,
+        tap: cv => { cv.boost(1.2); burst(worldAt(cv.head, .25), '🔔', 4, { size: .07, up: .4 }); say(worldAt(cv.head, .4), 'Ho Ho Ho!'); } });
+    }
+    if (S === 'train') {
+      track(.82); prop('h/tree-decorated-snow', .78, 0, -.05, 0, { tap: tapTreeBig });
+      for (const [x, z] of [[.3, .22], [-.28, .25], [.22, -.3], [-.3, -.26]]) prop(['h/present-a-cube', 'h/present-a-round', 'h/present-b-cube', 'h/present-b-rectangle'][Math.floor(Math.random() * 4)], .09, x, z, Math.random() * 6, { ch: '🎉' });
+      for (const [x, z] of ring(9, 1.06, .3)) prop(['h/tree-snow-a', 'h/tree-snow-c'][Math.floor(Math.random() * 2)], .26 + Math.random() * .1, x, z, Math.random() * 6, { ch: '❄️' });
+      let puffT = 0;
+      const cv = convoy(.82, .38, [{ k: 'h/train-locomotive', size: .3, axis: 'x', yaw: -Math.PI / 2, gap: 0 }, { k: 'h/train-tender', size: .2, axis: 'x', yaw: -Math.PI / 2, gap: .25 },
+        { k: 'h/train-wagon', size: .26, axis: 'x', yaw: -Math.PI / 2, gap: .25, after: (g) => { const p = new THREE.Group(); p.position.y = .1; g.add(p); modelInto(p, 'p/penguin', .12, 'y', Math.PI / 2); } },
+        { k: 'h/train-wagon-logs', size: .26, axis: 'x', yaw: -Math.PI / 2, gap: .27 }],
+        { tap: c => { c.boost(1.5); burst(worldAt(c.head, .3), '☁️', 8, { size: .1, up: .5, spread: .2, life: 1.8, grav: .05 }); say(worldAt(c.head, .45), '嘟嘟～！'); } });
+      movers.push({ holder: new THREE.Group(), inner: new THREE.Group(), update(t, dt) { puffT -= dt; if (puffT < 0 && cv.head) { puffT = .55; burst(worldAt(cv.head, .3), '☁️', 1, { size: .07, up: .35, spread: .05, life: 1.6, grav: .05 }); } } });
+    }
+    if (S === 'pets') {
+      prop('h/tree-decorated-snow', .55, 0, -.1, 0, { tap: tapTreeBig });
+      for (const [x, z] of ring(8, 1.06, .2)) prop(['h/tree-snow-a', 'h/tree-snow-b', 'h/tree-snow-c'][Math.floor(Math.random() * 3)], .3 + Math.random() * .1, x, z, Math.random() * 6, { ch: '❄️' });
+      prop('h/snow-pile', .08, .5, .55, 0, { ch: '❄️' }); prop('h/snow-pile', .07, -.6, .4, 1, { ch: '❄️' });
+      ['penguin', 'polar', 'bunny', 'fox', 'deer', 'panda', 'chick', 'cat'].forEach((k, i) =>
+        addModel('p/' + k, k === 'deer' ? .17 : k === 'chick' ? .08 : .12, 'y', petSetup(.4 + (i % 3) * .2, i * .8, i % 2 ? 1 : -1), { kind: 'pet' }));
+    }
+    if (S === 'forest') {
+      const spots = []; for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, r = .3 + Math.sqrt(Math.random()) * .8; const x = Math.cos(a) * r, z = Math.sin(a) * r; if (spots.every(([u, v]) => Math.hypot(u - x, v - z) > .22) && Math.abs(r - .93) > .07 && Math.abs(r - .74) > .07 && Math.abs(r - .62) > .07) spots.push([x, z]); }
+      spots.forEach(([x, z]) => prop(['h/tree-snow-a', 'h/tree-snow-b', 'h/tree-snow-c'][Math.floor(Math.random() * 3)], .3 + Math.random() * .2, x, z, Math.random() * 6, { ch: '❄️' }));
+      prop('h/lantern', .2, .1, .1, 0, { light: 1.1, ch: '💡' }); prop('h/rocks-medium', .08, -.2, .45, 1, { ch: '✨' });
+      addModel('fox', .2, 'y', foxSetup(.93, 2.6, 1)); addSilverFox();
+      addModel('horse', .26, 'y', (mixer, clips, holder) => { holder.traverse(x => { if (x.isMesh) x.material = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: .6, flatShading: true }); }); return walker(.62, .42, .8, 1.1)(mixer, clips); });
+      addSeagull(.72, .5, 1.2, .62); addModel('stork', .34, 'x', flyer(.55, -.4, 3.5, .45, 1));
+    }
+    if (S === 'nutcracker') {
+      prop('h/tree-decorated-snow', .7, 0, -.25, 0, { tap: tapTreeBig });
+      for (const [x, z, a] of ring(14, 1.04)) prop(a % 2 < 1 ? 'h/candy-cane-red' : 'h/candy-cane-green', .16, x, z, -a, { ch: '🍬' });
+      for (const [x, z] of [[.3, -.05], [-.32, -.02], [.18, -.48], [-.2, -.5]]) prop(['h/present-a-cube', 'h/present-a-round', 'h/present-b-cube', 'h/present-a-rectangle'][Math.floor(Math.random() * 4)], .09, x, z, Math.random() * 6, { ch: '🎉' });
+      prop('h/sock-red-cane', .12, .55, -.55, -.8, { ch: '🧦' });
+      // 胡桃鉗士兵：在前面左右來回巡邏，走到底轉身
+      [[-.1, .55, 1], [.1, .72, -1]].forEach(([x0, z0, d], i) => { const g = new THREE.Group(); globe.add(g); modelInto(g, 'h/nutcracker', .3); let x = x0, dir = d, salute = 0;
+        movers.push({ holder: g, inner: g, update(t, dt, ex) { if (salute <= 0) { x += dir * dt * .12; if (Math.abs(x) > .38) { dir = -dir; x = Math.sign(x) * .38; } } salute -= dt;
+          g.position.set(x, groundY(x, z0) + Math.abs(Math.sin(t * 9 + i)) * (salute > 0 ? 0 : .018) + (ex ? Math.abs(Math.sin(t * 12)) * .07 : 0), z0);
+          g.rotation.set(0, salute > 0 ? 0 : (dir > 0 ? Math.PI / 2 : -Math.PI / 2), salute > 0 ? Math.sin(t * 14) * .05 : 0); } });
+        targets.push({ obj: g, h: .15, fixed: true, onTap: () => { salute = 1.6; burst(worldAt(g, .35), '🥁', 2, { size: .08, up: .4 }); say(worldAt(g, .45), '敬禮！'); } }); });
+      [['h/gingerbread-man', -.42, .3], ['h/gingerbread-woman', .45, .32]].forEach(([k, x, z], i) => { const g = new THREE.Group(); place(g, x, z); modelInto(g, k, .15); let spin = 0;
+        movers.push({ holder: g, inner: g, update(t, dt) { spin = Math.max(0, spin - dt); g.rotation.y = t * (1.2 + spin * 6) * (i ? -1 : 1); g.position.y = groundY(x, z) + Math.abs(Math.sin(t * 5)) * .03; } });
+        targets.push({ obj: g, h: .08, fixed: true, onTap: () => { spin = 1.2; burst(worldAt(g, .16), '🍪', 4, { size: .06 }); } }); });
+    }
+  }
+
+  // ── 開始擺場景（要在上面的東西都定義好之後） ──
+  const S = o.scene;
+  if (S === 'classicOld') addOld(); else if (S === 'appNext') { addOld(); addSilverFox(); addSeagull(); }
+  else if (S !== 'classic' && S !== 'classicFlamingo') buildScene(S); else {
+    addModel('fox', .2, 'y', foxSetup(.93, 2.6, 1));
+    addModel('horse', .26, 'y', (mixer, clips, holder) => { holder.traverse(x => { if (x.isMesh) x.material = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: .6, flatShading: true }); });
+      return walker(.62, .42, .8, 1.1)(mixer, clips); });
+    addModel('stork', .36, 'x', flyer(.78, .45, 0, .62, 1));
+    addModel(S === 'classicFlamingo' ? 'flamingo' : 'parrot', S === 'classicFlamingo' ? .34 : .26, 'x', flyer(.6, -.6, 2.4, .32, 1.2));
+  }
 
   // ── 雪花 ──
   const N = o.flakes, fP = new Float32Array(N * 3), fV = new Float32Array(N * 3), fR = new Float32Array(N);
@@ -486,7 +633,7 @@ function makeGlobe(canvas, opts) {
     for (let i = fx.length - 1; i >= 0; i--) { const e = fx[i], k = Math.min(1, (t - e.t0) / e.dur); e.fn(k); if (k >= 1) fx.splice(i, 1); }
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.age += dt; const k = p.age / p.life;
       p.v.y += p.grav * dt; p.sp.position.addScaledVector(p.v, dt); p.v.multiplyScalar(Math.pow(.4, dt));
-      p.sp.material.opacity = k < .15 ? k / .15 : 1 - Math.max(0, (k - .5) / .5); p.sp.scale.setScalar(p.s0 * (1 + k * .4));
+      p.sp.material.opacity = k < .15 ? k / .15 : 1 - Math.max(0, (k - .5) / .5); if (!p.text) p.sp.scale.setScalar(p.s0 * (1 + k * .4));
       if (k >= 1) { globe.remove(p.sp); p.sp.material.dispose(); parts.splice(i, 1); } }
     if (blizzard) { swirl = Math.max(swirl, 2.4); wobble = Math.max(wobble, .25); for (let i = 0; i < N; i += 3) if (fR[i] > 0) { fR[i] = 0; fV[i * 3 + 1] = 1 + Math.random(); } }
     for (const k of twinkles) k.m.emissiveIntensity = k.base * (.55 + .45 * Math.sin(t * k.sp + k.ph));
@@ -513,7 +660,7 @@ function makeGlobe(canvas, opts) {
   // 點到誰：每個東西投影到螢幕上，找離手指最近、而且夠近的（動物很小，直接打中太難）
   function pick(cx, cy) { const r = canvas.getBoundingClientRect(), list = [...targets, ...trees.map(tr => ({ get at() { return worldAt(tr.g, .25 * tr.s); }, onTap: () => tapTree(tr), tree: true }))];
     let best = null, bd = Math.min(r.width, r.height) * .075;
-    for (const tg of list) { const p = tg.obj ? worldAt(tg.obj, tg.h * o.petScale) : tg.at; if (!p) continue;
+    for (const tg of list) { const p = tg.obj ? worldAt(tg.obj, tg.h * (tg.fixed ? 1 : o.petScale)) : tg.at; if (!p) continue;
       const v = globe.localToWorld(p.clone()).project(camera), sx = r.left + (v.x + 1) / 2 * r.width, sy = r.top + (1 - v.y) / 2 * r.height;
       const d = Math.hypot(sx - cx, sy - cy) - (tg.tree ? 0 : 6); if (d < bd) { bd = d; best = tg; } }
     return best; }
@@ -537,39 +684,39 @@ function makeGlobe(canvas, opts) {
 }
 
 // ════════ 頁面 ════════
-const state = { base: 'matte', zoo: 'models', pet: 1.6, spin: true, flake: .06 };
-try { Object.assign(state, JSON.parse(localStorage.getItem('globe-base-pick') || '{}')); } catch (_) {}
+const state = { base: 'obsidian', scene: 'appNext', pet: 1.6, spin: true, flake: .0544 };
+try { Object.assign(state, JSON.parse(localStorage.getItem('globe-base-pick2') || '{}')); } catch (_) {}
 let big = null, small = null;
 function rebuild() {
-  try { localStorage.setItem('globe-base-pick', JSON.stringify(state)); } catch (_) {}
+  try { localStorage.setItem('globe-base-pick2', JSON.stringify(state)); } catch (_) {}
   // 換底座／動物就整顆重建（重用同一個 canvas 要換新的，WebGL context 才乾淨）
   for (const [id, holder] of [['big', 'stage'], ['small', null]]) {
     const old = document.getElementById(id), c = document.createElement('canvas'); c.id = id; old.replaceWith(c);
   }
   big?.dispose(); small?.dispose();
-  big = makeGlobe(document.getElementById('big'), { base: state.base, zoo: state.zoo, petScale: state.pet, fit: 1.28, elev: 22, spin: state.spin, flakes: 900 });
-  small = makeGlobe(document.getElementById('small'), { base: state.base, zoo: state.zoo, petScale: 2.6, fit: 1, elev: 29, autoRotate: .9, flakes: 700, flakeSize: state.flake * 1.15 });
+  big = makeGlobe(document.getElementById('big'), { base: state.base, scene: state.scene, petScale: state.pet, fit: 1.28, elev: 22, spin: state.spin, flakes: 900 });
+  small = makeGlobe(document.getElementById('small'), { base: state.base, scene: state.scene, petScale: 2.6, fit: 1, elev: 29, autoRotate: .9, flakes: 700, flakeSize: state.flake * 1.15 });
   big.setFlake(state.flake); window.__big = big;
   const hint = document.getElementById('hint'); let ht = 0;
   big.onHint = txt => { hint.textContent = txt; hint.classList.add('on'); clearTimeout(ht); ht = setTimeout(() => hint.classList.remove('on'), 1600); };
-  const B = BASES[state.base]; document.getElementById('nowName').textContent = B.name; document.getElementById('nowDesc').textContent = B.desc + '　｜　' + ZOOS[state.zoo].name;
+  const B = BASES[state.base]; document.getElementById('nowName').textContent = B.name; document.getElementById('nowDesc').textContent = B.desc + '　｜　' + SCENES[state.scene].name;
   document.querySelectorAll('[data-base]').forEach(b => b.classList.toggle('on', b.dataset.base === state.base));
-  document.querySelectorAll('[data-zoo]').forEach(b => b.classList.toggle('on', b.dataset.zoo === state.zoo));
+  document.querySelectorAll('[data-zoo]').forEach(b => b.classList.toggle('on', b.dataset.zoo === state.scene));
 }
 document.getElementById('bases').innerHTML = Object.entries(BASES).map(([k, b]) =>
   `<button class="opt${k === 'wood' ? ' wide' : ''}" data-base="${k}"><b><span class="sw" style="background:${b.sw}"></span>${b.name}</b><small>${b.desc}</small></button>`).join('');
-document.getElementById('zoos').innerHTML = Object.entries(ZOOS).map(([k, z]) =>
-  `<button class="opt wide" data-zoo="${k}"><b>${z.name}</b><small>${z.desc}</small></button>`).join('');
+document.getElementById('zoos').innerHTML = Object.entries(SCENES).map(([k, z]) =>
+  `<button class="opt" data-zoo="${k}"><b>${z.name}</b><small>${z.desc}</small></button>`).join('');
 document.querySelectorAll('[data-base]').forEach(b => b.onclick = () => { state.base = b.dataset.base; rebuild(); });
-document.querySelectorAll('[data-zoo]').forEach(b => b.onclick = () => { state.zoo = b.dataset.zoo; rebuild(); });
+document.querySelectorAll('[data-zoo]').forEach(b => b.onclick = () => { state.scene = b.dataset.zoo; rebuild(); });
 const pet = document.getElementById('pet'), petv = document.getElementById('petv');
 pet.value = state.pet; petv.textContent = (+state.pet).toFixed(2) + '×';
-pet.oninput = () => { state.pet = +pet.value; petv.textContent = state.pet.toFixed(2) + '×'; big.setPet(state.pet); try { localStorage.setItem('globe-base-pick', JSON.stringify(state)); } catch (_) {} };
+pet.oninput = () => { state.pet = +pet.value; petv.textContent = state.pet.toFixed(2) + '×'; big.setPet(state.pet); try { localStorage.setItem('globe-base-pick2', JSON.stringify(state)); } catch (_) {} };
 const spin = document.getElementById('spin'); spin.checked = state.spin;
 spin.onchange = () => { state.spin = spin.checked; big.controls.autoRotate = spin.checked; };
 const flake = document.getElementById('flake'), flakev = document.getElementById('flakev');
 flake.value = state.flake; flakev.textContent = Math.round(state.flake / .034 * 100) + '%';
-flake.oninput = () => { state.flake = +flake.value; flakev.textContent = Math.round(state.flake / .034 * 100) + '%'; big.setFlake(state.flake); small.setFlake(state.flake * 1.15); try { localStorage.setItem('globe-base-pick', JSON.stringify(state)); } catch (_) {} };
+flake.oninput = () => { state.flake = +flake.value; flakev.textContent = Math.round(state.flake / .034 * 100) + '%'; big.setFlake(state.flake); small.setFlake(state.flake * 1.15); try { localStorage.setItem('globe-base-pick2', JSON.stringify(state)); } catch (_) {} };
 // 手機傾斜：雪往低的那邊飄（iOS 要使用者按一下才能要權限）
 document.getElementById('tiltBtn').onclick = async () => {
   try { if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) { if (await DeviceOrientationEvent.requestPermission() !== 'granted') return; } } catch (_) { return; }
