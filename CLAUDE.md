@@ -48,7 +48,7 @@
 - 要跟 Flutter 同一幀畫的東西（吉祥物位置）不要用 postMessage（會慢一拍），同網站的
   iframe 直接呼叫它 window 上的函式。
 - 要跟著捲動的東西不要在 Ticker 裡讀別的元件位置（Ticker 在排版前跑，讀到上一幀的位置，
-  捲動時永遠慢一幀）。在「畫的那一刻」讀（自訂 RenderObject 的 paint，見 tally_pet.dart 的 ），
+  捲動時永遠慢一幀）。在「畫的那一刻」讀（自訂 RenderObject 的 paint，見 tally_pet.dart 的 `_Follow`），
   同一刻把位置送給 iframe。
 
 ## 設計稿
