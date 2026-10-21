@@ -63,6 +63,9 @@
   button .new { font-size: 10.5px; color: var(--pink); margin-left: 4px; font-weight: 800; }
   #vers { display: grid; gap: 6px; } .vrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
   .vrow > span { width: 72px; color: var(--ink2); } .vrow button { padding: 5px 10px; font-size: 12.5px; } .vrow .d { color: var(--ink3); font-size: 12px; }
+  #viewer { position: fixed; inset: 0; z-index: 50; background: rgba(5,6,11,.86); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
+  #viewer.on { display: flex; } #viewer canvas { width: min(92vw, 560px); height: min(70vh, 560px); border-radius: 20px; background: radial-gradient(#2a2c44, #10111a); touch-action: none; }
+  #viewer .t { font-size: 16px; font-weight: 800; } #viewer .s { font-size: 12.5px; color: var(--ink2); }
   .notes { margin-top: 6px; border-radius: 18px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); padding: 4px 16px 10px; }
   .note { padding: 12px 0; border-top: 1px solid rgba(255,255,255,.08); font-size: 13.5px; line-height: 1.7; } .note:first-child { border-top: 0; }
   .note b { font-size: 14.5px; } .note .old { color: var(--ink3); }
@@ -107,6 +110,7 @@
 
   <div class="right">
     <div class="group"><h3>第一版 <small>App 原本的動作（換動作一格跳過去、手不會動、坐椅子），留著對照</small></h3><div class="btns" data-g="v1"></div></div>
+    <div class="group"><h3>看模型 <small>單獨看每個 3D 模型長怎樣（會自己轉，可以拖著轉）</small></h3><div class="btns" id="viewBtns"></div></div>
     <div class="group"><h3>基本</h3><div class="btns" data-g="basic"></div></div>
     <div class="group"><h3>吃東西</h3><div class="btns" data-g="eat"></div></div>
     <div class="group"><h3>休息 <small>坐下、睡覺重做</small></h3><div class="btns" data-g="rest"></div></div>
@@ -160,6 +164,7 @@
 <script src="assets/pet_models.js"></script>
 <script src="assets/pet_models_cc0.js"></script>
 <script src="assets/pet_models_ice.js"></script>
+<script src="assets/pet_models_ice_ai.js"></script>
 <script type="module">
 import * as THREE from 'three';
 
@@ -539,7 +544,7 @@ function prepModel(g) { const list = []; g.traverse(o => { if (o.isMesh) list.pu
     else if (name.includes('coal')) o.material = new THREE.MeshBasicMaterial({ color: hex });
     else { o.material = toon(hex); o.geometry.computeBoundingSphere(); if (o.geometry.boundingSphere.radius > .06) outlineOn(o, Math.min(.03, .012 + o.geometry.boundingSphere.radius * .02)); } }
   return g; }
-const MODEL_NAMES = ['plane', 'car', 'train', 'grill', 'dino', 'k_car', 'k_loco', 'k_wagon1', 'k_wagon2', ...(window.PET_MODELS_ICE ? ['scrat', 'sid', 'manny', 'diego'] : [])];
+const MODEL_NAMES = ['plane', 'car', 'train', 'grill', 'dino', 'k_car', 'k_loco', 'k_wagon1', 'k_wagon2', ...(window.PET_MODELS_ICE ? ['scrat', 'sid', 'manny', 'diego'] : []), ...Object.keys(window.PET_MODELS_ICE_AI || {})];
 const TEX_KIT = { k_car: 'k_car', k_loco: 'k_train', k_wagon1: 'k_train', k_wagon2: 'k_train' };
 const loaderFor = n => { if (!TEX_KIT[n]) return new GLTFLoader(); const mg = new THREE.LoadingManager();
   mg.setURLModifier(u => /colormap\.png$/.test(u) && window.petTexUrl ? window.petTexUrl(TEX_KIT[n]) : u); return new GLTFLoader(mg); };
@@ -547,6 +552,10 @@ const loaderFor = n => { if (!TEX_KIT[n]) return new GLTFLoader(); const mg = ne
 const modelsReady = new Promise(r => setTimeout(r, 0)).then(() => Promise.all(MODEL_NAMES.map(n => Promise.resolve(window.getPetModelBuffer?.(n)).then(buf => buf && new Promise((res, rej) => loaderFor(n).parse(buf, '', g => { PM[n] = prepModel(g.scene); res(); }, rej))).catch(e => console.warn('model', n, e)))));
 const model = n => PM[n] ? PM[n].clone(true) : null;
 /// 把網路下載的模型擺正：車頭朝 +X、長度變成 [len]、底部貼地、前後置中（每家模型大小方向都不一樣）
+/// AI 生的模型（面向鏡頭）：高度變成 [h]、底部貼地、置中
+function fitHeight(g, h) { if (!g) return null; const wrap = new THREE.Group(); wrap.add(g);
+  let b = new THREE.Box3().setFromObject(g); const k = h / b.getSize(new THREE.Vector3()).y; g.scale.multiplyScalar(k);
+  b = new THREE.Box3().setFromObject(g); const c = b.getCenter(new THREE.Vector3()); g.position.x -= c.x; g.position.z -= c.z; g.position.y -= b.min.y; wrap.userData.ai = 1; return wrap; }
 function fitModel(g, len) { if (!g) return null; const wrap = new THREE.Group(); wrap.add(g);
   let b = new THREE.Box3().setFromObject(g), sz = b.getSize(new THREE.Vector3()); if (sz.z > sz.x) { g.rotation.y = Math.PI / 2; b = new THREE.Box3().setFromObject(g); sz = b.getSize(new THREE.Vector3()); }
   const k = len / sz.x; g.scale.multiplyScalar(k); b = new THREE.Box3().setFromObject(g); const c = b.getCenter(new THREE.Vector3());
@@ -790,7 +799,7 @@ act('grabDemo', { g: 'held', label: '示範：抓起來甩一甩', isNew: 1 });
 
 // ── 變身 ──
 // ── 版本：改過的東西新舊版都留著，按鈕切換（2026-10-21 使用者：之後可能想變回舊版） ──
-const VER = { plane: 2, car: 2, train: 2, bbq: 2, dino: 2, rich: 2, beckon: 2, heart: 2, onigiri: 2, rice: 2, wizard: 2, sword: 2, fire: 2, ice: 2, chef: 3, ninja: 2, slash: 2, sausage: 2, tea: 5, skewer: 2 };
+const VER = { ice: 2, plane: 2, car: 2, train: 2, bbq: 2, dino: 2, rich: 2, beckon: 2, heart: 2, onigiri: 2, rice: 2, wizard: 2, sword: 2, fire: 2, ice: 2, chef: 3, ninja: 2, slash: 2, sausage: 2, tea: 5, skewer: 2 };
 const VER_INFO = {
   wizard: ['魔法師', ['尖帽＋魔杖', '月亮帽、星星披風、魔法書、魔杖拖星光']],
   sword: ['劍士', ['綠色帽子', '騎士：頭盔羽毛、肩甲、皮帶、披風、盾牌']],
@@ -799,6 +808,7 @@ const VER_INFO = {
   chef: ['廚師', ['小廚師帽', '褶紋高帽＋紅領巾、圍裙', '帽子加粗黑邊、褶線陰影']],
   ninja: ['忍者', ['頭帶', '頭巾、面罩、護額、紅圍巾']],
   slash: ['斬擊特效', ['單色圓弧', '新月刀光、殘影、火花、一閃']],
+  ice: ['冰原角色', ['Blender 用球、管子拼的', 'AI 從官方圖生的（TRELLIS，免費）；還沒生好的先用 v1']],
   plane: ['搭飛機', ['three.js 拼的', 'Blender 做的雙翼機（圓滾滾機身、螺旋槳會轉）']],
   car: ['搭車', ['three.js 拼的', 'Blender 做的敞篷小車（倒角圓角、輪子會轉）', '網路 CC0：Kenney Toy Car Kit 的復古賽車']],
   train: ['搭火車', ['three.js 拼的', 'Blender 做的蒸汽火車（金色環帶、連桿、車廂）', '網路 CC0：Kenney Train Kit 的火車頭＋兩節車廂']],
@@ -1611,8 +1621,10 @@ const spinNamed = (g, re, axis, d) => g?.traverse(o => { if (re.test(o.name) && 
 { let cast = [], snowT = 0, sx0 = 0, sy0 = 0; const IA = { in: 3.2, scrat: 2.0, crack: 9.0, out: 10.0, end: 12.5 };
   act('iceage', { g: 'scene', label: '🧊 冰原歷險記', dur: IA.end, isNew: 1,
     enter() { sx0 = me.px; sy0 = groundY(); cast = [];
-      const mk = (n, k, from, to, dir) => { const m = model(n); if (!m) return; scene.add(m); m.rotation.x = .18; m.scale.setScalar(me.S * k); m.userData = { from, to, dir, k, n }; cast.push(m); };
-      mk('manny', 1.0, W + 140, W * .74, -1); mk('sid', .62, W + 220, W * .74, -1); mk('diego', .78, -120, W * .2, 1); mk('scrat', .5, -60, W + 80, 1);
+      // v2：有 AI 版的就用 AI 版（面向鏡頭，走路時轉成 3/4 側面）
+      const H_ = { scrat: 2.3, sid: 2.6, manny: 3.6, diego: 2.2 };
+      const mk = (n, k, from, to, dir) => { const m = VER.ice >= 2 && PM['ai_' + n] ? fitHeight(model('ai_' + n), H_[n]) : model(n); if (!m) return; scene.add(m); m.rotation.x = .18; m.scale.setScalar(me.S * k); m.userData = { from, to, dir, k, n }; cast.push(m); };
+      mk('manny', 1.0, W + 140, W * .74, -1); mk('sid', VER.ice >= 2 && PM.ai_sid ? .85 : .62, W + 220, VER.ice >= 2 && PM.ai_sid ? W * .5 : W * .74, -1); mk('diego', .78, -120, W * .2, 1); mk('scrat', .5, -60, W + 80, 1);
       blessLine('ice', ['馨岑！是冰原歷險記耶！', '哇～冰河期的朋友們！', '大家來找馨岑玩了！'], 2); bigText('冰原歷險記！', 1.4, '#bff0ff'); },
     exit() { cast.forEach(m => scene.remove(m)); cast = []; },
     pose(P, t) { for (const m of cast) { const u = m.userData; let x, walking = false;
@@ -1621,9 +1633,10 @@ const spinNamed = (g, re, axis, d) => g?.traverse(o => { if (re.test(o.name) && 
           else { x = lerp(W * .55, -100, ease((t - IA.crack) / 1.6)); walking = true; u.dir = -1; } }
         else if (t < IA.out) { x = lerp(u.from, u.to, ease(Math.min(1, t / IA.in))); walking = t < IA.in; }
         else { x = lerp(u.to, u.from, ease((t - IA.out) / 2.2)); walking = true; u.dir = -u.dir; if (t - IA.out < .05) u.dir = Math.sign(u.from - u.to); }
-        const k = u.k * me.S, onBack = u.n === 'sid' ? k * 2.9 : 0;
+        const k = u.k * me.S, onBack = u.n === 'sid' && !m.userData.ai ? k * 2.9 : 0;
         m.position.set(x, -sy0 + onBack + (walking ? Math.abs(Math.sin(t * 8)) * 3 : 0) + (u.n === 'sid' ? Math.sin(t * 3) * 2 : 0), u.n === 'manny' ? -80 : (u.n === 'sid' ? -60 : 10));
         m.rotation.y = (u.n === 'scrat' && t >= IA.crack) || u.dir < 0 ? Math.PI : 0; if (u.n === 'scrat' && t >= IA.crack) m.rotation.y = Math.PI;
+        if (m.userData.ai) m.rotation.y = (m.rotation.y ? -1 : 1) * (walking ? .9 : .35); // AI 版本來就面向鏡頭
         m.rotation.z = walking ? Math.sin(t * 8) * .05 : (u.n === 'manny' ? Math.sin(t * 1.2) * .02 : 0); }
       // 吉祥物：看到大家很開心、跟每隻打招呼
       const look = t < 4 ? 0 : (Math.floor(t / 2) % 2 ? .7 : -.7); P.turn = look; P.happy = t > 1.2 && t < IA.crack ? 1 : 0;
@@ -1721,6 +1734,25 @@ for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue; const b = docum
     list.forEach((desc, i) => { const b = document.createElement('button'); b.textContent = (i === list.length - 1 ? '新' : i === 0 ? '舊' : '中') + ' v' + (i + 1); b.title = desc; if (VER[k] === i + 1) { b.classList.add('on'); d.textContent = desc; }
       b.onclick = () => { VER[k] = i + 1; row.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); d.textContent = desc; if (costume === k) wear(k); }; row.append(b); });
     row.append(d); box.append(row); } }
+// ── 看模型（2026-10-21 使用者要求：要能直接看希德長怎樣） ──
+{ const LIST = [['ai_sid', '希德（AI 生的）'], ['sid', '希德（Blender 拼的）'], ['scrat', '奎特（Blender）'], ['manny', '曼佛瑞（Blender）'], ['diego', '迪亞哥（Blender）'],
+    ['dino', '恐龍（Blender）'], ['plane', '飛機（Blender）'], ['car', '汽車（Blender）'], ['k_car', '汽車（Kenney CC0）'], ['train', '火車（Blender）'], ['k_loco', '火車頭（Kenney CC0）'], ['grill', '烤肉架（Blender）']];
+  const box = document.getElementById('viewBtns'), wrap = document.getElementById('viewer'), vc = document.getElementById('vc');
+  let vr = null, vs = null, vcam = null, cur = null, rotY = 0, rotX = .25, drag = null, raf = 0;
+  function open(n, label) { if (!PM[n]) { alert('這個模型還沒載入好，等一下再按'); return; }
+    wrap.classList.add('on'); document.getElementById('vTitle').textContent = label; document.getElementById('vSub').textContent = n.startsWith('ai_') ? '用免費 AI（TRELLIS）從一張官方圖生出來的' : (n.startsWith('k_') ? 'Kenney CC0 現成模型' : '我用 Blender 程式做的');
+    if (!vr) { vr = new THREE.WebGLRenderer({ canvas: vc, antialias: true, alpha: true }); vr.setPixelRatio(Math.min(devicePixelRatio, 2)); vs = new THREE.Scene();
+      vs.add(new THREE.AmbientLight(0xffffff, 1.4)); const l = new THREE.DirectionalLight(0xffffff, 1.6); l.position.set(3, 5, 4); vs.add(l); vcam = new THREE.PerspectiveCamera(32, 1, .01, 100); }
+    const w = vc.clientWidth, h = vc.clientHeight; vr.setSize(w, h, false); vcam.aspect = w / h; vcam.updateProjectionMatrix();
+    if (cur) vs.remove(cur); cur = new THREE.Group(); const m = model(n); cur.add(m);
+    const b = new THREE.Box3().setFromObject(m), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()).length(); m.position.sub(c); vs.add(cur);
+    vcam.position.set(0, 0, sz * 1.5); vcam.lookAt(0, 0, 0); rotY = 0; rotX = .2;
+    cancelAnimationFrame(raf); (function loop() { if (!wrap.classList.contains('on')) return; if (!drag) rotY += .01; cur.rotation.set(rotX, rotY, 0); vr.render(vs, vcam); raf = requestAnimationFrame(loop); })(); }
+  for (const [n, label] of LIST) { const b = document.createElement('button'); b.textContent = label; b.onclick = () => open(n, label); box.append(b); }
+  vc.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, ry: rotY, rx: rotX }; vc.setPointerCapture(e.pointerId); });
+  vc.addEventListener('pointermove', e => { if (!drag) return; rotY = drag.ry + (e.clientX - drag.x) * .01; rotX = THREE.MathUtils.clamp(drag.rx + (e.clientY - drag.y) * .01, -1.2, 1.2); });
+  vc.addEventListener('pointerup', () => drag = null);
+  document.getElementById('vClose').onclick = () => wrap.classList.remove('on'); wrap.addEventListener('click', e => { if (e.target === wrap) wrap.classList.remove('on'); }); }
 const tog = (id, f) => { const b = document.getElementById(id); b.onclick = () => { b.classList.toggle('on'); f(b.classList.contains('on')); }; };
 tog('auto', v => { auto = v; tfAll = false; }); tog('blend', v => blend = v); tog('springy', v => springy = v);
 tog('zoom', v => me.S = foe.S = v ? 56 : 23); tog('slow', v => slow = v ? .35 : 1); tog('oldGrip', v => oldGrip = v);
@@ -1734,7 +1766,7 @@ const cardTop = () => stage.querySelector('.card.main').offsetTop;
 const groundY = cardTop;
 // Kenney 的模型會去讀旁邊的 Textures/colormap.png：設計稿換成內嵌的圖
 window.petTexUrl = kit => 'data:image/png;base64,' + window.PET_TEX_CC0[kit];
-window.getPetModelBuffer = name => { const b = atob(window.PET_MODELS[name] || window.PET_MODELS_CC0[name] || (window.PET_MODELS_ICE || {})[name]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return Promise.resolve(u.buffer); };
+window.getPetModelBuffer = name => { const b = atob(window.PET_MODELS[name] || window.PET_MODELS_CC0[name] || (window.PET_MODELS_ICE || {})[name] || (window.PET_MODELS_ICE_AI || {})[name]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return Promise.resolve(u.buffer); };
 function grabAt(x, y, demo = false) { drag = { x, y, vx: 0, vy: 0, lt: performance.now(), demo }; setAct('held'); fingerEl.classList.add('on'); }
 function moveTo(x, y) { if (!drag) return; const now = performance.now(), dt = Math.max(8, now - drag.lt) / 1000; drag.vx = drag.vx * .5 + (x - drag.x) / dt * .5; drag.vy = drag.vy * .5 + (y - drag.y) / dt * .5; drag.x = x; drag.y = y; drag.lt = now; }
 function release() { if (!drag) return; fingerEl.classList.remove('on'); me.vx = THREE.MathUtils.clamp(drag.vx, -1400, 1400); me.vy = THREE.MathUtils.clamp(drag.vy, -1600, 1200); me.spinV = me.vx * .01; me.spinA = 0; drag = null; demoT = -1; setAct('fly'); }
@@ -1806,5 +1838,6 @@ me.py = cardTop(); setAct('idle'); talk('馨岑妳好啊♡', 2.4);
 requestAnimationFrame(frame);
 window.__pet = { advance(sec) { paused = true; for (let i = 0; i < sec * 60; i++) tick(1 / 60); }, play() { paused = false; }, setAct, get act() { return cur; }, get t() { return actT; }, set t(v) { actT = v; }, me, foe, grabAt, moveTo, release, wear, get drag() { return drag; } };
 </script>
+<div id="viewer"><div class="t" id="vTitle"></div><canvas id="vc"></canvas><div class="s" id="vSub"></div><button id="vClose">關閉</button></div>
 </body>
 </html>
