@@ -59,6 +59,7 @@
   button { font: inherit; font-size: 14px; color: var(--ink); background: rgba(255,255,255,.07); border: 1px solid var(--edge); border-radius: 12px; padding: 8px 13px; cursor: pointer; }
   button:hover { background: rgba(255,255,255,.12); }
   button.on { background: rgba(255,200,87,.18); border-color: var(--accent); color: var(--accent); }
+  button .prob { font-size: 10.5px; color: #8fd3ff; margin-left: 5px; font-weight: 700; } button .prob.off { color: var(--ink3); }
   button .new { font-size: 10.5px; color: var(--pink); margin-left: 4px; font-weight: 800; }
   #vers { display: grid; gap: 6px; } .vrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
   .vrow > span { width: 72px; color: var(--ink2); } .vrow button { padding: 5px 10px; font-size: 12.5px; } .vrow .d { color: var(--ink3); font-size: 12px; }
@@ -70,7 +71,7 @@
   @media (max-width: 900px) { .left { position: static; } }
 </style>
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
 </head>
 <body>
@@ -117,6 +118,12 @@
     <div class="group"><h3>祝福馨岑 <small>發財、好運、趕走小人</small></h3><div class="btns" data-g="bless"></div></div>
     <div class="group"><h3>其他新動作</h3><div class="btns" data-g="fun"></div></div>
 
+    <div class="notes" style="margin-bottom:14px">
+      <div class="note"><b>App 裡的出現機率</b>（按鈕右邊藍色的數字；每次牠想「下一件事」時）<br>
+        走路 14%、跑步 5%、爬梯子 8%（上面有卡片才會）、往下跳 6%（下面有卡片才會）、東張西望 5%、睡覺 3%、開心跳 4%、發呆 5%，<b>新動作 50%</b>。<br>
+        新動作先抽一組：吃東西、休息、變身、祝福、其他各 17.9%，場景 10.7%（大場面少一點）；同一組、同一個動作不會連續出現，再在組裡平均抽。
+        所以每一個：吃東西、休息類各 3.0%，祝福、場景各 1.8%，變身 1.5%，其他 1.1%。灰色「未放進 App」＝只有設計稿有。</div>
+    </div>
     <div class="notes">
       <div class="note"><b>為什麼舊版不順</b><br>
         <span class="tag o">舊</span><span class="old">每一幀先把全身歸零再套新動作，換動作就一格跳過去；手臂轉軸在手掌球自己身上，轉了也只是原地自轉；身體只能原地上下，躺不下去。</span><br>
@@ -148,6 +155,7 @@
   </div>
 </div>
 
+<script src="assets/pet_models.js"></script>
 <script type="module">
 import * as THREE from 'three';
 
@@ -163,6 +171,7 @@ new ResizeObserver(resize).observe(stage); resize();
 scene.add(new THREE.AmbientLight(0xffffff, 1.35));
 const sun = new THREE.DirectionalLight(0xffffff, 1.35); sun.position.set(2.5, 5, 4); scene.add(sun);
 // ════════ 引擎開始（node tools/port_pet.cjs 把「引擎開始」到「引擎結束」搬到 App 的 web/pet/index.html；改動作改這份再跑腳本） ════════
+// 頁面要先準備好：window.getPetModelBuffer(名字) → Promise<ArrayBuffer>（Blender 做的模型，見 tools/blender/pet_props.py）
 // 頁面要先準備好：THREE、scene、W／H（畫面寬高）、#dim #water #big #bub0 #bub1 這幾個元素
 const SPRITE_K = window.SPRITE_K || 1; // 文字特效放大倍數（App 裡吉祥物很小，字要放大才看得清楚）
 const grad = (() => { const c = new Uint8Array([205, 250, 255]); const t = new THREE.DataTexture(c, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
@@ -335,6 +344,20 @@ function makeTea4() { const g = makeTea3(); for (const q of g.userData.pearls) g
     const hl = new THREE.Mesh(new THREE.SphereGeometry(.016, 6, 4), basic(0x9a7a5c)); hl.position.set(-.022, .03, .045); q.add(hl); g.add(q); g.userData.pearls.push(q); }
   g.userData.pearls.sort((x, y) => y.position.y - x.position.y); // 吸的時候從上面那層開始少
   return g; }
+// 第五版：v3 的杯子；珍珠畫在奶茶「前面」（v4 灰灰一坨＝半透明奶茶疊在珍珠上），大顆黑亮、有反光，
+// 下半杯一層一層鋪滿，上面再散幾顆
+function makeTea5() { const g = makeTea3(); for (const q of g.userData.pearls) g.remove(q); g.userData.pearls = [];
+  const pearlM = new THREE.MeshToonMaterial({ color: 0x1c0f08, gradientMap: grad }), geo = new THREE.SphereGeometry(.058, 16, 12), hlM = basic(0xffffff, { transparent: true, opacity: .7 });
+  const spots = [];
+  for (let layer = 0; layer < 3; layer++) { const n = [9, 8, 6][layer], r = [.15, .14, .12][layer];
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + layer * .4; spots.push([Math.cos(a) * r, -.27 + layer * .1, Math.sin(a) * r]); } }
+  for (const [x, z] of [[.05, .02], [-.07, -.04], [.0, .09]]) spots.push([x, -.27, z]);
+  for (const [x, y, z] of [[.08, .05, .06], [-.1, .1, .03], [.03, .16, -.08]]) spots.push([x, y, z]);
+  for (const [x, y, z] of spots) { const q = new THREE.Mesh(geo, pearlM); q.position.set(x, y, z); q.renderOrder = 4;
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(.017, 8, 6), hlM); hl.position.set(-.022, .026, .045); hl.renderOrder = 5; q.add(hl); g.add(q); g.userData.pearls.push(q); }
+  g.userData.pearls.sort((a, b) => b.position.y - a.position.y);
+  g.userData.liq.material.opacity = .55; g.userData.liq.renderOrder = 2;
+  return g; }
 function makeBook() { const g = new THREE.Group(); g.add(ol(new THREE.BoxGeometry(.62, .44, .04), toon(0x6f8fff), 1.05));
   const pg = new THREE.Mesh(new THREE.PlaneGeometry(.54, .36), toon(0xffffff)); pg.position.z = .025; g.add(pg);
   for (let i = 0; i < 4; i++) { const l = new THREE.Mesh(new THREE.PlaneGeometry(.42, .015), basic(0xb8c4e8)); l.position.set(0, .1 - i * .08, .03); g.add(l); } return g; }
@@ -499,6 +522,23 @@ function ringTex(kind) { const c = document.createElement('canvas'); c.width = c
   return new THREE.CanvasTexture(c); }
 const TEX = { magic: ringTex('magic'), ice: ringTex('ice'), glow: ringTex('glow') };
 
+// ════════════════ Blender 模型（GLB） ════════════════
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const PM = {}; // 名字 → 載好的原型（每次用 clone）
+function outlineOn(mesh, th) { const m = new THREE.MeshBasicMaterial({ color: 0x241a20, side: THREE.BackSide });
+  m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed += normal * ' + th.toFixed(4) + ';'); };
+  const o = new THREE.Mesh(mesh.geometry, m); o.name = mesh.name + '_ol'; mesh.add(o); }
+function prepModel(g) { const list = []; g.traverse(o => { if (o.isMesh) list.push(o); });
+  for (const o of list) { const src = o.material, name = (src.name || '').toLowerCase(), hex = src.color ? src.color.getHex() : 0xffffff;
+    if (name.includes('glass')) o.material = new THREE.MeshToonMaterial({ color: hex, gradientMap: grad, transparent: true, opacity: .55 });
+    else if (name.includes('coal')) o.material = new THREE.MeshBasicMaterial({ color: hex });
+    else { o.material = toon(hex); o.geometry.computeBoundingSphere(); if (o.geometry.boundingSphere.radius > .06) outlineOn(o, Math.min(.03, .012 + o.geometry.boundingSphere.radius * .02)); } }
+  return g; }
+const MODEL_NAMES = ['plane', 'car', 'train', 'grill', 'dino'];
+// 整頁的程式跑完（頁面定義好 getPetModelBuffer）再載
+const modelsReady = new Promise(r => setTimeout(r, 0)).then(() => Promise.all(MODEL_NAMES.map(n => Promise.resolve(window.getPetModelBuffer?.(n)).then(buf => buf && new Promise((res, rej) => new GLTFLoader().parse(buf, '', g => { PM[n] = prepModel(g.scene); res(); }, rej))).catch(e => console.warn('model', n, e)))));
+const model = n => PM[n] ? PM[n].clone(true) : null;
+
 // ════════════════ 粒子、特效 ════════════════
 const texCache = {};
 function texOf(txt, color) { const k = txt + color; if (texCache[k]) return texCache[k];
@@ -521,7 +561,7 @@ let shakeAmt = 0;
 // ════════════════ 兩隻、道具實體 ════════════════
 const me = makePet(), foe = makePet({ dark: true }); foe.root.visible = false; foe.px = 9999;
 me.px = 200;
-const food = { tea4: makeTea4(), tea3: makeTea3(), rice2: makeOnigiri2(), rice: makeOnigiri(), sausage: makeSausage(), sausage1: makeSausageV1(), tea: makeTea() };
+const food = { tea5: makeTea5(), tea4: makeTea4(), tea3: makeTea3(), rice2: makeOnigiri2(), rice: makeOnigiri(), sausage: makeSausage(), sausage1: makeSausageV1(), tea: makeTea() };
 const book = makeBook(), pencil = makePencil();
 const pillow = ol(new THREE.SphereGeometry(.5, 24, 16), toon(0xbfd7ff), 1.05); pillow.visible = false; me.props.add(pillow);
 const nightcap = new THREE.Group(); { const c = ol(new THREE.ConeGeometry(.42, .9, 24), toon(0x7d8cff), 1.05); c.position.set(.12, .4, 0); c.rotation.z = -.55; nightcap.add(c);
@@ -650,7 +690,7 @@ eatAct('cutlet', '🍗 吃雞排', () => makeCutlet(), '雞排！香香的～', 
 eatAct('melon', '🍉 吃西瓜', () => makeWatermelon(), '西瓜好消暑～', 0xff4d5e);
 { let f = food.tea, L = f.userData.liq, PE = f.userData.pearls;
   act('tea', { g: 'eat', label: '🧋 喝珍奶', dur: 7.4, isNew: 1,
-    enter() { f = VER.tea >= 4 ? food.tea4 : VER.tea >= 3 ? food.tea3 : food.tea; L = f.userData.liq; PE = f.userData.pearls;
+    enter() { f = VER.tea >= 5 ? food.tea5 : VER.tea >= 4 ? food.tea4 : VER.tea >= 3 ? food.tea3 : food.tea; L = f.userData.liq; PE = f.userData.pearls;
       if (VER.tea < 3) f.userData.straws.forEach((m, i) => m.visible = i === (VER.tea >= 2 ? 1 : 0)); L.scale.y = VER.tea >= 3 ? .58 : .55; PE.forEach(q => q.visible = true); hold(me.holdMid, f, [0, .05, 0]); talk('珍奶！！', 1.6); },
     exit() { me.holdMid.remove(f); },
     pose(P, t) { const v2 = VER.tea >= 2; both(P, v2 ? [.3, .22, 1.3] : 'chest'); P.happy = t < .9 ? 1 : 0;
@@ -728,7 +768,7 @@ act('grabDemo', { g: 'held', label: '示範：抓起來甩一甩', isNew: 1 });
 
 // ── 變身 ──
 // ── 版本：改過的東西新舊版都留著，按鈕切換（2026-10-21 使用者：之後可能想變回舊版） ──
-const VER = { rich: 2, beckon: 2, heart: 2, onigiri: 2, rice: 2, wizard: 2, sword: 2, fire: 2, ice: 2, chef: 3, ninja: 2, slash: 2, sausage: 2, tea: 4, skewer: 2 };
+const VER = { plane: 2, car: 2, train: 2, bbq: 2, dino: 2, rich: 2, beckon: 2, heart: 2, onigiri: 2, rice: 2, wizard: 2, sword: 2, fire: 2, ice: 2, chef: 3, ninja: 2, slash: 2, sausage: 2, tea: 5, skewer: 2 };
 const VER_INFO = {
   wizard: ['魔法師', ['尖帽＋魔杖', '月亮帽、星星披風、魔法書、魔杖拖星光']],
   sword: ['劍士', ['綠色帽子', '騎士：頭盔羽毛、肩甲、皮帶、披風、盾牌']],
@@ -737,13 +777,18 @@ const VER_INFO = {
   chef: ['廚師', ['小廚師帽', '褶紋高帽＋紅領巾、圍裙', '帽子加粗黑邊、褶線陰影']],
   ninja: ['忍者', ['頭帶', '頭巾、面罩、護額、紅圍巾']],
   slash: ['斬擊特效', ['單色圓弧', '新月刀光、殘影、火花、一閃']],
+  plane: ['搭飛機', ['three.js 拼的', 'Blender 做的雙翼機（圓滾滾機身、螺旋槳會轉）']],
+  car: ['搭車', ['three.js 拼的', 'Blender 做的敞篷小車（倒角圓角、輪子會轉）']],
+  train: ['搭火車', ['three.js 拼的', 'Blender 做的蒸汽火車（金色環帶、連桿、車廂）']],
+  bbq: ['烤肉', ['three.js 拼的方形架', 'Blender 做的圓形烤爐（木炭發光、烤串會翻面）']],
+  dino: ['恐龍', ['three.js 拼的', 'Blender 做的暴龍（metaball 圓滑一整隻、下巴會張、腳會走）']],
   rich: ['發財舞', ['財神帽捧元寶扭', '中式財神：烏紗帽、紅袍、拱手拜年、鞭炮、燈籠、古錢、招財進寶捲軸']],
   beckon: ['招財', ['舉手招一招', '招財貓：紅項圈金鈴鐺、肉球手、抱千萬兩金幣、招手往前彎']],
   heart: ['比心', ['手放在一起＋大愛心', '手指真的比心（拇指食指交叉）、再雙手在頭上比大愛心']],
   onigiri: ['飯糰', ['三段疊起來、一口拿掉一段', '圓角膨膨、海苔包住底部、咬了有齒痕']],
   rice: ['咬東西', ['拿在胸前往上舉', '斜過去、最上面那塊對準嘴巴']],
   sausage: ['鑫鑫腸', ['有切痕', '光滑']],
-  tea: ['珍奶', ['杯子拿高', '拿低、吸管對嘴', '看得到黑珍珠、吸的時候珍珠跑上吸管', '珍珠多、大顆、不規則、疊在杯子下半部']],
+  tea: ['珍奶', ['杯子拿高', '拿低、吸管對嘴', '看得到黑珍珠、吸的時候珍珠跑上吸管', '珍珠多、大顆、不規則、疊在杯子下半部', '以 v3 為底：珍珠大顆黑亮、鋪滿下半杯、看得清楚（不會被奶茶蓋成灰色）']],
   skewer: ['吃鑫鑫腸的姿勢', ['竹籤直直的從上面咬', '咬第二、三顆時竹籤橫過來從側面咬（不會被竹籤戳到）']],
 };
 const cver = k => VER[k];
@@ -1427,8 +1472,116 @@ act('shy', { g: 'fun', label: '害羞', dur: 3.4, isNew: 1, enter() { talk('討�
   pose(P, t) { hR(P, 'cheek'); hL(P, 'cheek'); P.roll = Math.sin(t * 3) * .12; P.turn = Math.sin(t * 1.5) * .3; P.happy = 1; P.blush = 1; P.lean = .08; },
   ev(t0, t1) { if (every(t0, t1, .6)) puff('♥', W2(me.body, (Math.random() - .5) * 1.4, 2.0, 0), { color: '#ff6fa5', vy: 45, life: 1.3, wob: 14 }); } });
 
-for (const k of ['rich', 'beckon', 'heart']) { const v1 = ACTS[k]; ACTS[k + '1'] = { ...v1, g: null };
-  ACTS[k] = { g: 'bless', label: v1.label, isNew: 1, get dur() { return this.d?.dur ?? v1.dur; },
+// ════ 出遊、恐龍 v2：Blender 做的模型（v1＝原本 three.js 拼的，留著比較） ════
+const spinNamed = (g, re, axis, d) => g?.traverse(o => { if (re.test(o.name) && !o.isMesh) o.rotation[axis] += d; });
+{ let pl = null, sx0 = 0, sy0 = 0; const PL = { board: 1.0, up: 2.4, land: 8.6, end: 9.8 }, K = 1.15, SEAT = 1.33 * K + .45 - .55;
+  act('plane2', { g: null, label: '搭飛機 v2', dur: PL.end,
+    enter() { sx0 = me.px; sy0 = groundY(); pl = model('plane'); if (pl) { pl.scale.setScalar(.001); pl.position.set(-.05 * K, .45, 0); me.props.add(pl); } blessLine('plane', ['馨岑，我帶妳去旅行！', '飛機來接馨岑囉～', '馨岑想去哪裡呢？'], 1.8); },
+    exit() { if (pl) me.props.remove(pl); pl = null; me.swimOff = null; },
+    pose(P, t) { if (!pl) return; pl.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .4)) * K)); spinNamed(pl, /^prop$/, 'x', t > PL.board ? .7 : .12);
+      if (t < PL.board) { P.happy = 1; both(P, 'up'); P.y = seg(t, .35, 1) * SEAT + Math.sin(Math.min(1, t) * Math.PI) * .5; return; }
+      P.y = SEAT; P.turn = .45; both(P, t > PL.up && t < PL.land ? 'high' : 'rest'); P.happy = 1; P.mouth = .3; P.lLy = P.lRy = .25;
+      if (t < PL.up) { const k = seg(t, PL.board, PL.up); me.swimOff = { x: sx0 + k * 40, y: sy0 - k * H * .2 }; pl.rotation.z = .22 * Math.sin(k * Math.PI); return; }
+      if (t < PL.land) { const u = t - PL.up, dx = Math.cos(u * .9); me.swimOff = { x: W / 2 + Math.sin(u * .9) * W * .3, y: sy0 - H * .2 + Math.sin(u * 1.8) * 24 };
+        pl.rotation.y = dx >= 0 ? 0 : Math.PI; pl.rotation.z = Math.cos(u * 1.8) * .1; P.turn = dx >= 0 ? .45 : -.45; return; }
+      const k = seg(t, PL.land, PL.end - .3); pl.rotation.y = 0; pl.rotation.z = -.12 * (1 - k); me.swimOff = { x: lerp(me.px, sx0, .08), y: lerp(sy0 - H * .2, sy0, k) }; },
+    ev(t0, t1) { if (cross(t0, t1, PL.board + .2)) { talk('起飛囉～', 1.2); bigText('出發！', 1, '#9fe6ff'); }
+      if (pl && t1 > PL.up && t1 < PL.land && every(t0, t1, .22)) puff('●', W2(pl, -2.4, .9, 0), { color: '#ffffff', vy: 0, size: .32, grow: 1.3, life: .9 });
+      if (cross(t0, t1, PL.up + 2)) talk(pickNo('planeMid', ['馨岑看！雲好漂亮', '不開心的事都留在地上吧～', '馨岑，世界好大喔']), 2);
+      if (cross(t0, t1, PL.land + .8)) { talk('平安降落～', 1.4); me.swimOff = null; } } }); }
+{ let car = null, sx0 = 0, sy0 = 0; const CR = { in: .8, end: 8.0 }, K = 1.3, SEAT = 1.32 * K - .2;
+  act('car2', { g: null, label: '搭車 v2', dur: CR.end,
+    enter() { sx0 = me.px; sy0 = groundY(); car = model('car'); if (car) { car.scale.setScalar(.001); car.position.set(.3 * K, 0, 0); me.props.add(car); } blessLine('car', ['馨岑上車！帶妳去兜風～', '馨岑專屬司機來了！', '馨岑，今天想去哪？'], 1.8); },
+    exit() { if (car) me.props.remove(car); car = null; me.swimOff = null; },
+    pose(P, t) { if (!car) return; car.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .4)) * K));
+      if (t < CR.in) { P.happy = 1; both(P, 'up'); P.y = seg(t, .3, .8) * SEAT + Math.sin(Math.min(1, t / .8) * Math.PI) * .45; return; }
+      P.y = SEAT; const u = t - CR.in, v = Math.cos(u * .9);
+      me.swimOff = t < CR.end - .8 ? { x: THREE.MathUtils.clamp(sx0 + Math.sin(u * .9) * W * .3, 70, W - 70), y: sy0 } : { x: lerp(me.px, sx0, .15), y: sy0 };
+      car.rotation.y = v >= 0 ? 0 : Math.PI; car.position.x = (v >= 0 ? .3 : -.3) * K; car.position.y = Math.abs(Math.sin(u * 14)) * .03;
+      spinNamed(car, /^wheel\d$/, 'z', -.3 * Math.sign(v || 1)); P.turn = v >= 0 ? .55 : -.55;
+      hR(P, [.55, 1.05, 1.0]); hL(P, Math.floor(u / 2) % 2 ? 'up' : [.55, 1.05, 1.0]); P.happy = 1; P.mouth = .3; P.roll = Math.sin(u * 14) * .02; },
+    ev(t0, t1) { if (car && t1 > CR.in && every(t0, t1, .3)) puff('●', W2(car, -1.7, .45, 0), { color: '#c8ccd8', vy: 15, size: .25, grow: 1, life: .6 });
+      if (cross(t0, t1, CR.in + .1)) { talk('叭叭～', 1); puff('♪', W2(me.body, .8, 2, 0), { color: '#ffd36b', vy: 40, size: .3, life: 1 }); }
+      if (cross(t0, t1, CR.in + 2.5)) talk(pickNo('carMid', ['風好舒服～馨岑也是嗎？', '馨岑想聽什麼歌？', '開心的地方，我載妳去']), 2);
+      if (cross(t0, t1, CR.end - .7)) talk('到站囉！', 1.2); } }); }
+{ let tr = null, track = null, sx0 = 0, sy0 = 0; const TR = { arrive: 1.8, board: 2.6, go: 3.0, back: 7.6, end: 9.6 }, K = 1.15;
+  act('train2', { g: null, label: '搭火車 v2', dur: TR.end,
+    enter() { sx0 = me.px; sy0 = groundY(); tr = model('train'); if (tr) { scene.add(tr); tr.rotation.x = .18; }
+      track = new THREE.Group(); for (const dy of [2, -3]) { const r = new THREE.Mesh(new THREE.PlaneGeometry(W + 40, 3), basic(0x9aa3b5)); r.position.set(W / 2, -sy0 + dy, -1); track.add(r); }
+      for (let x = 0; x < W + 40; x += 18) { const sl = new THREE.Mesh(new THREE.PlaneGeometry(6, 9), basic(0x8a5a32)); sl.position.set(x - 10, -sy0, -2); track.add(sl); } scene.add(track);
+      blessLine('train', ['嘟嘟～馨岑專車到站！', '馨岑，上車囉～', '開往幸福的列車來了！'], 1.8); },
+    exit() { if (tr) scene.remove(tr); if (track) scene.remove(track); tr = track = null; me.swimOff = null; },
+    pose(P, t) { if (!tr) return; const sc = me.S * K * .75; tr.scale.setScalar(sc); let tx; const stopX = sx0 + .4 * sc;
+      if (t < TR.arrive) tx = lerp(-sc * 3, stopX, ease(t / TR.arrive)); else if (t < TR.go) tx = stopX;
+      else if (t < TR.back) tx = stopX + (t - TR.go) * 150; else tx = lerp(-sc * 3, stopX, ease((t - TR.back) / (TR.end - .4 - TR.back)));
+      const x = t >= TR.go && t < TR.back ? ((tx + sc * 6) % (W + sc * 11)) - sc * 6 : tx; tr.position.set(x, -sy0 + (t > TR.go ? Math.abs(Math.sin(t * 16)) : 0), 30);
+      if (t < TR.arrive || t > TR.go) spinNamed(tr, /^wheel\d+$/, 'z', -.35);
+      if (t < TR.board) { P.happy = t > TR.arrive ? 1 : 0; P.wide = t < TR.arrive ? 1 : 0; return; }
+      me.swimOff = { x: tr.position.x - .4 * sc, y: sy0 - .58 * sc }; P.turn = .45; P.happy = 1; P.mouth = .3;
+      if (t < TR.go) { P.y = Math.sin(seg(t, TR.board, TR.go) * Math.PI) * .4; both(P, 'up'); } else { hR(P, Math.floor(t * 1.5) % 2 ? 'up' : 'high'); hL(P, 'rest'); }
+      if (t > TR.end - .4) me.swimOff = { x: sx0, y: sy0 }; },
+    ev(t0, t1) { if (tr && t1 < TR.end - .4 && every(t0, t1, .2) && (t1 < TR.arrive || t1 > TR.go)) puff('●', W2(tr, 1.25, 2.0, 0), { color: '#e8e8f0', vy: 55, vx: -40, size: .4, grow: 1.4, life: 1.0, wob: 6 });
+      if (cross(t0, t1, TR.go)) { talk('出發！嘟嘟～', 1.2); bigText('嘟嘟——！', .9, '#ffd36b'); }
+      if (cross(t0, t1, TR.go + 2.2)) talk(pickNo('trainMid', ['下一站：馨岑的好日子', '煩惱都丟在上一站了', '馨岑，窗外風景好美']), 2);
+      if (cross(t0, t1, TR.end - .5)) talk('到站囉～', 1.2); } }); }
+{ let gr = null, fan = null; const BQ = { set: .8, fan: 4.2, eat: 6.6, end: 9.4 };
+  act('bbq2', { g: null, label: '烤肉 v2', dur: BQ.end,
+    enter() { gr = model('grill'); if (gr) { gr.position.set(1.9, 0, .5); gr.scale.setScalar(.001); me.props.add(gr); } fan = makeFan(); hold(me.holdR, fan, [0, .05, .05]); blessLine('bbq', ['烤肉給馨岑吃！', '馨岑等等，馬上就好～', '今天吃好料的！'], 1.8); },
+    exit() { if (gr) me.props.remove(gr); if (fan) me.holdR.remove(fan); me.holdMid.clear(); gr = fan = null; },
+    pose(P, t) { if (!gr) return; gr.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .4)) * 1.1 * (t > BQ.end - .4 ? (BQ.end - t) / .4 : 1)));
+      gr.traverse(o => { if (/^coal/.test(o.name) && o.material?.color) o.material.color.setHSL(.04 + Math.sin(clockT * 6 + o.id) * .015, 1, .45 + Math.sin(clockT * 5 + o.id * 2) * .12); });
+      P.turn = .65;
+      if (t < BQ.fan) { const w = Math.sin(t * 16); hR(P, [.9, .85 + w * .15, .95]); hL(P, 'belly'); P.lean = .1; P.eye = .8; P.puff = .5; return; }
+      if (t < BQ.eat) { const k = ((t - BQ.fan) % .8) / .8, i = Math.floor((t - BQ.fan) / .8) % 3; const sk = gr.getObjectByName('skewer' + i); if (sk) sk.rotation.x = ease(k) * Math.PI; hR(P, [1.2, 1.0 + Math.sin(k * Math.PI) * .3, .9]); hL(P, 'rest'); P.happy = 1; return; }
+      P.turn = 0; both(P, 'chest'); const c = (t - BQ.eat) % 1.2; P.mouth = c < .3 ? .8 : .18 + Math.sin(c * 18) * .12; P.puff = c > .3 ? 1 : 0; P.happy = 1; },
+    ev(t0, t1) { if (gr && t1 > BQ.set && t1 < BQ.end - .4 && every(t0, t1, .16)) puff('●', W2(gr, (Math.random() - .5) * 1.0, 1.4, 0), { color: '#c8ccd8', vy: 50, vx: (Math.random() - .5) * 20, size: .3, grow: 1.6, life: 1.1, wob: 8 });
+      if (gr && t1 < BQ.fan && every(t0, t1, .12)) puff(Math.random() < .5 ? '✦' : '🔥', W2(gr, (Math.random() - .5) * .8, 1.1, 0), { color: '#ffb340', vy: 60, size: .16, life: .4 });
+      if (cross(t0, t1, 1.6)) talk('滋滋滋～', 1.2);
+      if (cross(t0, t1, BQ.fan)) talk(pickNo('bbqMid', ['好香喔～', '翻面翻面！', '火候剛剛好']), 1.4);
+      if (cross(t0, t1, BQ.eat)) { const s0 = gr?.getObjectByName('skewer0'); if (s0) { s0.parent.remove(s0); s0.position.set(0, 0, 0); hold(me.holdMid, s0, [0, .2, .1], [0, 0, Math.PI / 2]); s0.userData.pop = 1; s0.scale.setScalar(.6); } talk('第一串給馨岑！', 1.6); }
+      if (cross(t0, t1, BQ.eat + 1.8)) talk(pickNo('bbqEnd', ['馨岑多吃一點喔', '吃飽飽，煩惱跑光光', '跟馨岑一起吃最好吃']), 2); } }); }
+{ let dino = null, meat = null, sx0 = 0, sy0 = 0, dx = 0, ddir = -1;
+  const DN = { in: 1.8, roar: 3.0, offer: 4.4, eat: 5.6, hop: 6.2, ride: 11.2, off: 11.8, end: 13.2 }, K = .95, BACK = 2.15;
+  act('dino2', { g: null, label: '馴服恐龍 v2', dur: DN.end,
+    enter() { sx0 = me.px; sy0 = groundY(); dino = model('dino'); if (dino) { scene.add(dino); dino.rotation.x = .18; } dx = W + me.S * 4; ddir = -1; talk('咚…咚…？', 1.4); },
+    exit() { if (dino) scene.remove(dino); dino = null; if (meat) me.holdR.remove(meat); meat = null; me.swimOff = null; },
+    pose(P, t) { if (!dino) return; const sc = me.S * K; dino.scale.setScalar(sc);
+      const jaw = dino.getObjectByName('jaw'), legs = ['leg_L', 'leg_R'].map(n => dino.getObjectByName(n)), arms = ['arm_L', 'arm_R'].map(n => dino.getObjectByName(n));
+      let walking = false, target = dx;
+      if (t < DN.in) { target = lerp(W + sc * 4, sx0 + sc * 3.6, ease(t / DN.in)); walking = true; }
+      else if (t < DN.offer) target = sx0 + sc * 3.6; else if (t < DN.eat) target = sx0 + sc * 2.9;
+      else if (t < DN.ride) { const v = t - DN.hop; target = t < DN.hop ? sx0 + sc * 2.9 : W / 2 + Math.sin(v * .8) * W * .22; walking = t > DN.hop; ddir = t < DN.hop ? -1 : (Math.cos(v * .8) >= 0 ? 1 : -1); }
+      else { target = t < DN.off ? dx : dx + (t - DN.off) * 240; walking = t > DN.off; ddir = 1; }
+      if (t < DN.hop) ddir = -1; dx = target;
+      dino.position.set(dx, -sy0 + (walking ? Math.abs(Math.sin(t * 7)) * 4 : 0), -40); dino.rotation.y = ddir < 0 ? Math.PI : 0;
+      dino.rotation.z = walking ? Math.sin(t * 7) * .04 : 0;
+      legs.forEach((l, i) => l && (l.rotation.z = walking ? Math.sin(t * 7 + i * Math.PI) * .45 : 0));
+      arms.forEach((a, i) => a && (a.rotation.z = Math.sin(t * (t > DN.eat ? 9 : 3) + i) * .3));
+      let jawOpen = 0; if (t > DN.in && t < DN.roar) jawOpen = .55 + Math.sin(t * 30) * .05; if (t > DN.offer && t < DN.eat) jawOpen = Math.max(0, Math.sin((t - DN.offer) * 9)) * .45;
+      if (jaw) jaw.rotation.z = -jawOpen;
+      P.turn = .9;
+      if (t < DN.in) { P.wide = t > .6 ? 1 : 0; return; }
+      if (t < DN.roar) { P.wide = 1; P.sq = t > DN.in + .4 ? 1 : 0; P.cry = t > DN.in + .6 ? .6 : 0; both(P, 'up'); P.roll = Math.sin(t * 40) * .04; P.lean = -.15; return; }
+      if (t < DN.eat) { hR(P, [1.0, 1.1, 1.1]); hL(P, 'chest'); P.lean = .12; P.eye = 1; P.mouth = .2; return; }
+      if (t < DN.hop) { P.happy = 1; both(P, 'high'); return; }
+      if (t < DN.ride) { const k = seg(t, DN.hop, DN.hop + .45); me.swimOff = { x: lerp(sx0, dx - ddir * sc * .1, k), y: sy0 - sc * BACK * k - Math.sin(k * Math.PI) * 30 }; P.turn = ddir * .6; P.happy = 1; P.mouth = .35;
+        hR(P, Math.floor(t * 1.2) % 2 ? 'high' : 'up'); hL(P, 'up'); P.y = Math.abs(Math.sin(t * 7)) * .06; P.lLy = P.lRy = .15; P.lLx = -.7; P.lRx = .7; return; }
+      const k = seg(t, DN.ride, DN.off); me.swimOff = { x: lerp(me.px, sx0, k), y: lerp(sy0 - sc * BACK, sy0, k) - Math.sin(k * Math.PI) * 30 };
+      if (t > DN.off + .3) me.swimOff = null; P.happy = 1; hR(P, 'up', Math.sin(t * 11) * .25, .25); P.turn = .5; },
+    ev(t0, t1) { if (!dino) return; const head = dino.getObjectByName('jaw') || dino;
+      if (t1 < DN.in && every(t0, t1, .45)) { shakeAmt = 3; puff('咚', new THREE.Vector3(dx, -sy0 + me.S * .2, 60), { color: '#c8e8b0', size: .3, vy: 20, life: .5 }); }
+      if (cross(t0, t1, DN.in + .1)) { bigText('吼————！', 1.2, '#9dff8f'); shakeAmt = 10; talk('哇啊啊！恐龍！', 1.2); }
+      if (cross(t0, t1, DN.roar - .4)) talk('別、別怕…', 1);
+      if (cross(t0, t1, DN.roar)) { meat = makeDrumstick(); hold(me.holdR, meat, [0, .05, .1], [0, 0, -.4]); talk('請你吃這個！', 1.4); }
+      if (cross(t0, t1, DN.eat - .5)) { if (meat) me.holdR.remove(meat); meat = null; puff('啊嗚', W2(head, .6, .3, 0), { size: .34, vy: 30, life: .7 }); }
+      if (t1 > DN.eat - .3 && t1 < DN.hop && every(t0, t1, .25)) puff('♥', W2(head, .2, .8, 0), { color: '#ff6fa5', vy: 50, size: .3, life: 1, wob: 10 });
+      if (cross(t0, t1, DN.eat)) { talk('牠變乖了！', 1.4); bigText('馴服成功！', 1.3, '#9dff8f'); }
+      if (cross(t0, t1, DN.hop + .5)) talk(pickNo('dinoRide', ['衝啊～恐龍號！', '馨岑！我騎恐龍了！', '誰敢欺負馨岑，恐龍咬他！']), 2);
+      if (t1 > DN.hop && t1 < DN.ride && every(t0, t1, .45)) shakeAmt = 2;
+      if (cross(t0, t1, DN.ride - 2.2)) talk(pickNo('dinoMid', ['恐龍說牠也喜歡馨岑', '以後牠也會保護馨岑喔', '下次帶馨岑一起騎！']), 2);
+      if (cross(t0, t1, DN.off + .2)) talk('掰掰～恐龍！', 1.4); } }); }
+for (const k of ['rich', 'beckon', 'heart', 'plane', 'car', 'train', 'bbq', 'dino']) { const v1 = ACTS[k]; ACTS[k + '1'] = { ...v1, g: null };
+  ACTS[k] = { g: v1.g, label: v1.label, isNew: 1, get dur() { return this.d?.dur ?? v1.dur; },
     enter() { this.d = VER[k] >= 2 ? ACTS[k + '2'] : ACTS[k + '1']; this.d.enter?.call(this.d); }, exit() { this.d?.exit?.call(this.d); },
     pose(P, t, F) { this.d.pose?.call(this.d, P, t, F); }, ev(a, b) { this.d.ev?.call(this.d, a, b); } }; }
 function walkCycle(P, ph, run, d = me.dir) { P.turn = d * .9; P.lean = .1 + run * .12; const s = Math.sin(ph), c = Math.cos(ph);
@@ -1489,9 +1642,19 @@ function setAct(name) { ACTS[cur].exit?.(); chairV1.visible = false; sparkV1.vis
   if (a.walk) { const tx = 60 + Math.random() * (W - 120); walkTo = Math.abs(tx - me.px) < 60 ? (me.px > W / 2 ? 70 : W - 70) : tx; me.dir = walkTo > me.px ? 1 : -1; } else walkTo = null;
   document.getElementById('now').textContent = a.label;
   document.querySelectorAll('[data-act]').forEach(b => b.classList.toggle('on', b.dataset.act === name || (tfAll && b.dataset.act === 'tf_all'))); }
+// ── App 裡的出現機率（每次牠想下一件事時；跟 tally_pet.dart 同步，改那邊要一起改這裡） ──
+// 新動作 50%：先抽一組（吃東西、休息、變身、祝福、其他 各 1 份，場景 0.6 份，不連續同組），再在組裡平均抽（不連續同一個）。
+const APP_PROB = (() => { const groups = { eat: ['rice', 'sausage', 'tea'], rest: ['sitEdge', 'sitFloor', 'stretch'], tf: ['tf_wizard', 'tf_sword', 'tf_fire', 'tf_ice', 'tf_chef', 'tf_ninja'],
+    bless: ['rich', 'beckon', 'luck', 'shoo', 'heart'], fun: ['wave', 'jump', 'dance', 'sneeze', 'shy', 'trip', 'coins', 'write'], scene: ['beach', 'flood', 'duel'] };
+  const W = { eat: 1, rest: 1, tf: 1, bless: 1, fun: 1, scene: .6 }, tot = 5.6, out = {};
+  for (const [g, list] of Object.entries(groups)) for (const k of list) out[k] = .5 * W[g] / tot / list.length;
+  Object.assign(out, { walk: .14, run: .05, sleep: .03 }); return out; })();
+const PROB_NOTE = { wake: '睡完接著', grabDemo: '手指捏才會' };
+const probText = k => PROB_NOTE[k] ? PROB_NOTE[k] : APP_PROB[k] == null ? (ACTS[k]?.g === 'v1' ? '' : '未放進 App') : (APP_PROB[k] * 100).toFixed(1) + '%';
 const stopAuto = () => { auto = false; document.getElementById('auto').classList.remove('on'); };
 for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue; const b = document.createElement('button'); b.dataset.act = k; b.textContent = a.label;
   if (a.isNew || a.redo) { const s = document.createElement('span'); s.className = 'new'; s.textContent = a.redo ? '重做' : '新'; b.append(s); }
+  { const p = probText(k); if (p) { const s = document.createElement('span'); s.className = 'prob' + (p.endsWith('%') ? '' : ' off'); s.textContent = p; b.append(s); } }
   b.onclick = () => { stopAuto(); tfAll = k === 'tf_all'; if (drag) release();
     if (k === 'wake' && cur !== 'sleep') { setAct('sleep'); actT = SL.lie + 1; }
     if (k === 'tf_all') { tfAllI = 0; setAct('tf_' + Object.keys(COSTUMES)[0]); return; }
@@ -1514,6 +1677,7 @@ const fingerEl = document.getElementById('finger');
 let drag = null;
 const cardTop = () => stage.querySelector('.card.main').offsetTop;
 const groundY = cardTop;
+window.getPetModelBuffer = name => { const b = atob(window.PET_MODELS[name]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return Promise.resolve(u.buffer); };
 function grabAt(x, y, demo = false) { drag = { x, y, vx: 0, vy: 0, lt: performance.now(), demo }; setAct('held'); fingerEl.classList.add('on'); }
 function moveTo(x, y) { if (!drag) return; const now = performance.now(), dt = Math.max(8, now - drag.lt) / 1000; drag.vx = drag.vx * .5 + (x - drag.x) / dt * .5; drag.vy = drag.vy * .5 + (y - drag.y) / dt * .5; drag.x = x; drag.y = y; drag.lt = now; }
 function release() { if (!drag) return; fingerEl.classList.remove('on'); me.vx = THREE.MathUtils.clamp(drag.vx, -1400, 1400); me.vy = THREE.MathUtils.clamp(drag.vy, -1600, 1200); me.spinV = me.vx * .01; me.spinA = 0; drag = null; demoT = -1; setAct('fly'); }
