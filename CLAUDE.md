@@ -50,6 +50,7 @@
 - 要跟著捲動的東西不要在 Ticker 裡讀別的元件位置（Ticker 在排版前跑，讀到上一幀的位置，
   捲動時永遠慢一幀）。在「畫的那一刻」讀（自訂 RenderObject 的 paint，見 tally_pet.dart 的 `_Follow`），
   同一刻把位置送給 iframe。
+- 吉祥物順暢化完整踩坑過程：`docs/吉祥物順暢化踩坑紀錄.md`。
 
 ## 設計稿
 
