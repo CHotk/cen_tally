@@ -249,6 +249,26 @@ class TallyRepository {
     );
   }
 
+  /// 遮蔽／取消遮蔽備註（跟著同步，換手機也一樣遮著）。
+  Future<void> setHidden(TallyItem old, bool hidden) async {
+    if (old.hidden == hidden) return;
+    final it = old.copyWith(hidden: hidden, updatedAt: DateTime.now());
+    final bal = await balance(old.bookId);
+    await _putItem(it);
+    await _log(
+      TallyAction.itemUpdate,
+      old.bookId,
+      hidden
+          ? '遮蔽一筆（${tallyMoney(old.amount)}）'
+          : '取消遮蔽（${tallyMoney(old.amount)}）',
+      itemId: it.id,
+      before: old.toJson(),
+      after: it.toJson(),
+      balanceBefore: bal,
+      balanceAfter: bal,
+    );
+  }
+
   Future<void> deleteItem(TallyItem it) async {
     final now = DateTime.now();
     final bal = await balance(it.bookId);

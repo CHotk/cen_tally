@@ -393,6 +393,9 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
     if (!mounted) return;
     if (c == 'edit') {
       await _edit(old: it);
+    } else if (c == 'hide' || c == 'unhide') {
+      await ref.read(tallyRepositoryProvider).setHidden(it, c == 'hide');
+      _load();
     } else if (c == 'delete') {
       final ok = await showAppConfirmDialog(
         context,
@@ -764,14 +767,19 @@ class _ItemRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.note.isEmpty ? (item.plus ? '豪支出' : '岑支出') : item.note,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.ink,
+                  TallyMosaic(
+                    on: item.hidden && item.note.isNotEmpty,
+                    child: Text(
+                      item.note.isEmpty
+                          ? (item.plus ? '豪支出' : '岑支出')
+                          : item.note,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -856,7 +864,30 @@ class _ItemDetail extends StatelessWidget {
       children: [
         _title('${item.plus ? '＋' : '−'} ${tallyMoney(item.amount)}'),
         row('種類', item.plus ? '＋ 豪支出' : '− 岑支出'),
-        row('備註', item.note.isEmpty ? '（沒寫）' : item.note),
+        // 備註：旁邊有「遮蔽」鈕，遮了就打馬賽克（列表上也是）
+        Row(
+          children: [
+            Expanded(
+              child: TallyMosaic(
+                on: item.hidden && item.note.isNotEmpty,
+                child: row('備註', item.note.isEmpty ? '（沒寫）' : item.note),
+              ),
+            ),
+            if (item.note.isNotEmpty)
+              TextButton.icon(
+                onPressed: () =>
+                    Navigator.pop(context, item.hidden ? 'unhide' : 'hide'),
+                icon: Icon(
+                  item.hidden
+                      ? Icons.visibility_rounded
+                      : Icons.visibility_off_rounded,
+                  size: 18,
+                ),
+                label: Text(item.hidden ? '取消遮蔽' : '遮蔽'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.ink2),
+              ),
+          ],
+        ),
         row('日期', _ymd(item.at)),
         if (!solo) ...[
           row('新增於', _full(item.createdAt)),
@@ -1375,6 +1406,7 @@ class _EventDetail extends StatelessWidget {
     'createdAt': '新增於',
     'updatedAt': '修改於',
     'deletedAt': '刪除於',
+    'hidden': '遮蔽',
     'bookId': '帳本編號',
     'id': '編號',
   };
@@ -1501,6 +1533,45 @@ class _EventDetail extends StatelessWidget {
               value is bool ? (value ? '是' : '否') : '$value',
             ),
         ],
+      ],
+    );
+  }
+}
+
+/// 馬賽克：遮蔽的備註（2026-10-21 使用者：比較私密的一筆，怕路人經過看到）。
+/// 模糊到看不出字，上面疊一個小鎖頭。
+class TallyMosaic extends StatelessWidget {
+  const TallyMosaic({super.key, required this.on, required this.child});
+
+  final bool on;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!on) return child;
+    return Stack(
+      alignment: Alignment.centerLeft,
+      children: [
+        ClipRect(
+          child: ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+            child: child,
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(left: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lock_rounded, size: 14, color: AppColors.ink3),
+              SizedBox(width: 4),
+              Text(
+                '已遮蔽',
+                style: TextStyle(fontSize: 12.5, color: AppColors.ink3),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

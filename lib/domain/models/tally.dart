@@ -67,10 +67,14 @@ class TallyItem {
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
+    this.hidden = false,
   });
 
   final String id;
   final String bookId;
+
+  /// 遮蔽：備註打馬賽克（比較私密的，例如內衣褲，怕路人看到；2026-10-21 使用者要求）。
+  final bool hidden;
 
   /// true＝＋（欠的變多），false＝−（還款）。
   final bool plus;
@@ -97,6 +101,7 @@ class TallyItem {
     DateTime? at,
     DateTime? updatedAt,
     DateTime? deletedAt,
+    bool? hidden,
   }) => TallyItem(
     id: id,
     bookId: bookId,
@@ -107,6 +112,7 @@ class TallyItem {
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt ?? this.deletedAt,
+    hidden: hidden ?? this.hidden,
   );
 
   Map<String, dynamic> toJson() => {
@@ -119,6 +125,7 @@ class TallyItem {
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
     'deletedAt': deletedAt?.toUtc().toIso8601String(),
+    if (hidden) 'hidden': true,
   };
 
   factory TallyItem.fromJson(Map<String, dynamic> j) => TallyItem(
@@ -131,6 +138,7 @@ class TallyItem {
     createdAt: _date(j['createdAt'])!,
     updatedAt: _date(j['updatedAt'])!,
     deletedAt: _date(j['deletedAt']),
+    hidden: j['hidden'] as bool? ?? false,
   );
 }
 
