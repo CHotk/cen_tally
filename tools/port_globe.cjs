@@ -35,6 +35,7 @@ const html = `<!doctype html>
   點空白＝搖、連點兩下＝大力搖、長按＝暴風雪、拖＝轉。
   跟 Flutter 溝通用 postMessage：
     收 {globe:'shake'}             搖一搖（記一筆時）
+    window.globePointer(type, x, y, id, kind)   Flutter 轉過來的手指（見下面「手指」）
     送 {globe:'ready'}             第一幀畫好了（Flutter 收到才把轉圈換成雪球）
     送 {globe:'error', message}   開不起來（不支援 3D 等）
   網址參數：?pet=動物大小倍數&fit=鏡頭遠近&scene=指定場景（測試用）
@@ -43,8 +44,10 @@ const html = `<!doctype html>
   （three.js 範例，ro.me／mirada）。Three.js：MIT（vendor/LICENSE-three.txt）。
 -->
 <style>
-  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
-  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  /* 長按（暴風雪）不要變成選取／跳出選單（2026-10-21 使用者回報：長按會像選取文字那樣反白） */
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -74,6 +77,15 @@ try {
     petScale: +(q.get('pet') || 2.6), autoRotate: .9,
   });
   window.__globe = g; // 測試用
+  // 手指：這個 iframe 本身不接手指（pointer-events: none），Flutter 先判斷是不是點到吉祥物，
+  // 不是才呼叫這裡，假裝成在畫布上按下去（2026-10-21：吉祥物走到雪球上會點不到牠）。
+  // 假的指標事件不能 setPointerCapture（會丟錯），改成什麼都不做。
+  const cv = document.getElementById('g');
+  cv.setPointerCapture = () => {}; cv.releasePointerCapture = () => {}; cv.hasPointerCapture = () => false;
+  window.globePointer = (type, x, y, id, kind) => {
+    cv.dispatchEvent(new PointerEvent('pointer' + type, { clientX: x, clientY: y, pointerId: id, pointerType: kind, isPrimary: true, button: 0, buttons: type === 'up' || type === 'cancel' ? 0 : 1, bubbles: true, cancelable: true, composed: true }));
+  };
+  document.addEventListener('contextmenu', e => e.preventDefault());
   addEventListener('message', e => { if (e.data && e.data.globe === 'shake') g.shake(); });
   document.addEventListener('visibilitychange', () => g.setActive(!document.hidden));
   requestAnimationFrame(() => requestAnimationFrame(() => post({ globe: 'ready' })));

@@ -680,12 +680,16 @@ class _TallyPetLayerState extends State<TallyPetLayer>
             child: Stack(
               clipBehavior: Clip.none,
               children: [
+                // 泡泡置中在牠頭上、一句話一行不換行（2026-10-21 使用者回報：有些台詞沒在正上方、
+                // 會自己換行）。原因：預載字型那段改成 Stack 之後，短句被靠左擺；寬度又只有 120，
+                // 長句就換行。改成很寬的框＋上方置中＋不換行。
                 Positioned(
-                  left: x - 60,
+                  left: x - 200,
                   top: y - _s * 2.9,
-                  width: 120,
+                  width: 400,
                   child: IgnorePointer(
                     child: Stack(
+                      alignment: Alignment.topCenter,
                       children: [
                         // 先把所有台詞的字排版一次（不畫出來）：網頁版的中文字型是用到哪些字才去
                         // 下載，某句第一次說時有幾個字還沒下載就會先空白（2026-10-21 使用者回報），
@@ -920,6 +924,9 @@ class _TallyPetLayerState extends State<TallyPetLayer>
         ],
       ),
       textAlign: TextAlign.center,
+      softWrap: false,
+      maxLines: 1,
+      overflow: TextOverflow.visible,
       style: _bubbleStyle,
     );
   }

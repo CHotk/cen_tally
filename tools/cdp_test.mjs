@@ -40,7 +40,7 @@ async function main() {
     if (s.cdp) { const r = await send(s.cdp.method, s.cdp.params || {}); if (s.log) console.log('cdp', JSON.stringify(r).slice(0, 200)); }
     if (s.cpu) await send('Emulation.setCPUThrottlingRate', { rate: s.cpu });
     if (s.pre) await send('Page.addScriptToEvaluateOnNewDocument', { source: s.pre });
-    if (s.go !== undefined) { await send('Page.navigate', { url: `http://localhost:${PORT}/cen_tally/${s.go}` }); await sleep(s.wait || 6000); }
+    if (s.go !== undefined) { await send('Page.navigate', { url: /^(https?|file):/.test(s.go) ? s.go : `http://localhost:${PORT}/cen_tally/${s.go}` }); await sleep(s.wait || 6000); }
     if (s.eval) { const r = await send('Runtime.evaluate', { expression: s.eval, awaitPromise: true }); if (s.log) console.log('eval:', JSON.stringify(r).slice(0, 400)); }
     if (s.tap) { const [x, y] = s.tap; for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 }); await sleep(s.wait || 1500); }
     if (s.wheel) { for (let k = 0; k < (s.times || 1); k++) { await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 200, y: 500, deltaX: 0, deltaY: s.wheel }); await sleep(120); } await sleep(800); }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'globe_view.dart';
@@ -68,6 +69,13 @@ class _TallyGlobeState extends State<TallyGlobe>
     super.dispose();
   }
 
+  void _fwd(String type, PointerEvent e) => forwardGlobePointer(
+    type,
+    e.localPosition,
+    e.pointer,
+    e.kind == PointerDeviceKind.touch,
+  );
+
   void _shake() {
     if (_phase == _Phase.flat) {
       _flatKey.currentState?.shake();
@@ -90,6 +98,27 @@ class _TallyGlobeState extends State<TallyGlobe>
             opacity: _phase == _Phase.ready ? 1 : 0.01,
             duration: const Duration(milliseconds: 400),
             child: buildGlobeView(),
+          ),
+        // 手指先到這裡再轉給雪球（雪球的 iframe 不直接接手指，吉祥物走到雪球上才點得到牠）。
+        // EagerGestureRecognizer：一按下就搶下這根手指，在雪球上拖不會順便捲動頁面
+        // （原本是 iframe 吃掉手指，頁面本來就不會捲）。
+        if (_phase == _Phase.ready)
+          RawGestureDetector(
+            behavior: HitTestBehavior.opaque,
+            gestures: {
+              EagerGestureRecognizer:
+                  GestureRecognizerFactoryWithHandlers<EagerGestureRecognizer>(
+                    EagerGestureRecognizer.new,
+                    (_) {},
+                  ),
+            },
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (e) => _fwd('down', e),
+              onPointerMove: (e) => _fwd('move', e),
+              onPointerUp: (e) => _fwd('up', e),
+              onPointerCancel: (e) => _fwd('cancel', e),
+            ),
           ),
         if (_phase != _Phase.ready)
           const IgnorePointer(

@@ -365,11 +365,12 @@ function makeGlobe(canvas, opts) {
       if (x.material && !x.material.isMeshStandardMaterial) { const old = x.material; x.material = new THREE.MeshStandardMaterial({ vertexColors: !!old.vertexColors, color: old.color, map: old.map, roughness: .7, flatShading: true }); } } });
     const v = sizeOf(m), sc = size / v[axis]; m.scale.setScalar(sc);
     const b = new THREE.Box3().setFromObject(m); m.position.y -= b.min.y; m.rotation.y = opts.yaw || 0;
-    const inner = new THREE.Group(); inner.add(m); inner.scale.setScalar(o.petScale);
+    // 這批動物（狐狸、馬、鳥…）整體再小 22%（2026-10-21 使用者：原本那些生物小一點）
+    const AK = .78, inner = new THREE.Group(); inner.add(m); inner.scale.setScalar(o.petScale * AK);
     const holder = new THREE.Group(); holder.add(inner); pets.add(holder);
     const mixer = new THREE.AnimationMixer(m), clips = gltf.animations;
-    const mv = { holder, inner, mixer, kind: opts.kind || k, ...setup(mixer, clips, holder) }; movers.push(mv);
-    targets.push({ obj: holder, h: size * .6, onTap: () => react(mv) });
+    const mv = { holder, inner, mixer, k: AK, kind: opts.kind || k, ...setup(mixer, clips, holder) }; movers.push(mv);
+    targets.push({ obj: holder, h: size * .6 * AK, onTap: () => react(mv) });
   }
   const walker = (r, speed, ph, timeScale) => (mixer, clips) => { const a = mixer.clipAction(clips[0]); a.timeScale = timeScale; a.play();
     return { update(t, dt, ex) { const th = ph + t * speed, x = Math.cos(th) * r, z = Math.sin(th) * r, dir = Math.sign(speed);
@@ -678,7 +679,7 @@ function makeGlobe(canvas, opts) {
   canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointerup', up);
   return {
     stats: () => ({ fx: fx.length, parts: parts.length }), shake, controls, setFlake(k) { flM.size = k; }, set onHint(f) { onHint = f; }, setTilt(x, z) { tilt.x = x; tilt.z = z; },
-    setPet(k) { o.petScale = k; movers.forEach(m => m.inner.scale.setScalar(k)); },
+    setPet(k) { o.petScale = k; movers.forEach(m => m.inner.scale.setScalar(k * (m.k || 1))); },
     dispose() { disposed = true; ro.disconnect(); canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointerup', up); controls.dispose(); renderer.dispose(); renderer.forceContextLoss(); },
   };
 }

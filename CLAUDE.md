@@ -34,6 +34,10 @@
   慢又容易看錯，留給真的要看樣子的時候。
 - 測試資料（使用者的真實帳）**不要放進 repo**（這個 repo 是公開的），放暫存資料夾。
 - 無頭 Chrome 用軟體繪圖，3D 很慢；看「順不順、閃不閃」不準，那部分要請使用者在手機上看。
+- 記帳首頁要有雲端設定才進得去：先開一次頁面，在 IndexedDB（`cen_tally` 庫、`kv` 表）put 一組假的
+  `cen_tally.sync.config.v1`（JSON 字串），再 `cdp: Page.reload`。
+- 設計稿（file://）也能用 `go` 開完整網址測；動畫設計稿加 `__pet.advance(秒)` 這種快轉，截圖才停得準
+  （無頭 Chrome 幀數很低，用真實時間等會跑掉）。
 - 吉祥物進場可以用網址參數指定：`?ent=drop|door|chute|globe|run|poof`。
 
 ## Flutter 網頁版嵌 iframe（platform view）的坑

@@ -11,3 +11,5 @@ void Function() listenGlobe(void Function(String type, String? message) on) =>
     () {};
 
 void shakeGlobe() {}
+
+void forwardGlobePointer(String type, Offset p, int id, bool touch) {}
