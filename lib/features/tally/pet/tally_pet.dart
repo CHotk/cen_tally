@@ -68,8 +68,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   String? next;
   double gx = 0, gy = 0; // 捏著時手指要牠去的位置
   double? ladderTop, ladderBot;
-  String? bubble;
-  double bubbleUntil = 0, clock = 0;
+  double clock = 0;
   bool _visible = false; // 3D 窗格載好沒（還沒好不要接手指）
 
   /// 台詞（2026-10-20 使用者：多一些，主人叫馨岑）。發呆、東張西望、被點時偶爾說。
@@ -83,7 +82,48 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     '嘿嘿',
   ];
 
-  void _chat() => _say(_lines[_rng.nextInt(_lines.length)], 2.4);
+  /// 隨機挑一個，不跟上一次一樣（2026-10-21 使用者：亂抽可以，但不要連續重複）。
+  final _lastPick = <String, Object>{};
+  T _pickNo<T extends Object>(String key, List<T> list) {
+    T v;
+    do {
+      v = list[_rng.nextInt(list.length)];
+    } while (list.length > 1 && v == _lastPick[key]);
+    _lastPick[key] = v;
+    return v;
+  }
+
+  void _chat() => _say(_pickNo('line', _lines), 2.4);
+
+  // ── 動作（設計稿 design-history/2026-10-21_吉祥物動作優化.html，3D 那邊演，做完回報） ──
+  // 2026-10-21 使用者：設計稿裡的全部做進 App。
+  static const _acts = [
+    'rice', 'sausage', 'tea', // 吃東西
+    'sitEdge',
+    'sitFloor',
+    'wave',
+    'jump',
+    'dance',
+    'stretch',
+    'sneeze',
+    'shy',
+    'trip',
+    'coins',
+    'write',
+    'tf_wizard', 'tf_sword', 'tf_fire', 'tf_ice', 'tf_chef', 'tf_ninja', // 變身
+    'rich', 'beckon', 'luck', 'shoo', 'heart', // 祝福馨岑
+    'duel', 'flood', 'beach', // 對決、場景
+  ];
+
+  /// 叫 3D 那邊做 [a]；最多等 [maxSec] 秒（坐著這種不會自己結束的，時間到就換下一件事）。
+  void _act(String a, [double maxSec = 16]) {
+    mode = 'act';
+    t = 0;
+    until = maxSec;
+    sendPetPose({'a': a, 'f': face, 'mv': 0});
+  }
+
+  void Function()? _undone;
 
   @override
   void initState() {
@@ -108,6 +148,11 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     }
 
     _unready = listenPetReady(start);
+    _undone = listenPetDone((_) {
+      if (mounted && mode == 'act') {
+        _setMode('idle', until0: (.6 + _rng.nextDouble()) * _pace);
+      }
+    });
     Timer(const Duration(seconds: 12), start);
   }
 
@@ -229,6 +274,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   @override
   void dispose() {
     _unready?.call();
+    _undone?.call();
     widget.cheers?.removeListener(_cheer);
     _ticker?.dispose();
     super.dispose();
@@ -263,10 +309,9 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     return null;
   }
 
-  void _say(String s, [double sec = 1.6]) {
-    bubble = s;
-    bubbleUntil = clock + sec;
-  }
+  // 泡泡改在 3D 那邊畫（2026-10-21：跟頭頂同一幀，跳起來、被捏起來都在正上方；字是瀏覽器的字型，
+  // 不會有 CanvasKit 中文字還沒下載的空白）。
+  void _say(String s, [double sec = 1.6]) => sendPetPose({'say': s, 'sd': sec});
 
   void _setMode(String m, {double? until0, double? vy0, double? vx0}) {
     if (m != 'fall') ignore = null;
@@ -320,13 +365,16 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       go(120);
       return _setMode('run');
     }
-    if (r < .72) {
+    if (r < .66) {
       if (_rng.nextDouble() < .45) _chat();
       return _setMode('look', until0: 2.2 * _pace);
     }
-    if (r < .8) return _setMode('sit', until0: 4.5 * _pace);
-    if (r < .86) return _setMode('sleep', until0: 6 * _pace);
-    if (r < .93) return _setMode('happy', vy0: -330);
+    if (r < .86) {
+      final a = _pickNo('act', _acts);
+      return _act(a, a.startsWith('sit') ? 5.5 * _pace : 18);
+    }
+    if (r < .9) return _setMode('sleep', until0: 9 * _pace);
+    if (r < .94) return _setMode('happy', vy0: -330);
     if (_rng.nextDouble() < .3) _chat();
     _setMode('idle', until0: (1.5 + _rng.nextDouble() * 2) * _pace);
   }
@@ -404,11 +452,12 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     }
 
     switch (mode) {
-      case 'idle' || 'look' || 'sit' || 'sleep':
-        if (t > until) {
-          if (mode == 'sleep') _say('嗯…睡飽了', 1.2);
-          _think(all);
-        }
+      case 'idle' || 'look' || 'sit':
+        if (t > until) _think(all);
+      case 'sleep':
+        if (t > until) _act('wake', 5);
+      case 'act':
+        if (t > until) _think(all);
       case 'enter':
         break;
       case 'hop': // 跳到別張卡片：拋物線，目標卡片還在捲也跟著
@@ -610,10 +659,12 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     gy = y;
     plat = null;
     _setMode('held');
-    _say('放開我～！', 1.4);
   }
 
   Offset? _grabOffset;
+
+  /// 捏著時牠的腳在指尖上方這麼多（整隻露出來，手指只碰到腳）。
+  static const _lift = Offset(0, -26);
 
   @override
   Widget build(BuildContext context) {
@@ -680,28 +731,8 @@ class _TallyPetLayerState extends State<TallyPetLayer>
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // 泡泡置中在牠頭上、一句話一行不換行（2026-10-21 使用者回報：有些台詞沒在正上方、
-                // 會自己換行）。原因：預載字型那段改成 Stack 之後，短句被靠左擺；寬度又只有 120，
-                // 長句就換行。改成很寬的框＋上方置中＋不換行。
-                Positioned(
-                  left: x - 200,
-                  top: y - _s * 2.9,
-                  width: 400,
-                  child: IgnorePointer(
-                    child: Stack(
-                      alignment: Alignment.topCenter,
-                      children: [
-                        // 先把所有台詞的字排版一次（不畫出來）：網頁版的中文字型是用到哪些字才去
-                        // 下載，某句第一次說時有幾個字還沒下載就會先空白（2026-10-21 使用者回報），
-                        // 開頁時先排一次，字就提前下載好了。
-                        const Offstage(
-                          child: Text(_allSaid, style: _bubbleStyle),
-                        ),
-                        _bubbleText(),
-                      ],
-                    ),
-                  ),
-                ),
+                // 台詞泡泡改在 3D 那邊畫（web/pet），這格留著空的
+                const Positioned(left: 0, top: 0, child: SizedBox()),
                 // 接手指的透明格子（只有牠那麼大）
                 Positioned(
                   left: _visible ? x - _s : -999,
@@ -718,8 +749,11 @@ class _TallyPetLayerState extends State<TallyPetLayer>
                       _holdTimer?.cancel();
                       _holdTimer = Timer(const Duration(milliseconds: 220), () {
                         if (_down != null) {
-                          _grabOffset = Offset(x, y) - _localOf(e.position);
+                          _grabOffset = _lift;
                           _grab();
+                          final p = _localOf(e.position) + _lift;
+                          gx = p.dx;
+                          gy = p.dy;
                         }
                       });
                     },
@@ -728,7 +762,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
                       _hist.add((e.position, clock));
                       if (_hist.length > 6) _hist.removeAt(0);
                       if (!_held && (e.position - _down!).distance > 5) {
-                        _grabOffset = Offset(x, y) - _localOf(_down!);
+                        _grabOffset = _lift;
                         _grab();
                       }
                       if (_held) {
@@ -757,6 +791,8 @@ class _TallyPetLayerState extends State<TallyPetLayer>
                           vy0: v.dy.clamp(-1400, 2600),
                         );
                         _say('哇啊——', 1);
+                      } else if (clock - _downAt < .3 && mode == 'sleep') {
+                        _act('wake', 5);
                       } else if (clock - _downAt < .3 && plat != null) {
                         _setMode('happy', vy0: -340);
                         if (_rng.nextBool()) {
@@ -888,46 +924,6 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       width: 120,
       height: 100,
       child: IgnorePointer(child: CustomPaint(painter: _PuffPainter(k))),
-    );
-  }
-
-  static const _bubbleStyle = TextStyle(
-    fontSize: 12.5,
-    fontWeight: FontWeight.w800,
-    color: Colors.white,
-    shadows: [Shadow(blurRadius: 3, color: Colors.black54)],
-  );
-
-  /// 牠會說的每一句（字型預先下載用）：台詞＋各動作的話。新增 _say 的話要加進來。
-  static const _allSaid =
-      '馨岑妳好啊♡馨岑今天過得怎麼樣？馨岑辛苦了～鑫鑫腸買了沒？今天有好好吃飯嗎？'
-      '馨岑快記帳！要早點睡喔嘿嘿♪到了！哇啊——嗯…睡飽了嘿咻！放開我～！'
-      '爬上去看看！登登！記好了！頭好暈…zZ';
-
-  /// 對話泡泡：「♡」用粉紅色（打招呼那句）。
-  Widget _bubbleText() {
-    final s = mode == 'sleep' && !(bubble != null && clock < bubbleUntil)
-        ? '${'z' * (1 + (t * 1.5).floor() % 3)}Z'
-        : (bubble != null && clock < bubbleUntil ? bubble! : '');
-    final parts = s.split('♡');
-    return Text.rich(
-      TextSpan(
-        children: [
-          for (var i = 0; i < parts.length; i++) ...[
-            if (i > 0)
-              const TextSpan(
-                text: '♡',
-                style: TextStyle(color: Color(0xFFFF6FA5)),
-              ),
-            TextSpan(text: parts[i]),
-          ],
-        ],
-      ),
-      textAlign: TextAlign.center,
-      softWrap: false,
-      maxLines: 1,
-      overflow: TextOverflow.visible,
-      style: _bubbleStyle,
     );
   }
 

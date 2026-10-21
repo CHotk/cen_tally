@@ -76,6 +76,18 @@ void Function() listenPetReady(void Function() onReady) {
   return () => web.window.removeEventListener('message', handler);
 }
 
+/// 3D 那邊做完一個動作（吃東西、變身、對決…，web/pet 送 {pet: {done: 動作}}）就呼叫 [onDone]。
+void Function() listenPetDone(void Function(String act) onDone) {
+  final handler = ((web.MessageEvent e) {
+    final d = e.data.dartify();
+    if (d is Map && d['pet'] is Map && (d['pet'] as Map)['done'] != null) {
+      onDone('${(d['pet'] as Map)['done']}');
+    }
+  }).toJS;
+  web.window.addEventListener('message', handler);
+  return () => web.window.removeEventListener('message', handler);
+}
+
 /// 直接呼叫 3D 頁的 petPose（同一個網站），當場畫，跟 Flutter 同一幀；
 /// 還沒載好（沒有 petPose）才退回 postMessage。
 void sendPetPose(Map<String, Object> pose) {
