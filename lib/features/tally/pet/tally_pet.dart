@@ -106,7 +106,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     'tf': ['tf_wizard', 'tf_sword', 'tf_fire', 'tf_ice', 'tf_chef', 'tf_ninja'],
     'bless': ['rich', 'beckon', 'luck', 'shoo', 'heart'],
     'fun': ['wave', 'jump', 'dance', 'sneeze', 'shy', 'trip', 'coins', 'write'],
-    'scene': ['beach', 'beach', 'flood', 'duel'],
+    'scene': ['beach', 'flood', 'duel'],
   };
 
   String _pickAct() {
