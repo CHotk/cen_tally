@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'pet_view.dart';
@@ -279,7 +280,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     if (vx0 != null) vx = vx0;
     if (m != 'climb') ladderTop = ladderBot = null;
     sendPetPose({
-      'm': m == 'enterRun' ? 'run' : m,
+      'm': m == 'enterRun' ? 'run' : (m == 'hop' ? 'happy' : m),
       'f': face,
       'mv': 0,
       'sp': speed,
@@ -381,7 +382,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       final p = _platOf(plat, all);
       if (p == null) {
         plat = null;
-        _setMode('fall', vx0: 0, vy0: 0);
+        if (!_hopToNearest(all)) _setMode('fall', vx0: 0, vy0: 0);
       } else {
         y = p.y;
         if (mode != 'enterRun') x = x.clamp(p.x1, p.x2);
@@ -410,6 +411,24 @@ class _TallyPetLayerState extends State<TallyPetLayer>
         }
       case 'enter':
         break;
+      case 'hop': // 跳到別張卡片：拋物線，目標卡片還在捲也跟著
+        final tp = _platOf(hopKey, all);
+        if (tp == null) {
+          if (!_hopToNearest(all)) _setMode('fall', vx0: 0, vy0: -100);
+          break;
+        }
+        final k = math.min(1.0, t / .55);
+        x = hx0 + (hx1 - hx0) * k;
+        y =
+            hy0 +
+            (tp.y - hy0) * k -
+            math.sin(k * math.pi) * (36 + (tp.y - hy0).abs() * .2);
+        if (k >= 1) {
+          y = tp.y;
+          plat = tp.key;
+          _setMode('idle', until0: (.8 + _rng.nextDouble()) * _pace);
+          sendPetPose({'land': 1});
+        }
       case 'enterRun':
         if (step()) {
           _setMode('idle', until0: 1.5);
@@ -520,7 +539,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       case 'dizzy':
         if (t > until) _setMode('idle', until0: 1);
     }
-    sendPetPose({'x': x, 'y': y, 's': _s * math.max(.001, _pop)});
+    _frameNo++;
     if (moving != _wasMoving) {
       _wasMoving = moving;
       sendPetPose({'mv': moving ? 1 : 0, 'sp': speed, 'f': face});
@@ -529,6 +548,53 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   }
 
   bool _wasMoving = false;
+
+  // ── 跳到別張卡片（站的那張捲出畫面時，2026-10-21 使用者：掉下去再從上面掉回來不夠順） ──
+  GlobalKey? hopKey;
+  double hx0 = 0, hy0 = 0, hx1 = 0;
+  bool _hopToNearest(List<_Plat> all) {
+    _Plat? best;
+    var bd = double.infinity;
+    for (final p in all) {
+      // 太貼近頂端的那筆馬上又會被捲走，盡量不要選
+      final d =
+          (p.y - y).abs() +
+          (x.clamp(p.x1, p.x2) - x).abs() * .5 +
+          (p.y < 120 ? 220 : 0);
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    if (best == null) return false;
+    hopKey = best.key;
+    hx0 = x;
+    hy0 = y;
+    hx1 = x.clamp(best.x1 + 10, best.x2 - 10).toDouble();
+    face = hx1 >= x ? 1 : -1;
+    _setMode('hop');
+    return true;
+  }
+
+  // ── 捲動時不慢一拍（2026-10-21 使用者回報） ──
+  // 每一幀的計時器在「排版之前」跑，那時讀到的卡片位置還是上一幀的；捲動時卡片這一幀
+  // 才排到新位置，吉祥物就永遠慢一幀。改成在「排版完、要畫出來的那一刻」再讀一次牠站
+  // 的那張卡片，差多少就把影子、泡泡、接手指的格子整個平移過去，3D 的位置也在這時候
+  // 送（同一幀畫），三個一起跟著卡片走。
+  int _frameNo = 0, _paintedFrame = -1;
+  double _dyNow = 0;
+  double _followDy() {
+    if (_paintedFrame == _frameNo) return _dyNow;
+    _paintedFrame = _frameNo;
+    var dy = 0.0;
+    if (plat != null && mode != 'held') {
+      final p = _platOf(plat);
+      if (p != null) dy = p.y - y;
+    }
+    _dyNow = dy;
+    sendPetPose({'x': x, 'y': y + dy, 's': _s * math.max(.001, _pop)});
+    return dy;
+  }
 
   // ── 手指 ──
   Offset? _down;
@@ -558,34 +624,44 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       children: [
         // 下面每一個都一直在、只切換看不看得見（2026-10-20 修：落地時影子才「加進來」，
         // 3D 窗格在畫面元件裡的位置就往後挪一格，網頁版會整個重貼一次，看起來閃一下）。
-        Positioned(
-          left: x - 13,
-          top: (ladderTop ?? 0) - 6,
-          width: 26,
-          height: ladderTop != null && ladderBot != null
-              ? (ladderBot! - ladderTop! + 6).clamp(0, 2000).toDouble()
-              : 0,
-          child: const IgnorePointer(
-            child: CustomPaint(painter: _LadderPainter()),
-          ),
-        ),
-        Positioned(
-          left: x - _s * 1.1,
-          top: (shadowY ?? -100) - 4,
-          width: _s * 2.2,
-          height: 8,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.black.withValues(alpha: .3),
-              ),
+        Positioned.fill(
+          child: _Follow(
+            dy: _followDy,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: x - 13,
+                  top: (ladderTop ?? 0) - 6,
+                  width: 26,
+                  height: ladderTop != null && ladderBot != null
+                      ? (ladderBot! - ladderTop! + 6).clamp(0, 2000).toDouble()
+                      : 0,
+                  child: const IgnorePointer(
+                    child: CustomPaint(painter: _LadderPainter()),
+                  ),
+                ),
+                Positioned(
+                  left: x - _s * 1.1,
+                  top: (shadowY ?? -100) - 4,
+                  width: _s * 2.2,
+                  height: 8,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.black.withValues(alpha: .3),
+                      ),
+                    ),
+                  ),
+                ),
+                _doorWidget(),
+                _chuteWidget(),
+                _puffWidget(),
+              ],
             ),
           ),
         ),
-        _doorWidget(),
-        _chuteWidget(),
-        _puffWidget(),
         // 3D 樣子：窗格蓋滿整個畫面、固定不動（2026-10-20 修：原本每一幀把窗格搬到
         // 牠的位置，Flutter 網頁版搬動嵌入窗格會閃、捏著跟手也不順），每一幀把牠的
         // 位置傳進去，3D 自己畫在那裡。
@@ -598,94 +674,107 @@ class _TallyPetLayerState extends State<TallyPetLayer>
             ),
           ),
         ),
-        Positioned(
-          left: x - 60,
-          top: y - _s * 2.9,
-          width: 120,
-          child: IgnorePointer(
+        Positioned.fill(
+          child: _Follow(
+            dy: _followDy,
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                // 先把所有台詞的字排版一次（不畫出來）：網頁版的中文字型是用到哪些字才去
-                // 下載，某句第一次說時有幾個字還沒下載就會先空白（2026-10-21 使用者回報），
-                // 開頁時先排一次，字就提前下載好了。
-                const Offstage(child: Text(_allSaid, style: _bubbleStyle)),
-                _bubbleText(),
+                Positioned(
+                  left: x - 60,
+                  top: y - _s * 2.9,
+                  width: 120,
+                  child: IgnorePointer(
+                    child: Stack(
+                      children: [
+                        // 先把所有台詞的字排版一次（不畫出來）：網頁版的中文字型是用到哪些字才去
+                        // 下載，某句第一次說時有幾個字還沒下載就會先空白（2026-10-21 使用者回報），
+                        // 開頁時先排一次，字就提前下載好了。
+                        const Offstage(
+                          child: Text(_allSaid, style: _bubbleStyle),
+                        ),
+                        _bubbleText(),
+                      ],
+                    ),
+                  ),
+                ),
+                // 接手指的透明格子（只有牠那麼大）
+                Positioned(
+                  left: _visible ? x - _s : -999,
+                  top: y - _s * 2.3,
+                  width: _s * 2,
+                  height: _s * 2.3,
+                  child: Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (e) {
+                      _down = e.position;
+                      _downAt = clock;
+                      _held = false;
+                      _hist.clear();
+                      _holdTimer?.cancel();
+                      _holdTimer = Timer(const Duration(milliseconds: 220), () {
+                        if (_down != null) {
+                          _grabOffset = Offset(x, y) - _localOf(e.position);
+                          _grab();
+                        }
+                      });
+                    },
+                    onPointerMove: (e) {
+                      if (_down == null) return;
+                      _hist.add((e.position, clock));
+                      if (_hist.length > 6) _hist.removeAt(0);
+                      if (!_held && (e.position - _down!).distance > 5) {
+                        _grabOffset = Offset(x, y) - _localOf(_down!);
+                        _grab();
+                      }
+                      if (_held) {
+                        final p =
+                            _localOf(e.position) + (_grabOffset ?? Offset.zero);
+                        gx = p.dx;
+                        gy = p.dy;
+                      }
+                    },
+                    onPointerUp: (e) {
+                      _holdTimer?.cancel();
+                      if (_held) {
+                        var v = Offset.zero;
+                        if (_hist.length >= 2) {
+                          final a = _hist.first, b = _hist.last;
+                          final dt = math.max(.016, b.$2 - a.$2);
+                          // 輕輕一拋不要飛太遠（2026-10-20 使用者回報）：打五五折，很輕的
+                          // 動作當成只是放開。
+                          v = (b.$1 - a.$1) / dt * .55;
+                          if (v.distance < 260) v = Offset.zero;
+                        }
+                        _held = false;
+                        _setMode(
+                          'fall',
+                          vx0: v.dx.clamp(-1200, 1200),
+                          vy0: v.dy.clamp(-1400, 2600),
+                        );
+                        _say('哇啊——', 1);
+                      } else if (clock - _downAt < .3 && plat != null) {
+                        _setMode('happy', vy0: -340);
+                        if (_rng.nextBool()) {
+                          _chat();
+                        } else {
+                          _say('♪', .8);
+                        }
+                      }
+                      _down = null;
+                    },
+                    onPointerCancel: (_) {
+                      _holdTimer?.cancel();
+                      if (_held) {
+                        _held = false;
+                        _setMode('fall', vx0: 0, vy0: 0);
+                      }
+                      _down = null;
+                    },
+                  ),
+                ),
               ],
             ),
-          ),
-        ),
-        // 接手指的透明格子（只有牠那麼大）
-        Positioned(
-          left: _visible ? x - _s : -999,
-          top: y - _s * 2.3,
-          width: _s * 2,
-          height: _s * 2.3,
-          child: Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: (e) {
-              _down = e.position;
-              _downAt = clock;
-              _held = false;
-              _hist.clear();
-              _holdTimer?.cancel();
-              _holdTimer = Timer(const Duration(milliseconds: 220), () {
-                if (_down != null) {
-                  _grabOffset = Offset(x, y) - _localOf(e.position);
-                  _grab();
-                }
-              });
-            },
-            onPointerMove: (e) {
-              if (_down == null) return;
-              _hist.add((e.position, clock));
-              if (_hist.length > 6) _hist.removeAt(0);
-              if (!_held && (e.position - _down!).distance > 5) {
-                _grabOffset = Offset(x, y) - _localOf(_down!);
-                _grab();
-              }
-              if (_held) {
-                final p = _localOf(e.position) + (_grabOffset ?? Offset.zero);
-                gx = p.dx;
-                gy = p.dy;
-              }
-            },
-            onPointerUp: (e) {
-              _holdTimer?.cancel();
-              if (_held) {
-                var v = Offset.zero;
-                if (_hist.length >= 2) {
-                  final a = _hist.first, b = _hist.last;
-                  final dt = math.max(.016, b.$2 - a.$2);
-                  // 輕輕一拋不要飛太遠（2026-10-20 使用者回報）：打五五折，很輕的
-                  // 動作當成只是放開。
-                  v = (b.$1 - a.$1) / dt * .55;
-                  if (v.distance < 260) v = Offset.zero;
-                }
-                _held = false;
-                _setMode(
-                  'fall',
-                  vx0: v.dx.clamp(-1200, 1200),
-                  vy0: v.dy.clamp(-1400, 2600),
-                );
-                _say('哇啊——', 1);
-              } else if (clock - _downAt < .3 && plat != null) {
-                _setMode('happy', vy0: -340);
-                if (_rng.nextBool()) {
-                  _chat();
-                } else {
-                  _say('♪', .8);
-                }
-              }
-              _down = null;
-            },
-            onPointerCancel: (_) {
-              _holdTimer?.cancel();
-              if (_held) {
-                _held = false;
-                _setMode('fall', vx0: 0, vy0: 0);
-              }
-              _down = null;
-            },
           ),
         ),
       ],
@@ -951,4 +1040,51 @@ class _LadderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LadderPainter old) => false;
+}
+
+/// 畫的那一刻才決定往上下平移多少（[dy] 在排版完才算，讀到的卡片位置是這一幀的），
+/// 點的位置也跟著平移。給吉祥物的影子、泡泡、接手指格子跟著捲動用。
+class _Follow extends SingleChildRenderObjectWidget {
+  const _Follow({required this.dy, super.child});
+
+  final double Function() dy;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderFollow(dy);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderFollow renderObject) {
+    renderObject.dy = dy;
+  }
+}
+
+class _RenderFollow extends RenderProxyBox {
+  _RenderFollow(this._dy);
+
+  double Function() _dy;
+  double _last = 0;
+
+  set dy(double Function() v) {
+    _dy = v;
+    markNeedsPaint(); // 每一幀都要重算
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    _last = _dy();
+    super.paint(context, offset + Offset(0, _last));
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      result.addWithPaintOffset(
+        offset: Offset(0, _last),
+        position: position,
+        hitTest: (r, p) => super.hitTestChildren(r, position: p),
+      );
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    transform.translateByDouble(0, _last, 0, 1);
+  }
 }
