@@ -145,6 +145,8 @@
         <span class="tag n">新</span>淹水潛水：水從下面漲上來（有波浪、光線、泡泡），牠戴上蛙鏡＋呼吸管、背氧氣瓶、穿蛙鞋，在整個畫面繞著游（卡片不擋），魚、河豚、烏賊游過去，呼吸管冒泡泡，最後水退掉落回卡片。沙灘度假：卡片上冒出一小塊沙灘、紅白遮陽傘、藍白躺椅、小螃蟹走來走去，牠戴墨鏡躺上去用吸管喝果汁。</div>
       <div class="note"><b>出遊</b><br>
         <span class="tag n">新</span>搭飛機：雙翼小飛機開過來，牠跳上駕駛座，螺旋槳轉、起飛在畫面上空繞，後面拖著「祝馨岑出遊愉快」布條會飄，最後降落。搭車：藍色敞篷「馨岑號」，牠坐進去握方向盤在卡片上來回兜風、輪子轉、排氣冒煙、叭叭。搭火車：鐵軌鋪出來，紅色火車頭拉兩節車廂開進站，牠跳上駕駛室，嘟嘟冒煙開出去繞一圈再回來。烤肉：烤肉架冒出來、木炭一閃一閃，牠先搧扇子（火星），再翻烤串（鑫鑫腸、香菇、玉米），最後拿第一串吃。</div>
+      <div class="note"><b>冰原歷險記</b>（只放設計稿，私人使用）<br>
+        <span class="tag n">新</span>Blender 做的 Q 版奎特、希德、曼佛瑞、迪亞哥（tools/blender/ice_age.py，預覽圖在 assets/blender/）。下雪、曼佛瑞載著希德從右邊走進來、迪亞哥從左邊來、奎特追著橡實跑過去，牠開心地跟大家打招呼；奎特一停下來冰就「喀啦」裂開，奎特嚇得跑回去，大家揮手離開。</div>
       <div class="note"><b>馴服恐龍、更多食物</b><br>
         <span class="tag n">新</span>恐龍：綠色暴龍咚咚咚走過來（畫面震動），張大嘴「吼——！」，牠嚇到眼睛閉成 &gt;&lt;、手舉高發抖、眼淚冒出來，鼓起勇氣拿出雞腿請牠吃，恐龍一口吃掉、臉紅冒愛心、尾巴狂搖，「馴服成功！」，牠跳上恐龍背上騎著在卡片上來回跑，最後跳下來揮手跟恐龍說掰掰。食物新增冰淇淋（雙球＋櫻桃＋彩色糖粒）、甜甜圈（粉紅糖霜）、雞排（紙袋裝）、西瓜（三角片、有籽、綠皮），一樣三口吃完、每口對準嘴巴。</div>
       <div class="note"><b>祝福馨岑</b><br>
@@ -156,6 +158,8 @@
 </div>
 
 <script src="assets/pet_models.js"></script>
+<script src="assets/pet_models_cc0.js"></script>
+<script src="assets/pet_models_ice.js"></script>
 <script type="module">
 import * as THREE from 'three';
 
@@ -530,14 +534,23 @@ function outlineOn(mesh, th) { const m = new THREE.MeshBasicMaterial({ color: 0x
   const o = new THREE.Mesh(mesh.geometry, m); o.name = mesh.name + '_ol'; mesh.add(o); }
 function prepModel(g) { const list = []; g.traverse(o => { if (o.isMesh) list.push(o); });
   for (const o of list) { const src = o.material, name = (src.name || '').toLowerCase(), hex = src.color ? src.color.getHex() : 0xffffff;
-    if (name.includes('glass')) o.material = new THREE.MeshToonMaterial({ color: hex, gradientMap: grad, transparent: true, opacity: .55 });
+    if (src.map) { o.material = new THREE.MeshToonMaterial({ map: src.map, gradientMap: grad }); o.geometry.computeBoundingSphere(); outlineOn(o, .012); }
+    else if (name.includes('glass')) o.material = new THREE.MeshToonMaterial({ color: hex, gradientMap: grad, transparent: true, opacity: .55 });
     else if (name.includes('coal')) o.material = new THREE.MeshBasicMaterial({ color: hex });
     else { o.material = toon(hex); o.geometry.computeBoundingSphere(); if (o.geometry.boundingSphere.radius > .06) outlineOn(o, Math.min(.03, .012 + o.geometry.boundingSphere.radius * .02)); } }
   return g; }
-const MODEL_NAMES = ['plane', 'car', 'train', 'grill', 'dino'];
+const MODEL_NAMES = ['plane', 'car', 'train', 'grill', 'dino', 'k_car', 'k_loco', 'k_wagon1', 'k_wagon2', ...(window.PET_MODELS_ICE ? ['scrat', 'sid', 'manny', 'diego'] : [])];
+const TEX_KIT = { k_car: 'k_car', k_loco: 'k_train', k_wagon1: 'k_train', k_wagon2: 'k_train' };
+const loaderFor = n => { if (!TEX_KIT[n]) return new GLTFLoader(); const mg = new THREE.LoadingManager();
+  mg.setURLModifier(u => /colormap\.png$/.test(u) && window.petTexUrl ? window.petTexUrl(TEX_KIT[n]) : u); return new GLTFLoader(mg); };
 // 整頁的程式跑完（頁面定義好 getPetModelBuffer）再載
-const modelsReady = new Promise(r => setTimeout(r, 0)).then(() => Promise.all(MODEL_NAMES.map(n => Promise.resolve(window.getPetModelBuffer?.(n)).then(buf => buf && new Promise((res, rej) => new GLTFLoader().parse(buf, '', g => { PM[n] = prepModel(g.scene); res(); }, rej))).catch(e => console.warn('model', n, e)))));
+const modelsReady = new Promise(r => setTimeout(r, 0)).then(() => Promise.all(MODEL_NAMES.map(n => Promise.resolve(window.getPetModelBuffer?.(n)).then(buf => buf && new Promise((res, rej) => loaderFor(n).parse(buf, '', g => { PM[n] = prepModel(g.scene); res(); }, rej))).catch(e => console.warn('model', n, e)))));
 const model = n => PM[n] ? PM[n].clone(true) : null;
+/// 把網路下載的模型擺正：車頭朝 +X、長度變成 [len]、底部貼地、前後置中（每家模型大小方向都不一樣）
+function fitModel(g, len) { if (!g) return null; const wrap = new THREE.Group(); wrap.add(g);
+  let b = new THREE.Box3().setFromObject(g), sz = b.getSize(new THREE.Vector3()); if (sz.z > sz.x) { g.rotation.y = Math.PI / 2; b = new THREE.Box3().setFromObject(g); sz = b.getSize(new THREE.Vector3()); }
+  const k = len / sz.x; g.scale.multiplyScalar(k); b = new THREE.Box3().setFromObject(g); const c = b.getCenter(new THREE.Vector3());
+  g.position.x -= c.x; g.position.z -= c.z; g.position.y -= b.min.y; wrap.userData.h = b.getSize(new THREE.Vector3()).y; return wrap; }
 
 // ════════════════ 粒子、特效 ════════════════
 const texCache = {};
@@ -691,9 +704,18 @@ eatAct('melon', '🍉 吃西瓜', () => makeWatermelon(), '西瓜好消暑～', 
 { let f = food.tea, L = f.userData.liq, PE = f.userData.pearls;
   act('tea', { g: 'eat', label: '🧋 喝珍奶', dur: 7.4, isNew: 1,
     enter() { f = VER.tea >= 5 ? food.tea5 : VER.tea >= 4 ? food.tea4 : VER.tea >= 3 ? food.tea3 : food.tea; L = f.userData.liq; PE = f.userData.pearls;
-      if (VER.tea < 3) f.userData.straws.forEach((m, i) => m.visible = i === (VER.tea >= 2 ? 1 : 0)); L.scale.y = VER.tea >= 3 ? .58 : .55; PE.forEach(q => q.visible = true); hold(me.holdMid, f, [0, .05, 0]); talk('珍奶！！', 1.6); },
-    exit() { me.holdMid.remove(f); },
+      if (VER.tea < 3) f.userData.straws.forEach((m, i) => m.visible = i === (VER.tea >= 2 ? 1 : 0)); L.scale.y = VER.tea >= 3 ? .58 : .55; PE.forEach(q => q.visible = true);
+      // v3 以後：杯子直接擺在「吸管頂端剛好在嘴巴」的位置（2026-10-21 使用者：吸管還是沒對到嘴）
+      if (VER.tea >= 3) { const B = f.userData.strawB; me.body.add(f); f.rotation.set(0, 0, 0); f.position.set(MOUTH.x - B.x, MOUTH.y - B.y + .02, MOUTH.z - B.z + .06); f.scale.setScalar(.001); }
+      else hold(me.holdMid, f, [0, .05, 0]);
+      talk('珍奶！！', 1.6); },
+    exit() { f.parent?.remove(f); },
     pose(P, t) { const v2 = VER.tea >= 2; both(P, v2 ? [.3, .22, 1.3] : 'chest'); P.happy = t < .9 ? 1 : 0;
+      if (VER.tea >= 3) { f.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .35)))); const hy = f.position.y + .02, hz = f.position.z;
+        both(P, [.3, hy, hz]); P.happy = t < .9 ? 1 : 0;
+        if (t > .9 && t < 5.2) { const c = (t - 1.3) % 1.2; P.mouth = .14; P.puff = c < .8 ? -1 : .2; P.happy = c > .8 ? .8 : 0; if (t > 1.3 && c < .8) L.scale.y = Math.max(.04, L.scale.y - .0015); }
+        if (t >= 5.2) { const u = t - 5.2; P.y = u < .35 ? Math.sin(u / .35 * Math.PI) * .25 : 0; P.happy = 1; P.mouth = u < .5 ? .6 : .1; }
+        return; }
       if (t > .9 && t < 5.2) { const u = seg(t, .9, 1.3), v = v2 ? [.28, lerp(.22, .35, u), lerp(1.3, 1.35, u)] : [.28, lerp(.8, .62, u), 1.38]; hR(P, v); hL(P, v); const c = (t - 1.3) % 1.2;
         P.mouth = .14; P.puff = c < .8 ? -1 : .2; P.happy = c > .8 ? .8 : 0; if (t > 1.3 && c < .8) L.scale.y = Math.max(.04, L.scale.y - .0015); }
       if (t >= 5.2) { const u = t - 5.2; P.y = u < .35 ? Math.sin(u / .35 * Math.PI) * .25 : 0; P.happy = 1; P.mouth = u < .5 ? .6 : .1; both(P, 'belly'); } },
@@ -702,7 +724,7 @@ eatAct('melon', '🍉 吃西瓜', () => makeWatermelon(), '西瓜好消暑～', 
           fxs.push({ t: 0, life: .45, fn: k => ball.position.lerpVectors(A, B, ease(k)), end: () => { f.remove(ball); me.cur.puff = 1.2; } }); }
         else if (q) { q.visible = false; puff('●', W2(f, -.04, .8, .1), { color: '#3b2418', size: .12, vy: 60, life: .3 }); } }
       for (const at of [1.4, 2.6, 3.8]) if (cross(t0, t1, at)) puff('咻嚕', W2(me.body, 1.1, 1.5, .8), { size: .3, vy: 25, life: .8 });
-      if (cross(t0, t1, 5.2)) { talk('嗝！', 1.2); me.holdMid.remove(f); puff('💨', W2(me.body, .3, .9, 1.2), { size: .4, vy: 10, vx: 30, life: .8 }); } } }); }
+      if (cross(t0, t1, 5.2)) { talk('嗝！', 1.2); f.parent?.remove(f); puff('💨', W2(me.body, .3, .9, 1.2), { size: .4, vy: 10, vx: 30, life: .8 }); } } }); }
 
 // ── 休息 ──
 act('sitEdge', { g: 'rest', label: '坐卡片邊晃腳', redo: 1, enter() { talk('坐一下～', 1.4); },
@@ -778,8 +800,8 @@ const VER_INFO = {
   ninja: ['忍者', ['頭帶', '頭巾、面罩、護額、紅圍巾']],
   slash: ['斬擊特效', ['單色圓弧', '新月刀光、殘影、火花、一閃']],
   plane: ['搭飛機', ['three.js 拼的', 'Blender 做的雙翼機（圓滾滾機身、螺旋槳會轉）']],
-  car: ['搭車', ['three.js 拼的', 'Blender 做的敞篷小車（倒角圓角、輪子會轉）']],
-  train: ['搭火車', ['three.js 拼的', 'Blender 做的蒸汽火車（金色環帶、連桿、車廂）']],
+  car: ['搭車', ['three.js 拼的', 'Blender 做的敞篷小車（倒角圓角、輪子會轉）', '網路 CC0：Kenney Toy Car Kit 的復古賽車']],
+  train: ['搭火車', ['three.js 拼的', 'Blender 做的蒸汽火車（金色環帶、連桿、車廂）', '網路 CC0：Kenney Train Kit 的火車頭＋兩節車廂']],
   bbq: ['烤肉', ['three.js 拼的方形架', 'Blender 做的圓形烤爐（木炭發光、烤串會翻面）']],
   dino: ['恐龍', ['three.js 拼的', 'Blender 做的暴龍（metaball 圓滑一整隻、下巴會張、腳會走）']],
   rich: ['發財舞', ['財神帽捧元寶扭', '中式財神：烏紗帽、紅袍、拱手拜年、鞭炮、燈籠、古錢、招財進寶捲軸']],
@@ -1489,16 +1511,17 @@ const spinNamed = (g, re, axis, d) => g?.traverse(o => { if (re.test(o.name) && 
       if (pl && t1 > PL.up && t1 < PL.land && every(t0, t1, .22)) puff('●', W2(pl, -2.4, .9, 0), { color: '#ffffff', vy: 0, size: .32, grow: 1.3, life: .9 });
       if (cross(t0, t1, PL.up + 2)) talk(pickNo('planeMid', ['馨岑看！雲好漂亮', '不開心的事都留在地上吧～', '馨岑，世界好大喔']), 2);
       if (cross(t0, t1, PL.land + .8)) { talk('平安降落～', 1.4); me.swimOff = null; } } }); }
-{ let car = null, sx0 = 0, sy0 = 0; const CR = { in: .8, end: 8.0 }, K = 1.3, SEAT = 1.32 * K - .2;
+{ let car = null, sx0 = 0, sy0 = 0, SEATn = 0; const CR = { in: .8, end: 8.0 }, K = 1.3, SEAT = 1.32 * K - .2;
   act('car2', { g: null, label: '搭車 v2', dur: CR.end,
-    enter() { sx0 = me.px; sy0 = groundY(); car = model('car'); if (car) { car.scale.setScalar(.001); car.position.set(.3 * K, 0, 0); me.props.add(car); } blessLine('car', ['馨岑上車！帶妳去兜風～', '馨岑專屬司機來了！', '馨岑，今天想去哪？'], 1.8); },
+    enter() { sx0 = me.px; sy0 = groundY(); car = VER.car >= 3 ? fitModel(model('k_car'), 3.0) : model('car'); if (car) { car.scale.setScalar(.001); car.position.set(.3 * K, 0, 0); me.props.add(car); }
+      SEATn = VER.car >= 3 && car ? car.userData.h * K * .62 : SEAT; blessLine('car', ['馨岑上車！帶妳去兜風～', '馨岑專屬司機來了！', '馨岑，今天想去哪？'], 1.8); },
     exit() { if (car) me.props.remove(car); car = null; me.swimOff = null; },
     pose(P, t) { if (!car) return; car.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .4)) * K));
-      if (t < CR.in) { P.happy = 1; both(P, 'up'); P.y = seg(t, .3, .8) * SEAT + Math.sin(Math.min(1, t / .8) * Math.PI) * .45; return; }
-      P.y = SEAT; const u = t - CR.in, v = Math.cos(u * .9);
+      if (t < CR.in) { P.happy = 1; both(P, 'up'); P.y = seg(t, .3, .8) * SEATn + Math.sin(Math.min(1, t / .8) * Math.PI) * .45; return; }
+      P.y = SEATn; const u = t - CR.in, v = Math.cos(u * .9);
       me.swimOff = t < CR.end - .8 ? { x: THREE.MathUtils.clamp(sx0 + Math.sin(u * .9) * W * .3, 70, W - 70), y: sy0 } : { x: lerp(me.px, sx0, .15), y: sy0 };
       car.rotation.y = v >= 0 ? 0 : Math.PI; car.position.x = (v >= 0 ? .3 : -.3) * K; car.position.y = Math.abs(Math.sin(u * 14)) * .03;
-      spinNamed(car, /^wheel\d$/, 'z', -.3 * Math.sign(v || 1)); P.turn = v >= 0 ? .55 : -.55;
+      spinNamed(car, /^wheel\d$/, 'z', -.3 * Math.sign(v || 1)); car.traverse(o => { if (/wheel/i.test(o.name) && o.isMesh && VER.car >= 3) o.rotation.x -= .3 * Math.sign(v || 1); }); P.turn = v >= 0 ? .55 : -.55;
       hR(P, [.55, 1.05, 1.0]); hL(P, Math.floor(u / 2) % 2 ? 'up' : [.55, 1.05, 1.0]); P.happy = 1; P.mouth = .3; P.roll = Math.sin(u * 14) * .02; },
     ev(t0, t1) { if (car && t1 > CR.in && every(t0, t1, .3)) puff('●', W2(car, -1.7, .45, 0), { color: '#c8ccd8', vy: 15, size: .25, grow: 1, life: .6 });
       if (cross(t0, t1, CR.in + .1)) { talk('叭叭～', 1); puff('♪', W2(me.body, .8, 2, 0), { color: '#ffd36b', vy: 40, size: .3, life: 1 }); }
@@ -1506,7 +1529,11 @@ const spinNamed = (g, re, axis, d) => g?.traverse(o => { if (re.test(o.name) && 
       if (cross(t0, t1, CR.end - .7)) talk('到站囉！', 1.2); } }); }
 { let tr = null, track = null, sx0 = 0, sy0 = 0; const TR = { arrive: 1.8, board: 2.6, go: 3.0, back: 7.6, end: 9.6 }, K = 1.15;
   act('train2', { g: null, label: '搭火車 v2', dur: TR.end,
-    enter() { sx0 = me.px; sy0 = groundY(); tr = model('train'); if (tr) { scene.add(tr); tr.rotation.x = .18; }
+    enter() { sx0 = me.px; sy0 = groundY();
+      if (VER.train >= 3) { tr = new THREE.Group(); const lo = fitModel(model('k_loco'), 2.6), w1 = fitModel(model('k_wagon1'), 2.2), w2 = fitModel(model('k_wagon2'), 2.2);
+        if (lo) { lo.position.x = .4; tr.add(lo); } if (w1) { w1.position.x = -2.15; tr.add(w1); } if (w2) { w2.position.x = -4.5; tr.add(w2); } }
+      else tr = model('train');
+      if (tr) { scene.add(tr); tr.rotation.x = .18; }
       track = new THREE.Group(); for (const dy of [2, -3]) { const r = new THREE.Mesh(new THREE.PlaneGeometry(W + 40, 3), basic(0x9aa3b5)); r.position.set(W / 2, -sy0 + dy, -1); track.add(r); }
       for (let x = 0; x < W + 40; x += 18) { const sl = new THREE.Mesh(new THREE.PlaneGeometry(6, 9), basic(0x8a5a32)); sl.position.set(x - 10, -sy0, -2); track.add(sl); } scene.add(track);
       blessLine('train', ['嘟嘟～馨岑專車到站！', '馨岑，上車囉～', '開往幸福的列車來了！'], 1.8); },
@@ -1580,6 +1607,34 @@ const spinNamed = (g, re, axis, d) => g?.traverse(o => { if (re.test(o.name) && 
       if (t1 > DN.hop && t1 < DN.ride && every(t0, t1, .45)) shakeAmt = 2;
       if (cross(t0, t1, DN.ride - 2.2)) talk(pickNo('dinoMid', ['恐龍說牠也喜歡馨岑', '以後牠也會保護馨岑喔', '下次帶馨岑一起騎！']), 2);
       if (cross(t0, t1, DN.off + .2)) talk('掰掰～恐龍！', 1.4); } }); }
+// ════ 冰原歷險記（2026-10-21 使用者要求；Blender 做的 Q 版，只放設計稿，角色版權屬原作者） ════
+{ let cast = [], snowT = 0, sx0 = 0, sy0 = 0; const IA = { in: 3.2, scrat: 2.0, crack: 9.0, out: 10.0, end: 12.5 };
+  act('iceage', { g: 'scene', label: '🧊 冰原歷險記', dur: IA.end, isNew: 1,
+    enter() { sx0 = me.px; sy0 = groundY(); cast = [];
+      const mk = (n, k, from, to, dir) => { const m = model(n); if (!m) return; scene.add(m); m.rotation.x = .18; m.scale.setScalar(me.S * k); m.userData = { from, to, dir, k, n }; cast.push(m); };
+      mk('manny', 1.0, W + 140, W * .74, -1); mk('sid', .62, W + 220, W * .74, -1); mk('diego', .78, -120, W * .2, 1); mk('scrat', .5, -60, W + 80, 1);
+      blessLine('ice', ['馨岑！是冰原歷險記耶！', '哇～冰河期的朋友們！', '大家來找馨岑玩了！'], 2); bigText('冰原歷險記！', 1.4, '#bff0ff'); },
+    exit() { cast.forEach(m => scene.remove(m)); cast = []; },
+    pose(P, t) { for (const m of cast) { const u = m.userData; let x, walking = false;
+        if (u.n === 'scrat') { // 奎特追著橡實跑過去，冰裂開又嚇得跑回來
+          if (t < IA.scrat) x = u.from; else if (t < IA.crack) { x = lerp(u.from, W * .55, ease(Math.min(1, (t - IA.scrat) / 2.5))) + (t > IA.scrat + 2.5 ? Math.sin(t * 9) * 6 : 0); walking = t < IA.scrat + 2.5; }
+          else { x = lerp(W * .55, -100, ease((t - IA.crack) / 1.6)); walking = true; u.dir = -1; } }
+        else if (t < IA.out) { x = lerp(u.from, u.to, ease(Math.min(1, t / IA.in))); walking = t < IA.in; }
+        else { x = lerp(u.to, u.from, ease((t - IA.out) / 2.2)); walking = true; u.dir = -u.dir; if (t - IA.out < .05) u.dir = Math.sign(u.from - u.to); }
+        const k = u.k * me.S, onBack = u.n === 'sid' ? k * 2.9 : 0;
+        m.position.set(x, -sy0 + onBack + (walking ? Math.abs(Math.sin(t * 8)) * 3 : 0) + (u.n === 'sid' ? Math.sin(t * 3) * 2 : 0), u.n === 'manny' ? -80 : (u.n === 'sid' ? -60 : 10));
+        m.rotation.y = (u.n === 'scrat' && t >= IA.crack) || u.dir < 0 ? Math.PI : 0; if (u.n === 'scrat' && t >= IA.crack) m.rotation.y = Math.PI;
+        m.rotation.z = walking ? Math.sin(t * 8) * .05 : (u.n === 'manny' ? Math.sin(t * 1.2) * .02 : 0); }
+      // 吉祥物：看到大家很開心、跟每隻打招呼
+      const look = t < 4 ? 0 : (Math.floor(t / 2) % 2 ? .7 : -.7); P.turn = look; P.happy = t > 1.2 && t < IA.crack ? 1 : 0;
+      if (t > 4 && t < IA.crack) { hR(P, 'up', Math.sin(t * 10) * .25, .25); P.mouth = .3; }
+      if (t >= IA.crack && t < IA.crack + 1.2) { P.wide = 1; both(P, 'high'); P.y = Math.sin(Math.min(1, (t - IA.crack) / .5) * Math.PI) * .4; }
+      if (t > IA.out + .5) { P.happy = 1; hR(P, 'up', Math.sin(t * 11) * .25, .25); } },
+    ev(t0, t1) { if (every(t0, t1, .06) && t1 < IA.end - 1) puff('❄', new THREE.Vector3(Math.random() * W, 20, 300), { color: '#ffffff', vy: -60 - Math.random() * 40, vx: (Math.random() - .5) * 30, size: .14 + Math.random() * .12, life: 3, wob: 18, spin: 1 });
+      if (cross(t0, t1, 4.2)) talk(pickNo('ice1', ['希德說要跟馨岑當朋友', '曼佛瑞說會保護馨岑喔', '迪亞哥說馨岑好勇敢']), 2.2);
+      if (cross(t0, t1, 6.6)) talk(pickNo('ice2', ['奎特又在追橡實了…', '大家都喜歡馨岑！', '冬天也要開開心心的～']), 2.2);
+      if (cross(t0, t1, IA.crack)) { bigText('喀啦——！', 1, '#bff0ff'); shakeAmt = 9; talk('冰、冰裂開了！', 1.2); }
+      if (cross(t0, t1, IA.out + .6)) talk(pickNo('ice3', ['掰掰～下次再來找馨岑！', '大家掰掰～', '冰河期的朋友們再見！']), 2); } }); }
 for (const k of ['rich', 'beckon', 'heart', 'plane', 'car', 'train', 'bbq', 'dino']) { const v1 = ACTS[k]; ACTS[k + '1'] = { ...v1, g: null };
   ACTS[k] = { g: v1.g, label: v1.label, isNew: 1, get dur() { return this.d?.dur ?? v1.dur; },
     enter() { this.d = VER[k] >= 2 ? ACTS[k + '2'] : ACTS[k + '1']; this.d.enter?.call(this.d); }, exit() { this.d?.exit?.call(this.d); },
@@ -1669,7 +1724,7 @@ for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue; const b = docum
 const tog = (id, f) => { const b = document.getElementById(id); b.onclick = () => { b.classList.toggle('on'); f(b.classList.contains('on')); }; };
 tog('auto', v => { auto = v; tfAll = false; }); tog('blend', v => blend = v); tog('springy', v => springy = v);
 tog('zoom', v => me.S = foe.S = v ? 56 : 23); tog('slow', v => slow = v ? .35 : 1); tog('oldGrip', v => oldGrip = v);
-const PLAN = ['walk', 'dino', 'icecream', 'plane', 'donut', 'cutlet', 'melon', 'car', 'train', 'bbq', 'beach', 'flood', 'rich', 'shoo', 'luck', 'heart', 'beckon', 'rice', 'sitEdge', 'tf_wizard', 'wave', 'walk', 'coins', 'duel', 'dance', 'grabDemo', 'write', 'tf_fire', 'sleep', 'wake', 'stretch', 'run', 'sausage', 'tf_sword', 'sneeze', 'trip', 'tf_off', 'shy', 'walk', 'tea', 'tf_ninja', 'jump', 'tf_ice', 'sitFloor', 'tf_chef', 'tf_off'];
+const PLAN = ['walk', 'iceage', 'dino', 'icecream', 'plane', 'donut', 'cutlet', 'melon', 'car', 'train', 'bbq', 'beach', 'flood', 'rich', 'shoo', 'luck', 'heart', 'beckon', 'rice', 'sitEdge', 'tf_wizard', 'wave', 'walk', 'coins', 'duel', 'dance', 'grabDemo', 'write', 'tf_fire', 'sleep', 'wake', 'stretch', 'run', 'sausage', 'tf_sword', 'sneeze', 'trip', 'tf_off', 'shy', 'walk', 'tea', 'tf_ninja', 'jump', 'tf_ice', 'sitFloor', 'tf_chef', 'tf_off'];
 let planI = 0;
 
 // ── 手指拖曳（抓起來） ──
@@ -1677,7 +1732,9 @@ const fingerEl = document.getElementById('finger');
 let drag = null;
 const cardTop = () => stage.querySelector('.card.main').offsetTop;
 const groundY = cardTop;
-window.getPetModelBuffer = name => { const b = atob(window.PET_MODELS[name]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return Promise.resolve(u.buffer); };
+// Kenney 的模型會去讀旁邊的 Textures/colormap.png：設計稿換成內嵌的圖
+window.petTexUrl = kit => 'data:image/png;base64,' + window.PET_TEX_CC0[kit];
+window.getPetModelBuffer = name => { const b = atob(window.PET_MODELS[name] || window.PET_MODELS_CC0[name] || (window.PET_MODELS_ICE || {})[name]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return Promise.resolve(u.buffer); };
 function grabAt(x, y, demo = false) { drag = { x, y, vx: 0, vy: 0, lt: performance.now(), demo }; setAct('held'); fingerEl.classList.add('on'); }
 function moveTo(x, y) { if (!drag) return; const now = performance.now(), dt = Math.max(8, now - drag.lt) / 1000; drag.vx = drag.vx * .5 + (x - drag.x) / dt * .5; drag.vy = drag.vy * .5 + (y - drag.y) / dt * .5; drag.x = x; drag.y = y; drag.lt = now; }
 function release() { if (!drag) return; fingerEl.classList.remove('on'); me.vx = THREE.MathUtils.clamp(drag.vx, -1400, 1400); me.vy = THREE.MathUtils.clamp(drag.vy, -1600, 1200); me.spinV = me.vx * .01; me.spinA = 0; drag = null; demoT = -1; setAct('fly'); }
