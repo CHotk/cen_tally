@@ -97,23 +97,27 @@ class _TallyPetLayerState extends State<TallyPetLayer>
 
   // ── 動作（設計稿 design-history/2026-10-21_吉祥物動作優化.html，3D 那邊演，做完回報） ──
   // 2026-10-21 使用者：設計稿裡的全部做進 App。
-  static const _acts = [
-    'rice', 'sausage', 'tea', // 吃東西
-    'sitEdge',
-    'sitFloor',
-    'wave',
-    'jump',
-    'dance',
-    'stretch',
-    'sneeze',
-    'shy',
-    'trip',
-    'coins',
-    'write',
-    'tf_wizard', 'tf_sword', 'tf_fire', 'tf_ice', 'tf_chef', 'tf_ninja', // 變身
-    'rich', 'beckon', 'luck', 'shoo', 'heart', // 祝福馨岑
-    'duel', 'flood', 'beach', // 對決、場景
-  ];
+  // 分組輪流：先抽一組（不連續同一組），再在組裡抽一個（不連續同一個）。2026-10-21 使用者：
+  // 新動作太少見（原本 20% 平分給 28 個），改成約一半的時間做新動作、每類機率一樣；
+  // 大場面（淹水、對決）少一點，保留驚喜。
+  static const _actGroups = <String, List<String>>{
+    'eat': ['rice', 'sausage', 'tea'],
+    'rest': ['sitEdge', 'sitFloor', 'stretch'],
+    'tf': ['tf_wizard', 'tf_sword', 'tf_fire', 'tf_ice', 'tf_chef', 'tf_ninja'],
+    'bless': ['rich', 'beckon', 'luck', 'shoo', 'heart'],
+    'fun': ['wave', 'jump', 'dance', 'sneeze', 'shy', 'trip', 'coins', 'write'],
+    'scene': ['beach', 'beach', 'flood', 'duel'],
+  };
+
+  String _pickAct() {
+    // 場景這組權重低一點（大場面少一點）
+    final keys = [
+      ..._actGroups.keys.where((k) => k != 'scene'),
+      if (_rng.nextDouble() < .6) 'scene',
+    ];
+    final g = _pickNo('actGroup', keys);
+    return _pickNo('act_$g', _actGroups[g]!);
+  }
 
   /// 叫 3D 那邊做 [a]；最多等 [maxSec] 秒（坐著這種不會自己結束的，時間到就換下一件事）。
   void _act(String a, [double maxSec = 16]) {
@@ -350,31 +354,31 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     final r = _rng.nextDouble();
     final above = _above(here, all);
     final below = all.any((p) => p.y > here.y + 20 && x >= p.x1 && x <= p.x2);
-    if (r < .16 && above.isNotEmpty) return _climb(here, above.first);
-    if (r < .27 && below) return _jumpDown(here);
+    if (r < .08 && above.isNotEmpty) return _climb(here, above.first);
+    if (r < .14 && below) return _jumpDown(here);
     void go(double spd) {
       target = here.x1 + _rng.nextDouble() * (here.x2 - here.x1);
       speed = spd;
     }
 
-    if (r < .5) {
+    if (r < .28) {
       go(42);
       return _setMode('walk');
     }
-    if (r < .6) {
+    if (r < .33) {
       go(120);
       return _setMode('run');
     }
-    if (r < .66) {
+    if (r < .38) {
       if (_rng.nextDouble() < .45) _chat();
       return _setMode('look', until0: 2.2 * _pace);
     }
-    if (r < .86) {
-      final a = _pickNo('act', _acts);
+    if (r < .88) {
+      final a = _pickAct();
       return _act(a, a.startsWith('sit') ? 5.5 * _pace : 18);
     }
-    if (r < .9) return _setMode('sleep', until0: 9 * _pace);
-    if (r < .94) return _setMode('happy', vy0: -330);
+    if (r < .91) return _setMode('sleep', until0: 9 * _pace);
+    if (r < .95) return _setMode('happy', vy0: -330);
     if (_rng.nextDouble() < .3) _chat();
     _setMode('idle', until0: (1.5 + _rng.nextDouble() * 2) * _pace);
   }
