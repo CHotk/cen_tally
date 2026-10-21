@@ -968,20 +968,20 @@ const villains = [0, 1, 2].map(() => { const v = makeVillain(); v.visible = fals
 const blessLine = (k, list, d = 1.8) => talk(pickNo(k, list), d);
 const rain = (txts, n, spread = 3) => { for (let i = 0; i < n; i++) puff(txts[i % txts.length], W2(me.body, (Math.random() - .5) * spread * 2, 3.2 + Math.random() * 1.5, 0), { color: '#ffd36b', vy: -40 - Math.random() * 40, g: -260, vx: (Math.random() - .5) * 40, size: .32 + Math.random() * .12, life: 1.6, spin: (Math.random() - .5) * 6 }); };
 act('rich', { g: 'bless', label: '💰 發財舞', dur: 6.0, isNew: 1, cosT: 0,
-  enter() { this.prev = costume; wear(null); const h = makeCaishenHat(); me.hat.add(h); h.scale.setScalar(.001); h.userData.pop = 0; hold(me.holdMid, makeIngot(), [0, .25, .05]); blessLine('rich', ['馨岑發大財！', '馨岑恭喜發財～', '馨岑，財神來囉！']); },
+  enter() { this.prev = costume; wear(null); const h = makeCaishenHat(); me.hat.add(h); h.scale.setScalar(.001); h.userData.pop = 0; hold(me.holdMid, makeIngot(), [0, .25, .05]); blessLine('rich', ['祝馨岑發大財！', '馨岑那麼努力，一定會有回報的', '馨岑的錢包會越來越胖喔', '祝馨岑財源廣進～']); },
   exit() { me.hat.clear(); me.holdMid.clear(); },
   pose(P, t) { const b = Math.sin(t * 6.5); both(P, [.36, 1.25 + Math.abs(b) * .2, 1.2]); P.y = Math.abs(b) * .16; P.roll = b * .16; P.turn = Math.sin(t * 3.25) * .45; P.happy = 1; P.mouth = .4; P.lLy = .06 + Math.max(0, b) * .18; P.lRy = .06 + Math.max(0, -b) * .18; P.sy = 1 - Math.abs(b) * .05; },
   ev(t0, t1) { if (every(t0, t1, .22)) rain(['🪙', '🧧', '$', '🪙'], 2); if (cross(t0, t1, 1.2)) bigText('恭喜發財！', 1.4, '#ffd36b');
-    if (cross(t0, t1, 3.2)) blessLine('rich2', ['馨岑紅包拿來～', '馨岑錢錢多多！', '馨岑變有錢人！']); for (const at of [.5, 1.9, 3.4, 4.8]) if (cross(t0, t1, at)) glow(W2(me.holdMid, 0, .3, .2), 1.4, .4, 0xffd36b); } });
+    if (cross(t0, t1, 3.2)) blessLine('rich2', ['馨岑辛苦賺的錢都會加倍回來', '願馨岑想買的都買得起～', '馨岑變有錢人！']); for (const at of [.5, 1.9, 3.4, 4.8]) if (cross(t0, t1, at)) glow(W2(me.holdMid, 0, .3, .2), 1.4, .4, 0xffd36b); } });
 act('beckon', { g: 'bless', label: '🐱 招財', dur: 5.2, isNew: 1,
-  enter() { blessLine('beckon', ['馨岑，錢錢快進來～', '馨岑招財招財～', '馨岑財運來！']); },
+  enter() { blessLine('beckon', ['我幫馨岑把財運招過來了！', '馨岑，錢錢都往妳那邊跑囉', '祝馨岑財源滾滾～', '好事都來找馨岑吧～']); },
   pose(P, t) { const w = Math.sin(t * 7); hR(P, [.95, 1.55 + w * .18, .75 + Math.max(0, w) * .2]); hL(P, 'belly'); P.happy = 1; P.roll = Math.sin(t * 3.5) * .06; P.mouth = .2; P.lean = -.03; },
   ev(t0, t1) { if (every(t0, t1, .3, .4)) { const s = Math.random() < .5 ? -1 : 1, start = W2(me.body, s * 4, 1.5 + Math.random(), 0), end = W2(me.body, 0, .9, 1.2);
       const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: texOf(Math.random() < .7 ? '🪙' : '💎', '#fff'), transparent: true, depthTest: false })); spr.renderOrder = 10; spr.scale.setScalar(me.S * .32); scene.add(spr);
       fxs.push({ t: 0, life: .7, fn: k => { spr.position.lerpVectors(start, end, ease(k)); spr.position.y += Math.sin(k * Math.PI) * me.S * .8; spr.material.opacity = k > .85 ? (1 - k) / .15 : 1; }, end: () => { scene.remove(spr); puff('+', end, { color: '#ffd36b', size: .2, vy: 30, life: .4 }); } }); }
     if (cross(t0, t1, 3.6)) bigText('財源滾滾！', 1.3, '#ffd36b'); } });
 act('luck', { g: 'bless', label: '🍀 祈福好運', dur: 5.6, isNew: 1,
-  enter() { blessLine('luck', ['馨岑好運連連✨', '馨岑萬事如意～', '馨岑心想事成！']); },
+  enter() { blessLine('luck', ['祝馨岑好運連連✨', '我在幫馨岑祈禱喔', '壞運氣都給我，好運都給馨岑', '馨岑，今天不順也沒關係']); },
   exit() { me.holdMid.clear(); },
   pose(P, t) { hR(P, [.12, 1.0, 1.3]); hL(P, [.12, 1.0, 1.3]); P.shut = 1; P.eye = 0; P.lean = .1 + Math.sin(t * 2) * .03; P.y = seg(t, .8, 1.6) * .3 + Math.sin(t * 2.4) * .04; P.blush = .5;
     if (t > 3.6) { P.shut = 0; P.eye = 1; P.happy = 1; both(P, 'up', .2); } },
@@ -989,7 +989,7 @@ act('luck', { g: 'bless', label: '🍀 祈福好運', dur: 5.6, isNew: 1,
     if (every(t0, t1, .5, .6) && t1 < 3.6) glow(W2(me.body, 0, 1, .5), 3, .7, 0xfff3a8);
     if (cross(t0, t1, 3.6)) { const c = makeCharm(); c.material.map.needsUpdate = true; hold(me.holdMid, (() => { const g = new THREE.Group(); const b = ol(new THREE.BoxGeometry(.38, .5, .08), toon(0xd8344a), 1.08); g.add(b); const k = new THREE.Mesh(new THREE.TorusGeometry(.08, .02, 6, 12), toon(0xffd36b)); k.position.y = .3; g.add(k);
         const t = new THREE.Mesh(new THREE.PlaneGeometry(.26, .3), new THREE.MeshBasicMaterial({ map: texOf('福', '#ffd36b'), transparent: true })); t.position.z = .05; g.add(t); return g; })(), [0, .6, .1]);
-      bigText('好運到！', 1.3, '#9dffb8'); for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; puff('✦', W2(me.body, 0, 1.2, 1), { color: '#fff3a8', vx: Math.cos(a) * 180, vy: Math.sin(a) * 180, size: .22, life: .6 }); } } } });
+      bigText('好運到！', 1.3, '#9dffb8'); setTimeout(() => talk(pickNo('luckEnd', ['馨岑一定會越來越好的', '老天爺會看到馨岑的努力', '好運已經在路上了喔']), 2.2), 900); for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; puff('✦', W2(me.body, 0, 1.2, 1), { color: '#fff3a8', vx: Math.cos(a) * 180, vy: Math.sin(a) * 180, size: .22, life: .6 }); } } } });
 { const VS = [[-2.6, 0], [2.7, .5], [-3.0, 1.0]];
   act('shoo', { g: 'bless', label: '👡 趕走小人', dur: 7.0, isNew: 1,
     enter() { hold(me.holdR, makeSlipper(), [0, .1, .1], [0, 0, 0]); villains.forEach((v, i) => { v.visible = true; v.position.set(VS[i][0] * 1.4, 0, .3); v.rotation.set(0, 0, 0); v.scale.setScalar(1); v.userData.hit = 0; }); talk('臭小人不准欺負馨岑！', 1.8); },
@@ -1001,9 +1001,9 @@ act('luck', { g: 'bless', label: '🍀 祈福好運', dur: 5.6, isNew: 1,
       for (let i = 0; i < 3; i++) { const h = 1.3 + i * 1.1, d = t - (h - .25); if (d > 0 && d < .45) { const k = d / .45; hR(P, k < .55 ? [.5, 1.9, -.2] : [1.0, .9, 1.25]); P.lean = k < .55 ? -.1 : .25; P.mouth = .8; P.sq = k > .5 ? 1 : 0; } }
       if (t > 4.8) { P.turn = 0; P.happy = 1; hR(P, 'up', 0, .3); } },
     ev(t0, t1) { villains.forEach((v, i) => { const h = 1.3 + i * 1.1; if (cross(t0, t1, h)) { const w = W2(me.props, v.position.x, .4, .3); glow(w, 1.4, .3); puff('啪！', w.clone().add(new THREE.Vector3(0, me.S * .5, 0)), { color: '#fff', size: .38, vy: 30, life: .5 }); for (let k = 0; k < 6; k++) puff('●', w, { color: '#6b6478', vx: (Math.random() - .5) * 120, vy: Math.random() * 80, size: .3, grow: 1.4, life: .6 }); shakeAmt = 5; talk(['走開！', '去去去！', '退散！'][i], .8); } });
-      if (cross(t0, t1, 4.8)) { const c = makeCharm(); c.userData.charm = 1; c.position.set(0, 2.9, .9); c.scale.setScalar(.001); me.props.add(c); fxs.push({ t: 0, life: .4, fn: k => c.scale.setScalar(Math.max(.001, ease(k) * (1 + Math.sin(k * Math.PI) * .4))) }); bigText('小人退散！', 1.4, '#ffe27a'); glow(W2(me.props, 0, 2.9, .9), 2.5, .5, 0xffe27a); } } }); }
+      if (cross(t0, t1, 4.8)) { const c = makeCharm(); c.userData.charm = 1; c.position.set(0, 2.9, .9); c.scale.setScalar(.001); me.props.add(c); fxs.push({ t: 0, life: .4, fn: k => c.scale.setScalar(Math.max(.001, ease(k) * (1 + Math.sin(k * Math.PI) * .4))) }); bigText('小人退散！', 1.4, '#ffe27a'); talk(pickNo('shooEnd', ['馨岑別怕，有我在！', '以後誰都不准欺負馨岑', '壞東西都趕跑了，放心～']), 2); glow(W2(me.props, 0, 2.9, .9), 2.5, .5, 0xffe27a); } } }); }
 act('heart', { g: 'bless', label: '💗 比心祝福', dur: 5.8, isNew: 1,
-  enter() { blessLine('heart', ['馨岑天天開心♡', '馨岑身體健康喔～', '馨岑最棒了♡']); },
+  enter() { blessLine('heart', ['祝馨岑天天開心♡', '馨岑，妳已經很棒了♡', '不開心的時候，我都在喔♡', '馨岑最可愛了♡']); },
   pose(P, t) { const k = seg(t, .2, .6); hR(P, [lerp(1.04, .2, k), lerp(.58, 1.22, k), lerp(.4, 1.3, k)]); hL(P, [lerp(1.04, .2, k), lerp(.58, 1.22, k), lerp(.4, 1.3, k)]); P.happy = 1; P.blush = 1; P.roll = Math.sin(t * 2.5) * .08; P.y = Math.abs(Math.sin(t * 2.5)) * .06;
     if (t > 3.2) { both(P, 'high'); P.mouth = .5; } },
   ev(t0, t1) { if (cross(t0, t1, .8)) { const h = new THREE.Sprite(new THREE.SpriteMaterial({ map: texOf('💗', '#fff'), transparent: true, depthTest: false })); h.renderOrder = 11; scene.add(h); const st = W2(me.body, 0, 1.4, 1.4);
@@ -1019,7 +1019,7 @@ act('heart', { g: 'bless', label: '💗 比心祝福', dur: 5.8, isNew: 1,
   act('rich2', { g: null, label: '發財舞 v2', dur: 7.5,
     enter() { wear(null); const h = makeWushaHat(); me.hat.add(h); h.scale.setScalar(.001); h.userData.pop = 0; const r = makeCaishenRobe(); me.outfit.add(r); r.scale.setScalar(.001); r.userData.pop = 0;
       lan = [-1, 1].map(sd => { const l = makeLantern(); l.position.set(sd * 2.3, 2.9, -.2); l.scale.setScalar(.001); me.props.add(l); return l; });
-      scroll = makeScroll(); scroll.position.set(0, 3.35, .5); scroll.scale.set(.001, 1, 1); me.props.add(scroll); blessLine('rich', ['馨岑恭喜發財！', '馨岑，財神到！', '馨岑發大財！']); },
+      scroll = makeScroll(); scroll.position.set(0, 3.35, .5); scroll.scale.set(.001, 1, 1); me.props.add(scroll); blessLine('rich', ['祝馨岑發大財！', '馨岑那麼努力，一定會有回報的', '馨岑的錢包會越來越胖喔', '祝馨岑財源廣進～']); },
     exit() { me.hat.clear(); me.outfit.clear(); lan.forEach(l => me.props.remove(l)); if (scroll) me.props.remove(scroll); me.holdMid.clear(); },
     pose(P, t) { lan.forEach((l, i) => { l.scale.setScalar(Math.max(.001, ease(Math.min(1, (t - .3) / .4)))); l.rotation.z = Math.sin(t * 2 + i) * .15; });
       if (scroll) scroll.scale.x = Math.max(.001, ease(Math.min(1, Math.max(0, (t - 2.2) / .6))));
@@ -1028,15 +1028,16 @@ act('heart', { g: 'bless', label: '💗 比心祝福', dur: 5.8, isNew: 1,
       // 捧元寶左右扭＋踏步
       const b = Math.sin(t * 6.5); both(P, [.36, 1.3 + Math.abs(b) * .2, 1.2]); P.y = Math.abs(b) * .14; P.roll = b * .14; P.turn = Math.sin(t * 3.25) * .4; P.happy = 1; P.mouth = .45; P.lLy = .06 + Math.max(0, b) * .2; P.lRy = .06 + Math.max(0, -b) * .2; },
     ev(t0, t1) { if (cross(t0, t1, 2.2)) { hold(me.holdMid, makeIngot(), [0, .25, .05]); bigText('招財進寶！', 1.4, '#ffcf4a'); }
-      if (t1 < 2.2 && every(t0, t1, .7)) talk(pickNo('gx', ['馨岑恭喜恭喜～', '馨岑財源廣進～', '馨岑恭喜發財！']), .7);
+      if (t1 < 2.2 && every(t0, t1, .7)) talk(pickNo('gx', ['財神，請保佑馨岑～', '馨岑恭喜恭喜～', '祝馨岑財源廣進～']), .7);
       if (t1 > 2.2 && every(t0, t1, .2)) oldCoin(W2(me.body, (Math.random() - .5) * 6, 3.6, 0), (Math.random() - .5) * 60, -20);
       if (t1 > 2.2 && every(t0, t1, .6)) puff('🧧', W2(me.body, (Math.random() - .5) * 5, 3.4, 0), { vy: -60, g: -200, size: .3, life: 1.5, spin: 2 });
       for (const at of [.6, 1.4, 4.5, 6.0]) if (cross(t0, t1, at)) { const sd = at % 1.6 < .8 ? -1 : 1, p = W2(me.props, sd * 2.6, .6, .5); for (let i = 0; i < 6; i++) setTimeout(() => { glow(p.clone().add(new THREE.Vector3((Math.random() - .5) * 20, Math.random() * 30, 0)), .9, .25, 0xffb340); puff('啪', p.clone().add(new THREE.Vector3((Math.random() - .5) * 30, Math.random() * 40, 0)), { color: '#ffcf4a', size: .22, vy: 40, life: .4 }); }, i * 70); puff('🧨', p, { size: .32, vy: 0, life: .6 }); shakeAmt = 3; }
+      if (cross(t0, t1, 5.6)) talk(pickNo('richEnd', ['馨岑想要的都會實現的', '馨岑值得過好日子']), 1.8);
       if (every(t0, t1, .45)) puff(Math.floor(t1 / .45) % 2 ? '咚' : '鏘', W2(me.body, 1.6, 2.2, 0), { color: '#ffcf4a', size: .26, vy: 30, life: .5 }); } }); }
 // 招財 v2：招財貓
 { let col = null, kob = null;
   act('beckon2', { g: null, label: '招財 v2', dur: 6.2,
-    enter() { col = makeNekoCollar(); me.outfit.add(col); col.scale.setScalar(.001); col.userData.pop = 0; kob = makeKoban(); hold(me.holdL, kob, [.05, .05, .1], [0, 0, 0]); pawPads.forEach(p => p.visible = true); blessLine('beckon', ['馨岑，錢錢快進來～', '馨岑招財喵～', '馨岑千萬兩進來！']); },
+    enter() { col = makeNekoCollar(); me.outfit.add(col); col.scale.setScalar(.001); col.userData.pop = 0; kob = makeKoban(); hold(me.holdL, kob, [.05, .05, .1], [0, 0, 0]); pawPads.forEach(p => p.visible = true); blessLine('beckon', ['我幫馨岑把財運招過來了！', '馨岑，錢錢都往妳那邊跑囉', '祝馨岑財源滾滾～', '好事都來找馨岑吧～']); },
     exit() { if (col) me.outfit.remove(col); if (kob) me.holdL.remove(kob); pawPads.forEach(p => p.visible = false); },
     pose(P, t) { const w = (t * 1.6) % 1, k = w < .5 ? ease(w * 2) : 1 - ease((w - .5) * 2);
       hR(P, [.95, 1.75 - k * .35, .55 + k * .55]); hL(P, [.55, .7, 1.25]); P.lean = .05 + k * .08; P.happy = 1; P.mouth = .2; P.roll = Math.sin(t * 3.2) * .05;
@@ -1045,10 +1046,10 @@ act('heart', { g: 'bless', label: '💗 比心祝福', dur: 5.8, isNew: 1,
       if (every(t0, t1, .25, .4)) { const sd = Math.random() < .5 ? -1 : 1, start = W2(me.body, sd * 4.5, 1.2 + Math.random() * 1.5, 0), end = W2(me.body, 0, .8, 1.2);
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: Math.random() < .6 ? coinTex : texOf('💰', '#fff'), transparent: true, depthTest: false })); spr.renderOrder = 10; spr.scale.setScalar(me.S * .3); scene.add(spr);
         fxs.push({ t: 0, life: .75, fn: k => { spr.position.lerpVectors(start, end, ease(k)); spr.position.y += Math.sin(k * Math.PI) * me.S * .9; spr.material.rotation = k * 6; }, end: () => { scene.remove(spr); puff('+', end, { color: '#ffcf4a', size: .2, vy: 30, life: .4 }); } }); }
-      if (cross(t0, t1, 3.8)) bigText('財源滾滾！', 1.3, '#ffcf4a'); } }); }
+      if (cross(t0, t1, 3.8)) { bigText('財源滾滾！', 1.3, '#ffcf4a'); talk(pickNo('beckonEnd', ['福氣都留在馨岑身邊囉', '馨岑的好運擋都擋不住']), 2); } } }); }
 // 比心 v2：手指真的比心＋雙手頭上大愛心
 act('heart2', { g: null, label: '比心 v2', dur: 6.4,
-  enter() { blessLine('heart', ['馨岑天天開心♡', '馨岑，比心給妳♡', '馨岑最可愛了♡']); },
+  enter() { blessLine('heart', ['祝馨岑天天開心♡', '馨岑，妳已經很棒了♡', '不開心的時候，我都在喔♡', '馨岑最可愛了♡']); },
   exit() { fingerHearts.forEach(g => g.visible = false); },
   pose(P, t) { P.happy = 1; P.blush = 1;
     if (t < 3.0) { // 單手手指比心，在臉旁邊，一下一下往前推
@@ -1062,7 +1063,7 @@ act('heart2', { g: null, label: '比心 v2', dur: 6.4,
       x.beginPath(); x.moveTo(64, 112); x.bezierCurveTo(4, 70, 10, 14, 64, 40); x.bezierCurveTo(118, 14, 124, 70, 64, 112); x.stroke();
       const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); spr.renderOrder = 11; scene.add(spr);
       fxs.push({ t: 0, life: 2.6, fn: k => { spr.position.copy(W2(me.body, 0, 2.55, .6)); spr.scale.setScalar(me.S * (.4 + ease(Math.min(1, k * 4)) * 1.1) * (1 + Math.sin(k * 24) * .05)); spr.material.opacity = k > .85 ? (1 - k) / .15 : 1; }, end: () => scene.remove(spr) });
-      bigText('馨岑天天開心！', 1.6, '#ff9fbe'); }
+      bigText('馨岑天天開心！', 1.6, '#ff9fbe'); talk(pickNo('heartEnd', ['馨岑要好好照顧自己喔♡', '有我陪著馨岑♡', '馨岑笑起來最好看♡']), 2.2); }
     for (const [at, dx, col] of [[4.0, -2.4, '#ff9fbe'], [4.4, 2.2, '#ffd36b'], [4.8, -.6, '#8fd3ff'], [5.2, 1.4, '#9dffb8']]) if (cross(t0, t1, at)) { const p = W2(me.body, dx, 4.2, 0); glow(p, 2.4, .5, new THREE.Color(col).getHex());
       for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; puff('✦', p, { color: col, vx: Math.cos(a) * 130, vy: Math.sin(a) * 130, g: -120, size: .18, life: .9 }); } } } });
 
