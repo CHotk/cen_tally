@@ -113,7 +113,7 @@
     <div class="group"><h3>變身 <small>像星之卡比的複製能力，可以一直變</small></h3><div class="btns" data-g="costume"></div></div>
     <div class="group"><h3>版本切換 <small>改過的都留著，點了馬上換（正在穿的會重新穿）</small></h3><div id="vers"></div></div>
     <div class="group"><h3>對決</h3><div class="btns" data-g="duel"></div></div>
-    <div class="group"><h3>場景 <small>淹水潛水（整個畫面）、沙灘度假（卡片上一小塊）</small></h3><div class="btns" data-g="scene"></div></div>
+    <div class="group"><h3>場景 <small>淹水潛水（整個畫面）、沙灘度假（卡片上一小塊）、搭飛機、搭車、搭火車、烤肉、馴服恐龍</small></h3><div class="btns" data-g="scene"></div></div>
     <div class="group"><h3>祝福馨岑 <small>發財、好運、趕走小人</small></h3><div class="btns" data-g="bless"></div></div>
     <div class="group"><h3>其他新動作</h3><div class="btns" data-g="fun"></div></div>
 
@@ -136,6 +136,10 @@
         <span class="tag n">新</span>黑色的另一隻（紅眼睛、紫色描邊、皺眉）從右邊衝進來 → 互瞪「哼！」→ 兩邊拔劍（劍閃一下）→ 畫面變暗 → 衝過去鏘鏘鏘三連擊（火花、畫面震動）→ 跳到空中大力對砍 → 擦身而過定格… → 隨機一邊輸：輸的轉圈倒地頭暈；對手輸了哭著跑掉，自己輸了坐著哭、對手笑完離開，牠爬起來說「下次一定贏！」。</div>
       <div class="note"><b>場景</b><br>
         <span class="tag n">新</span>淹水潛水：水從下面漲上來（有波浪、光線、泡泡），牠戴上蛙鏡＋呼吸管、背氧氣瓶、穿蛙鞋，在整個畫面繞著游（卡片不擋），魚、河豚、烏賊游過去，呼吸管冒泡泡，最後水退掉落回卡片。沙灘度假：卡片上冒出一小塊沙灘、紅白遮陽傘、藍白躺椅、小螃蟹走來走去，牠戴墨鏡躺上去用吸管喝果汁。</div>
+      <div class="note"><b>出遊</b><br>
+        <span class="tag n">新</span>搭飛機：雙翼小飛機開過來，牠跳上駕駛座，螺旋槳轉、起飛在畫面上空繞，後面拖著「祝馨岑出遊愉快」布條會飄，最後降落。搭車：藍色敞篷「馨岑號」，牠坐進去握方向盤在卡片上來回兜風、輪子轉、排氣冒煙、叭叭。搭火車：鐵軌鋪出來，紅色火車頭拉兩節車廂開進站，牠跳上駕駛室，嘟嘟冒煙開出去繞一圈再回來。烤肉：烤肉架冒出來、木炭一閃一閃，牠先搧扇子（火星），再翻烤串（鑫鑫腸、香菇、玉米），最後拿第一串吃。</div>
+      <div class="note"><b>馴服恐龍、更多食物</b><br>
+        <span class="tag n">新</span>恐龍：綠色暴龍咚咚咚走過來（畫面震動），張大嘴「吼——！」，牠嚇到眼睛閉成 &gt;&lt;、手舉高發抖、眼淚冒出來，鼓起勇氣拿出雞腿請牠吃，恐龍一口吃掉、臉紅冒愛心、尾巴狂搖，「馴服成功！」，牠跳上恐龍背上騎著在卡片上來回跑，最後跳下來揮手跟恐龍說掰掰。食物新增冰淇淋（雙球＋櫻桃＋彩色糖粒）、甜甜圈（粉紅糖霜）、雞排（紙袋裝）、西瓜（三角片、有籽、綠皮），一樣三口吃完、每口對準嘴巴。</div>
       <div class="note"><b>祝福馨岑</b><br>
         <span class="tag n">新</span>發財舞（戴財神帽、捧元寶左右扭，金幣紅包從天上掉下來）、招財（像招財貓一樣招手，金幣從兩邊飛進牠懷裡）、祈福好運（雙手合十、身上發光、幸運草跟星星飄上去、御守冒出來）、趕走小人（黑黑的小人從旁邊走過來，牠拿拖鞋一個一個打飛，最後貼上「退散」符）、比心祝福（雙手比愛心、大愛心浮起來、放煙火）。台詞都是祝福馨岑的，隨機但不會連續重複。</div>
       <div class="note"><b>做進 App 時</b><br>
@@ -578,8 +582,42 @@ act('jump', { g: 'basic', label: '跳跳', dur: 2.4, isNew: 1, enter() { talk('�
   ev(a, b) { for (let k = 0; k < 3; k++) if (cross(a, b, k * .8 + .6)) puff('✦', W2(me.body, 0, 2.2, 0), { color: '#ffd36b', vy: 60, life: .8 }); } });
 
 // ── 吃東西 ──
+function makeIceCream() { const g = new THREE.Group(); g.userData.parts = [];
+  const cone = new THREE.Group(); const c = ol(new THREE.ConeGeometry(.17, .5, 20), toon(0xe0a85a), 1.06); c.rotation.x = Math.PI; c.position.y = -.12; cone.add(c);
+  for (let i = 0; i < 3; i++) { const l = new THREE.Mesh(new THREE.TorusGeometry(.17 - i * .05, .008, 4, 20), basic(0xa8742a)); l.rotation.x = Math.PI / 2; l.position.y = .05 - i * .12; cone.add(l); }
+  const mid = new THREE.Group(); const m = ol(new THREE.SphereGeometry(.2, 20, 14), toon(0x9dffc8), 1.06); m.position.y = .2; mid.add(m);
+  const top = new THREE.Group(); const t = ol(new THREE.SphereGeometry(.19, 20, 14), toon(0xffb3cf), 1.06); t.position.y = .45; top.add(t);
+  const ch = ol(new THREE.SphereGeometry(.06, 12, 10), toon(0xe0263a), 1.1); ch.position.y = .66; top.add(ch);
+  for (let i = 0; i < 8; i++) { const sp = new THREE.Mesh(new THREE.CapsuleGeometry(.008, .03, 2, 4), basic([0xffd23f, 0x6fd6ff, 0xffffff][i % 3])); const a = i * .8; sp.position.set(Math.cos(a) * .15, .5 + (i % 3) * .03, Math.sin(a) * .1 + .1); sp.rotation.z = a; top.add(sp); }
+  [top, mid, cone].forEach(p => { g.add(p); g.userData.parts.push(p); }); return g; }
+function makeDonut() { const g = new THREE.Group(); g.userData.parts = [];
+  // 立著拿的甜甜圈，切成上、右下、左下三段（上面那段先吃）
+  for (const [start] of [[Math.PI / 6], [-Math.PI / 2], [Math.PI * 5 / 6]]) { const p = new THREE.Group();
+    const dough = ol(new THREE.TorusGeometry(.26, .12, 14, 20, Math.PI * 2 / 3), toon(0xe0a85a), 1.06); dough.rotation.z = start; p.add(dough);
+    const ice = new THREE.Mesh(new THREE.TorusGeometry(.26, .125, 14, 20, Math.PI * 2 / 3), toon(0xff8fb8)); ice.rotation.z = start; ice.scale.set(1, 1, .7); ice.position.z = .05; p.add(ice);
+    for (let i = 0; i < 5; i++) { const a = start + (i + .5) / 5 * Math.PI * 2 / 3; const sp = new THREE.Mesh(new THREE.CapsuleGeometry(.008, .03, 2, 4), basic([0xffffff, 0xffd23f, 0x6fd6ff][i % 3])); sp.position.set(Math.cos(a) * .26, Math.sin(a) * .26, .14); sp.rotation.z = a * 3; p.add(sp); }
+    g.add(p); g.userData.parts.push(p); }
+  g.position.y = .1; return g; }
+function makeCutlet() { const g = new THREE.Group(); g.userData.parts = [];
+  const crust = toon(0xd99a3c);
+  for (let i = 0; i < 3; i++) { const p = new THREE.Group(); const m = ol(new THREE.BoxGeometry(.5 - i * .02, .26, .14), crust, 1.06); m.position.y = .42 - i * .26; m.rotation.z = (i - 1) * .06; p.add(m);
+    for (let k = 0; k < 6; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.035, 0), toon(0xf0c060)); b.position.set((Math.random() - .5) * .4, m.position.y + (Math.random() - .5) * .18, .08); p.add(b); }
+    g.add(p); g.userData.parts.push(p); }
+  const bag = new THREE.Mesh(new THREE.CylinderGeometry(.3, .27, .4, 4, 1, true), dbl(0xfff3dc)); bag.rotation.y = Math.PI / 4; bag.scale.z = .45; bag.position.y = -.05; g.userData.parts[2].add(bag);
+  const logo = textPlane('雞排', .22, .12, 'rgba(0,0,0,0)', '#d8344a'); logo.position.set(0, -.02, .1); g.userData.parts[2].add(logo); return g; }
+function makeWatermelon() { const g = new THREE.Group(); g.userData.parts = [];
+  const T = .5, Bt = -.18, Wd = .42, xAt = (y, sd) => sd * Wd * (y - Bt) / (T - Bt) * 0 + sd * Wd * (1 - (T - y) / (T - Bt) * 0) * ((T - y) / (T - Bt));
+  // 三角形果肉朝上（尖端在上），一層一層吃，最下面是綠色的皮
+  const bands = [[T, .26], [.26, .04], [.04, Bt]];
+  bands.forEach(([y0, y1], i) => { const sh = new THREE.Shape(); sh.moveTo(xAt(y0, -1), y0); sh.lineTo(xAt(y0, 1), y0); sh.lineTo(xAt(y1, 1), y1); sh.lineTo(xAt(y1, -1), y1); sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: .12, bevelEnabled: true, bevelSize: .02, bevelThickness: .02, bevelSegments: 2 }); geo.translate(0, 0, -.06);
+    const p = new THREE.Group(); p.add(ol(geo, toon(0xff4d5e), 1.04));
+    for (let k = 0; k < 2 + i; k++) { const sd = new THREE.Mesh(new THREE.SphereGeometry(.022, 8, 6), basic(0x241a20)); sd.scale.set(.7, 1.2, .5); const y = y1 + (y0 - y1) * (.3 + Math.random() * .4); sd.position.set((Math.random() - .5) * 2 * xAt(y, 1) * .7, y, .08); p.add(sd); }
+    if (i === 2) { const rind = ol(new THREE.BoxGeometry(Wd * 2 + .04, .1, .16), toon(0x3fae4f), 1.04); rind.position.y = Bt - .06; p.add(rind); const w = new THREE.Mesh(new THREE.BoxGeometry(Wd * 2, .03, .17), toon(0xeaffd8)); w.position.y = Bt - .005; p.add(w); }
+    g.add(p); g.userData.parts.push(p); });
+  return g; }
 const SAUS_C = [.2, -.04, -.28]; let eatSide = 0; // 鑫鑫腸每顆的中心（竹籤上的位置）
-const MOUTH = new THREE.Vector3(0, .93, 1.18), TOPS = { rice: [.42, .16, -.05], rice2: [.5, .2, .0], sausage: [.32, .08, -.16] };
+const MOUTH = new THREE.Vector3(0, .93, 1.18), TOPS = { icecream: [.72, .4, .1], donut: [.5, .2, .05], cutlet: [.55, .3, .05], melon: [.5, .26, .04], rice: [.42, .16, -.05], rice2: [.5, .2, .0], sausage: [.32, .08, -.16] };
 const eatPivot = new THREE.Group(); me.body.add(eatPivot); let eatU = 0, eatTop = 0;
 function eatAct(key, label, f0, line, crumb) { const N = 3, T0 = .9, BT = 1.45; let f = typeof f0 === 'function' ? null : f0;
   act(key, { g: 'eat', label, dur: T0 + N * BT + 2.0, isNew: 1,
@@ -606,6 +644,10 @@ function eatAct(key, label, f0, line, crumb) { const N = 3, T0 = .9, BT = 1.45; 
       if (t1 > end && every(t0, t1, .45, end)) puff('♥', W2(me.body, (Math.random() - .5), 2.1, 0), { color: '#ff6fa5', vy: 45, life: 1.2, wob: 12 }); } }); }
 eatAct('rice', '🍙 吃飯糰', () => VER.onigiri >= 2 ? food.rice2 : food.rice, '哇～飯糰！', 0xffffff);
 eatAct('sausage', '🍢 吃鑫鑫腸', () => VER.sausage >= 2 ? food.sausage : food.sausage1, '鑫鑫腸！！', 0xe0533f);
+eatAct('icecream', '🍦 吃冰淇淋', () => makeIceCream(), '冰淇淋！！', 0xffb3cf);
+eatAct('donut', '🍩 吃甜甜圈', () => makeDonut(), '甜甜圈～', 0xff8fb8);
+eatAct('cutlet', '🍗 吃雞排', () => makeCutlet(), '雞排！香香的～', 0xd99a3c);
+eatAct('melon', '🍉 吃西瓜', () => makeWatermelon(), '西瓜好消暑～', 0xff4d5e);
 { let f = food.tea, L = f.userData.liq, PE = f.userData.pearls;
   act('tea', { g: 'eat', label: '🧋 喝珍奶', dur: 7.4, isNew: 1,
     enter() { f = VER.tea >= 4 ? food.tea4 : VER.tea >= 3 ? food.tea3 : food.tea; L = f.userData.liq; PE = f.userData.pearls;
@@ -926,7 +968,7 @@ const fins = [0, 1].map(i => { const fn = makeFin(); fn.visible = false; me.legs
 { const FL = { rise: 1.6, swim: 11.5, drain: 13.2, end: 14.6 }; let sx0 = 0, sy0 = 0, fishT = 0;
   const water = () => document.getElementById('water');
   act('flood', { g: 'scene', label: '🌊 淹水潛水', dur: FL.end, isNew: 1, swim: 1,
-    enter() { sx0 = me.px; sy0 = me.py; wear(null); const m = makeDiveMask(); me.hat.add(m); m.scale.setScalar(.001); m.userData.pop = 0; const b = makeDiveBody(); me.outfit.add(b); b.scale.setScalar(.001); b.userData.pop = 0; fins.forEach(x => x.visible = true); talk('淹水了！？', 1.4); },
+    enter() { sx0 = me.px; sy0 = groundY(); wear(null); const m = makeDiveMask(); me.hat.add(m); m.scale.setScalar(.001); m.userData.pop = 0; const b = makeDiveBody(); me.outfit.add(b); b.scale.setScalar(.001); b.userData.pop = 0; fins.forEach(x => x.visible = true); talk('淹水了！？', 1.4); },
     exit() { me.hat.clear(); me.outfit.clear(); fins.forEach(x => x.visible = false); const w = water(); if (w) { w.style.height = '0'; w.style.visibility = 'hidden'; } me.swimOff = null; },
     pose(P, t) { const w = water(), Hh = H; let lvl = t < FL.rise ? ease(t / FL.rise) : t > FL.swim ? 1 - ease((t - FL.swim) / (FL.drain - FL.swim)) : 1; if (w) { w.style.height = (lvl * Hh * .92) + 'px'; w.style.visibility = lvl > .001 ? 'visible' : 'hidden'; }
       if (t < FL.rise) { P.wide = 1; both(P, 'up'); P.y = Math.sin(t * 8) * .05; return; }
@@ -996,6 +1038,220 @@ function makeJuice() { const g = new THREE.Group(); const glass = new THREE.Mesh
       if (t1 > BE.lie && every(t0, t1, 4, BE.lie + .4)) puff('咕嚕', W2(me.body, 1.0, 1.4, 1), { size: .22, vy: 20, life: .7 });
       if (cross(t0, t1, BE.lie + 5)) talk(pickNo('beach2', ['果汁好好喝', '太陽好溫暖～', '不想上班了']), 2);
       if (cross(t0, t1, BE.end - .8)) { me.hat.clear(); me.holdR.clear(); talk('回去記帳囉！', 1.4); } } }); }
+
+// ── 交通工具、烤肉（2026-10-21 使用者：多新增搭飛機、搭車、搭火車、烤肉） ──
+const wheel = (r = .22) => { const g = new THREE.Group(); const t = ol(new THREE.CylinderGeometry(r, r, .16, 20), toon(0x2b2b38), 1.08); t.rotation.x = Math.PI / 2; g.add(t);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * .45, r * .45, .18, 12), toon(0xd8dfec)); hub.rotation.x = Math.PI / 2; g.add(hub);
+  const sp = new THREE.Mesh(new THREE.BoxGeometry(r * 1.5, .04, .19), basic(0x9aa3b5)); g.add(sp); return g; };
+function textPlane(txt, w, h, bg, fg) { const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w); const x = c.getContext('2d');
+  x.fillStyle = bg; x.fillRect(0, 0, c.width, c.height); x.fillStyle = fg; x.font = '900 ' + Math.round(c.height * .55) + 'px "Microsoft JhengHei","PingFang TC",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, c.width / 2, c.height / 2 + 2);
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), side: THREE.DoubleSide, transparent: true })); }
+// 飛機：機身、雙翼、尾翼、螺旋槳、敞篷駕駛座；後面拖一條祝福布條
+function makePlane() { const g = new THREE.Group(), red = toon(0xff5a6e), white = toon(0xffffff), yel = toon(0xffd23f);
+  const body = ol(new THREE.CapsuleGeometry(.55, 2.2, 10, 24), red, 1.04); body.rotation.z = Math.PI / 2; body.position.y = .55; g.add(body);
+  const stripe = new THREE.Mesh(new THREE.CylinderGeometry(.565, .565, .25, 24, 1, true), white); stripe.rotation.z = Math.PI / 2; stripe.position.set(-.7, .55, 0); g.add(stripe);
+  for (const y of [.15, 1.2]) { const wg = ol(new THREE.BoxGeometry(1.0, .08, 3.4), y < .5 ? yel : white, 1.05); wg.position.set(.2, y, 0); g.add(wg); }
+  for (const z of [-1.3, 1.3]) for (const x of [-.15, .55]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 1.05, 6), toon(0x8a5a32)); st.position.set(x, .68, z); g.add(st); }
+  const tail = ol(new THREE.BoxGeometry(.5, .7, .08), red, 1.06); tail.position.set(-1.55, 1.0, 0); tail.rotation.z = .3; g.add(tail);
+  const tailW = ol(new THREE.BoxGeometry(.45, .06, 1.3), white, 1.06); tailW.position.set(-1.55, .7, 0); g.add(tailW);
+  const nose = ol(new THREE.ConeGeometry(.3, .3, 16), yel, 1.08); nose.rotation.z = -Math.PI / 2; nose.position.set(1.75, .55, 0); g.add(nose);
+  const prop = new THREE.Group(); prop.position.set(1.92, .55, 0); g.add(prop);
+  for (let i = 0; i < 2; i++) { const b = ol(new THREE.BoxGeometry(.06, 1.2, .14), toon(0x5b3a24), 1.08); b.rotation.x = i * Math.PI / 2; prop.add(b); }
+  for (const z of [-.45, .45]) { const wl = wheel(.18); wl.position.set(.5, -.05, z); g.add(wl); const leg = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .45, 6), toon(0x8a5a32)); leg.position.set(.5, .2, z); g.add(leg); }
+  const ws = new THREE.Mesh(new THREE.PlaneGeometry(.5, .35), new THREE.MeshBasicMaterial({ color: 0xbfe6ff, transparent: true, opacity: .6, side: THREE.DoubleSide })); ws.position.set(.75, 1.05, 0); ws.rotation.y = Math.PI / 2; ws.rotation.x = -.3; g.add(ws);
+  // 布條：繩子＋「祝馨岑出遊愉快」
+  const rope = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, 1.1, 4), basic(0x8a8a9a)); rope.rotation.z = Math.PI / 2; rope.position.set(-2.3, .7, 0); g.add(rope);
+  const ban = textPlane('祝馨岑出遊愉快', 3.0, .55, '#fff3a8', '#d8344a'); ban.position.set(-4.35, .7, 0); g.add(ban);
+  g.userData.prop = prop; g.userData.ban = ban; ban.userData.base = ban.geometry.attributes.position.array.slice(); return g; }
+// 小汽車：敞篷、圓圓的、方向盤、車燈
+function makeCar() { const g = new THREE.Group(), body = toon(0x4aa8ff);
+  const b = ol(new THREE.CapsuleGeometry(.5, 2.0, 8, 20), body, 1.04); b.rotation.z = Math.PI / 2; b.scale.set(1, 1, 1.5); b.position.y = .55; g.add(b);
+  const seat = new THREE.Mesh(new THREE.CylinderGeometry(.62, .62, .2, 20), toon(0x22303f)); seat.position.set(-.1, 1.02, 0); g.add(seat);
+  const hood = ol(new THREE.BoxGeometry(.9, .16, 1.3), toon(0x3a8fe0), 1.04); hood.position.set(1.0, .95, 0); g.add(hood);
+  const ws = new THREE.Mesh(new THREE.PlaneGeometry(.45, 1.2), new THREE.MeshBasicMaterial({ color: 0xbfe6ff, transparent: true, opacity: .55, side: THREE.DoubleSide })); ws.position.set(.6, 1.25, 0); ws.rotation.set(0, Math.PI / 2, 0); ws.rotateX(-.4); g.add(ws);
+  const wheelS = new THREE.Mesh(new THREE.TorusGeometry(.17, .035, 6, 16), toon(0x2b2b38)); wheelS.position.set(.45, 1.2, .25); wheelS.rotation.y = Math.PI / 2; wheelS.rotation.x = .5; g.add(wheelS);
+  for (const z of [-.5, .5]) { const l = ol(new THREE.SphereGeometry(.11, 12, 10), toon(0xfff3a8), 1.1); l.position.set(1.48, .65, z); g.add(l); const tl = ol(new THREE.SphereGeometry(.09, 10, 8), toon(0xff5a6e), 1.1); tl.position.set(-1.48, .7, z); g.add(tl); }
+  g.userData.wheels = [];
+  for (const x of [-.95, .95]) for (const z of [-.72, .72]) { const w = wheel(.3); w.position.set(x, .3, z); g.add(w); g.userData.wheels.push(w); }
+  const plate = textPlane('馨岑號', .55, .2, '#ffffff', '#22303f'); plate.position.set(-1.56, .45, 0); plate.rotation.y = -Math.PI / 2; g.add(plate);
+  return g; }
+// 小火車：火車頭（鍋爐、煙囪、駕駛室）＋兩節車廂；鐵軌畫在畫面上
+function makeTrain() { const g = new THREE.Group(), red = toon(0xe0344a), dark = toon(0x2b2b38), gold = toon(0xffd23f);
+  const loco = new THREE.Group(); g.add(loco);
+  const boiler = ol(new THREE.CylinderGeometry(.45, .45, 1.5, 24), red, 1.04); boiler.rotation.z = Math.PI / 2; boiler.position.set(.75, .75, 0); loco.add(boiler);
+  const front = ol(new THREE.CylinderGeometry(.47, .47, .1, 24), dark, 1.06); front.rotation.z = Math.PI / 2; front.position.set(1.52, .75, 0); loco.add(front);
+  const lamp = ol(new THREE.SphereGeometry(.12, 12, 10), toon(0xfff3a8), 1.1); lamp.position.set(1.6, 1.0, 0); loco.add(lamp);
+  const chim = ol(new THREE.CylinderGeometry(.18, .12, .5, 14), dark, 1.06); chim.position.set(1.15, 1.35, 0); loco.add(chim);
+  const dome = ol(new THREE.SphereGeometry(.18, 12, 10), gold, 1.08); dome.position.set(.6, 1.2, 0); loco.add(dome);
+  const cab = ol(new THREE.BoxGeometry(.9, .7, 1.2), red, 1.04); cab.position.set(-.4, .75, 0); loco.add(cab);
+  const roof = ol(new THREE.BoxGeometry(1.15, .1, 1.45), dark, 1.05); roof.position.set(-.4, 2.05, 0); loco.add(roof);
+  for (const z of [-.55, .55]) for (const x of [-.75, -.05]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, 1.0, 6), dark); p.position.set(x, 1.55, z); loco.add(p); }
+  const base = ol(new THREE.BoxGeometry(2.4, .2, 1.1), dark, 1.04); base.position.set(.4, .35, 0); loco.add(base);
+  const cow = ol(new THREE.ConeGeometry(.35, .4, 4), gold, 1.06); cow.rotation.z = -Math.PI / 2; cow.position.set(1.72, .35, 0); loco.add(cow);
+  g.userData.wheels = []; g.userData.chim = chim;
+  for (const x of [-.4, .4, 1.1]) for (const z of [-.6, .6]) { const w = wheel(.24); w.position.set(x, .24, z); loco.add(w); g.userData.wheels.push(w); }
+  [0x4aa8ff, 0xffd23f].forEach((c, i) => { const car = new THREE.Group(); car.position.x = -2.1 - i * 2.0; g.add(car);
+    const box = ol(new THREE.BoxGeometry(1.7, .6, 1.1), toon(c), 1.04); box.position.y = .7; car.add(box);
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(1.75, .08, 1.15), toon(0xffffff)); rim.position.y = 1.02; car.add(rim);
+    const cargo = new THREE.Mesh(new THREE.SphereGeometry(.3, 12, 10), toon([0xff9fbe, 0x9dffb8][i])); cargo.position.set(.3, 1.1, 0); car.add(cargo);
+    const heart = textPlane(['♡', '★'][i], .4, .4, 'rgba(0,0,0,0)', '#ffffff'); heart.position.set(0, .7, .56); car.add(heart);
+    for (const x of [-.55, .55]) for (const z of [-.6, .6]) { const w = wheel(.22); w.position.set(x, .22, z); car.add(w); g.userData.wheels.push(w); }
+    const hook = new THREE.Mesh(new THREE.BoxGeometry(.4, .06, .1), toon(0x2b2b38)); hook.position.set(1.0, .35, 0); car.add(hook); });
+  return g; }
+// 烤肉架：架子、木炭（會發光）、網子、烤串（鑫鑫腸、香菇、玉米）、扇子
+function makeGrill() { const g = new THREE.Group(), dark = toon(0x2b2b38);
+  for (const [x, z] of [[-.5, -.3], [.5, -.3], [-.5, .3], [.5, .3]]) { const l = ol(new THREE.CylinderGeometry(.04, .04, .7, 8), dark, 1.1); l.position.set(x, .35, z); g.add(l); }
+  const box = ol(new THREE.BoxGeometry(1.3, .3, .8), dark, 1.04); box.position.y = .78; g.add(box);
+  const coal = []; for (let i = 0; i < 9; i++) { const c = new THREE.Mesh(new THREE.IcosahedronGeometry(.1, 0), new THREE.MeshBasicMaterial({ color: 0xff5a1f })); c.position.set((i % 3 - 1) * .35 + (Math.random() - .5) * .1, .92, (Math.floor(i / 3) - 1) * .22); g.add(c); coal.push(c); }
+  for (let i = 0; i < 7; i++) { const r = new THREE.Mesh(new THREE.BoxGeometry(1.3, .02, .02), toon(0x9aa3b5)); r.position.set(0, 1.0, -.33 + i * .11); g.add(r); }
+  const sk = []; const items = [[0xe0533f, 'saus'], [0x8a5a32, 'mush'], [0xffd23f, 'corn']];
+  items.forEach(([c, k], i) => { const s0 = new THREE.Group(); s0.position.set(0, 1.07, -.22 + i * .22); g.add(s0); const stick = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, 1.4, 6), toon(0xe3c48f)); stick.rotation.z = Math.PI / 2; s0.add(stick);
+    for (let j = 0; j < 3; j++) { const m = k === 'corn' ? ol(new THREE.CylinderGeometry(.08, .08, .22, 12), toon(c), 1.08) : k === 'mush' ? ol(new THREE.SphereGeometry(.09, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon(c), 1.1) : ol(new THREE.CapsuleGeometry(.07, .1, 6, 12), toon(c), 1.08);
+      m.rotation.z = Math.PI / 2; m.position.x = (j - 1) * .3; s0.add(m); } sk.push(s0); });
+  g.userData.coal = coal; g.userData.sk = sk; return g; }
+function makeFan() { const g = new THREE.Group(); const stick = ol(new THREE.CylinderGeometry(.025, .025, .35, 6), toon(0x8a5a32), 1.1); g.add(stick);
+  const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.absarc(0, 0, .38, Math.PI * .2, Math.PI * .8, false); sh.lineTo(0, 0);
+  const fan = ol(new THREE.ShapeGeometry(sh), dbl(0xff9fbe), 1.06); fan.position.y = .1; g.add(fan); return g; }
+{ let plane = null, sx0 = 0, sy0 = 0; const PL = { board: 1.0, up: 2.4, land: 8.6, end: 9.8 };
+  act('plane', { g: 'scene', label: '✈ 搭飛機', dur: PL.end, isNew: 1,
+    enter() { sx0 = me.px; sy0 = groundY(); plane = makePlane(); plane.scale.setScalar(.001); plane.userData.t = 0; me.props.add(plane); blessLine('plane', ['馨岑，我帶妳去旅行！', '飛機來接馨岑囉～', '馨岑想去哪裡呢？'], 1.8); },
+    exit() { if (plane) me.props.remove(plane); plane = null; me.swimOff = null; },
+    pose(P, t) { if (!plane) return; plane.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .4)))); plane.userData.prop.rotation.x += t > PL.board ? .6 : .1;
+      plane.position.set(-.2, t < PL.board ? 0 : -.55, 0);
+      if (t < PL.board) { P.happy = 1; both(P, 'up'); P.y = seg(t, .4, 1) * .55 + Math.sin(Math.min(1, t) * Math.PI) * .3; return; }
+      P.y = .55; P.turn = .5; both(P, t > PL.up && t < PL.land ? 'high' : 'rest'); P.happy = 1; P.mouth = .3; P.lLy = P.lRy = .2;
+      // 布條飄
+      const a = plane.userData.ban.geometry.attributes.position, b0 = plane.userData.ban.userData.base; for (let i = 0; i < a.count; i++) a.setZ(i, Math.sin(clockT * 8 + b0[i * 3] * 2) * .12 * (1.5 - b0[i * 3] / 2)); a.needsUpdate = true;
+      if (t < PL.up) { const k = seg(t, PL.board, PL.up); me.swimOff = { x: sx0 + k * 40, y: sy0 - k * H * .3 }; plane.rotation.z = .25 * Math.sin(k * Math.PI); return; }
+      if (t < PL.land) { const u = t - PL.up, x = W / 2 + Math.sin(u * .9) * W * .32, y = sy0 - H * .3 + Math.sin(u * 1.8) * 30, dx = Math.cos(u * .9);
+        me.swimOff = { x, y }; plane.rotation.y = dx >= 0 ? 0 : Math.PI; plane.rotation.z = Math.cos(u * 1.8) * .12; P.turn = dx >= 0 ? .5 : -.5; return; }
+      const k = seg(t, PL.land, PL.end - .3); plane.rotation.y = 0; plane.rotation.z = -.15 * (1 - k); me.swimOff = { x: lerp(me.px, sx0, .08), y: lerp(sy0 - H * .3, sy0, k) }; },
+    ev(t0, t1) { if (cross(t0, t1, PL.board + .2)) { talk('起飛囉～', 1.2); bigText('出發！', 1, '#9fe6ff'); }
+      if (t1 > PL.up && t1 < PL.land && every(t0, t1, .25)) puff('●', W2(me.props, -2.2, 0, 0), { color: '#ffffff', vy: 0, vx: 0, size: .35, grow: 1.2, life: .9 });
+      if (cross(t0, t1, PL.up + 2)) talk(pickNo('planeMid', ['馨岑看！雲好漂亮', '不開心的事都留在地上吧～', '馨岑，世界好大喔']), 2);
+      if (cross(t0, t1, PL.land + .8)) { talk('平安降落～', 1.4); me.swimOff = null; }
+      if (cross(t0, t1, PL.end - .3)) { for (let i = 0; i < 8; i++) puff('●', W2(me.props, (Math.random() - .5) * 3, Math.random(), 0), { color: '#d8dae4', vy: 20, size: .5, grow: 1.5, life: .7 }); } } }); }
+{ let car = null, sx0 = 0, sy0 = 0; const CR = { in: .8, end: 8.0 };
+  act('car', { g: 'scene', label: '🚗 搭車兜風', dur: CR.end, isNew: 1,
+    enter() { sx0 = me.px; sy0 = groundY(); car = makeCar(); car.scale.setScalar(.001); me.props.add(car); blessLine('car', ['馨岑上車！帶妳去兜風～', '馨岑專屬司機來了！', '馨岑，今天想去哪？'], 1.8); },
+    exit() { if (car) me.props.remove(car); car = null; me.swimOff = null; },
+    pose(P, t) { if (!car) return; car.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .4)))); car.position.y = -.55;
+      if (t < CR.in) { P.happy = 1; P.y = seg(t, .3, .8) * .55 + Math.sin(Math.min(1, t / .8) * Math.PI) * .4; both(P, 'up'); car.position.y = -.55 * seg(t, .3, .8); return; }
+      P.y = .55; const u = t - CR.in, L = W * .3, x = sx0 + Math.sin(u * .9) * L, v = Math.cos(u * .9);
+      if (t < CR.end - .8) me.swimOff = { x: THREE.MathUtils.clamp(x, 60, W - 60), y: sy0 + Math.abs(Math.sin(u * 14)) * 1.5 }; else me.swimOff = { x: lerp(me.px, sx0, .15), y: sy0 };
+      car.rotation.y = v >= 0 ? 0 : Math.PI; P.turn = v >= 0 ? .55 : -.55; for (const w of car.userData.wheels) w.rotation.z -= v * .25;
+      hR(P, [.5, 1.05, 1.0]); hL(P, Math.floor(u / 2) % 2 ? 'up' : [.5, 1.05, 1.0]); P.happy = 1; P.mouth = .3; P.roll = Math.sin(u * 14) * .02; },
+    ev(t0, t1) { if (t1 > CR.in && every(t0, t1, .3)) puff('●', W2(me.props, -1.7, .4, 0), { color: '#c8ccd8', vy: 15, size: .25, grow: 1, life: .6 });
+      if (cross(t0, t1, CR.in + .1)) { talk('叭叭～', 1); puff('♪', W2(me.body, .8, 2, 0), { color: '#ffd36b', vy: 40, size: .3, life: 1 }); }
+      if (cross(t0, t1, CR.in + 2.5)) talk(pickNo('carMid', ['風好舒服～馨岑也是嗎？', '馨岑想聽什麼歌？', '開心的地方，我載妳去']), 2);
+      if (cross(t0, t1, CR.end - .7)) talk('到站囉！', 1.2); } }); }
+{ let train = null, track = null, sx0 = 0, sy0 = 0; const TR = { arrive: 1.8, board: 2.6, go: 3.0, back: 7.6, end: 9.6 };
+  act('train', { g: 'scene', label: '🚂 搭火車', dur: TR.end, isNew: 1,
+    enter() { sx0 = me.px; sy0 = groundY(); train = makeTrain(); scene.add(train); train.rotation.x = .18;
+      track = new THREE.Group(); const rail = new THREE.Mesh(new THREE.PlaneGeometry(W + 40, 3), basic(0x9aa3b5)); rail.position.y = -sy0 + 2; track.add(rail); const rail2 = rail.clone(); rail2.position.y = -sy0 - 3; track.add(rail2);
+      for (let x = 0; x < W + 40; x += 18) { const sl = new THREE.Mesh(new THREE.PlaneGeometry(6, 9), basic(0x8a5a32)); sl.position.set(x - 10, -sy0, -1); track.add(sl); } track.position.x = 0; track.renderOrder = 0; scene.add(track);
+      blessLine('train', ['嘟嘟～馨岑專車到站！', '馨岑，上車囉～', '開往幸福的列車來了！'], 1.8); },
+    exit() { if (train) scene.remove(train); if (track) scene.remove(track); train = track = null; me.swimOff = null; },
+    pose(P, t) { if (!train) return; const sc = me.S * .8; train.scale.setScalar(sc); let tx;
+      if (t < TR.arrive) tx = lerp(-sc * 3, sx0 + sc * .4, ease(t / TR.arrive)); else if (t < TR.go) tx = sx0 + sc * .4;
+      else if (t < TR.back) tx = sx0 + sc * .4 + (t - TR.go) * 140; else tx = lerp(-sc * 3, sx0 + sc * .4, ease((t - TR.back) / (TR.end - .4 - TR.back)));
+      const loopX = t >= TR.go && t < TR.back ? ((tx + sc * 5) % (W + sc * 8)) - sc * 5 : tx; train.position.set(loopX, -sy0 + Math.abs(Math.sin(t * 16)) * (t > TR.go ? 1 : 0), 30);
+      for (const w of train.userData.wheels) w.rotation.z -= (t < TR.arrive || t > TR.go ? .3 : 0);
+      if (t < TR.board) { P.happy = t > TR.arrive; P.wide = t < TR.arrive ? 1 : 0; return; }
+      // 坐在駕駛室：位置跟著火車頭
+      me.swimOff = { x: train.position.x - sc * .4, y: sy0 - sc * .55 }; P.y = 0; P.turn = .45; P.happy = 1; P.mouth = .3;
+      if (t < TR.go) { P.y = Math.sin(seg(t, TR.board, TR.go) * Math.PI) * .4; both(P, 'up'); } else { hR(P, Math.floor(t * 1.5) % 2 ? 'up' : 'high'); hL(P, 'rest'); }
+      if (t > TR.end - .4) me.swimOff = { x: sx0, y: sy0 }; },
+    ev(t0, t1) { if (train && t1 < TR.end - .4 && every(t0, t1, .22) && (t1 < TR.arrive || t1 > TR.go)) puff('●', W2(train.userData.chim, 0, .4, 0), { color: '#e8e8f0', vy: 50, vx: -40, size: .38, grow: 1.4, life: 1.0, wob: 6 });
+      if (cross(t0, t1, TR.go)) { talk('出發！嘟嘟～', 1.2); bigText('嘟嘟——！', .9, '#ffd36b'); }
+      if (cross(t0, t1, TR.go + 2.2)) talk(pickNo('trainMid', ['下一站：馨岑的好日子', '煩惱都丟在上一站了', '馨岑，窗外風景好美']), 2);
+      if (cross(t0, t1, TR.end - .5)) { talk('到站囉～', 1.2); } } }); }
+{ let grill = null, fan = null; const BQ = { set: .8, fan: 4.2, eat: 6.6, end: 9.4 };
+  act('bbq', { g: 'scene', label: '🍖 烤肉', dur: BQ.end, isNew: 1,
+    enter() { grill = makeGrill(); grill.position.set(1.65, 0, .4); grill.scale.setScalar(.001); me.props.add(grill); fan = makeFan(); hold(me.holdR, fan, [0, .05, .05], [0, 0, 0]); blessLine('bbq', ['烤肉給馨岑吃！', '馨岑等等，馬上就好～', '今天吃好料的！'], 1.8); },
+    exit() { if (grill) me.props.remove(grill); if (fan) me.holdR.remove(fan); me.holdMid.clear(); grill = fan = null; },
+    pose(P, t) { if (!grill) return; grill.scale.setScalar(Math.max(.001, ease(Math.min(1, t / .4)) * (t > BQ.end - .4 ? (BQ.end - t) / .4 : 1)));
+      grill.userData.coal.forEach((c, i) => c.material.color.setHSL(.04 + Math.sin(clockT * 6 + i) * .015, 1, .45 + Math.sin(clockT * 5 + i * 2) * .1));
+      P.turn = .65;
+      if (t < BQ.fan) { const w = Math.sin(t * 16); hR(P, [.9, .85 + w * .15, .95]); hL(P, 'belly'); P.lean = .1; P.eye = .8; P.puff = .5; return; }
+      if (t < BQ.eat) { // 翻烤串
+        const k = ((t - BQ.fan) % .8) / .8; grill.userData.sk.forEach((sk, i) => sk.rotation.x = (Math.floor((t - BQ.fan) / .8) + (i === Math.floor(k * 3) ? ease(k) : 0)) * Math.PI); hR(P, [1.2, 1.0 + Math.sin(k * Math.PI) * .3, .9]); hL(P, 'rest'); P.happy = 1; return; }
+      P.turn = 0; both(P, 'chest'); const c = (t - BQ.eat) % 1.2; P.mouth = c < .3 ? .8 : .18 + Math.sin(c * 18) * .12; P.puff = c > .3 ? 1 : 0; P.happy = 1; },
+    ev(t0, t1) { if (grill && t1 > BQ.set && t1 < BQ.end - .4 && every(t0, t1, .16)) puff('●', W2(grill, (Math.random() - .5) * 1.2, 1.2, 0), { color: '#c8ccd8', vy: 50, vx: (Math.random() - .5) * 20, size: .3, grow: 1.6, life: 1.1, wob: 8 });
+      if (grill && t1 < BQ.fan && every(t0, t1, .12)) puff(Math.random() < .5 ? '✦' : '🔥', W2(grill, (Math.random() - .5), 1.05, 0), { color: '#ffb340', vy: 60, size: .16, life: .4 });
+      if (cross(t0, t1, 1.6)) talk('滋滋滋～', 1.2);
+      if (cross(t0, t1, BQ.fan)) talk(pickNo('bbqMid', ['好香喔～', '翻面翻面！', '火候剛剛好']), 1.4);
+      if (cross(t0, t1, BQ.eat)) { const s0 = grill?.userData.sk[0]; if (s0) { grill.remove(s0); hold(me.holdMid, s0, [0, .2, .1], [0, 0, Math.PI / 2]); s0.scale.setScalar(.6); s0.userData.pop = 1; } talk('第一串給馨岑！', 1.6); }
+      if (cross(t0, t1, BQ.eat + 1.8)) talk(pickNo('bbqEnd', ['馨岑多吃一點喔', '吃飽飽，煩惱跑光光', '跟馨岑一起吃最好吃']), 2); } }); }
+
+// 恐龍：綠色暴龍，背上橘色尖刺、小短手、會張嘴的下顎、會搖的尾巴
+function makeDino() { const g = new THREE.Group(), green = toon(0x6fd36b), belly = toon(0xd8f5b0), spike = toon(0xffa53c);
+  const body = ol(new THREE.SphereGeometry(1, 28, 20), green, 1.03); body.scale.set(1.4, .95, .85); body.position.y = 1.35; g.add(body);
+  const bl = new THREE.Mesh(new THREE.SphereGeometry(.8, 20, 14), belly); bl.scale.set(1.1, .8, .5); bl.position.set(.35, 1.2, .42); g.add(bl);
+  const neck = ol(new THREE.SphereGeometry(.55, 20, 14), green, 1.04); neck.position.set(1.05, 1.95, 0); g.add(neck);
+  const head = new THREE.Group(); head.position.set(1.55, 2.3, 0); g.add(head);
+  const skull = ol(new THREE.SphereGeometry(.62, 24, 18), green, 1.04); skull.scale.set(1.2, .9, .85); head.add(skull);
+  const snout = ol(new THREE.SphereGeometry(.45, 20, 14), green, 1.05); snout.scale.set(1.3, .7, .8); snout.position.set(.6, -.18, 0); head.add(snout);
+  for (const z of [-.12, .12]) { const n = new THREE.Mesh(new THREE.SphereGeometry(.04, 8, 6), basic(0x241a20)); n.position.set(1.15, -.08, z); head.add(n); }
+  const jaw = new THREE.Group(); jaw.position.set(.15, -.32, 0); head.add(jaw);
+  const lower = ol(new THREE.SphereGeometry(.4, 18, 12), green, 1.05); lower.scale.set(1.45, .4, .72); lower.position.set(.45, -.04, 0); jaw.add(lower);
+  const tongue = new THREE.Mesh(new THREE.SphereGeometry(.22, 12, 8), toon(0xff7f98)); tongue.scale.set(1.3, .3, .6); tongue.position.set(.42, .04, 0); jaw.add(tongue);
+  for (let i = 0; i < 5; i++) for (const z of [-.22, .22]) { const t = new THREE.Mesh(new THREE.ConeGeometry(.035, .1, 6), basic(0xffffff)); t.position.set(.25 + i * .17, -.42, z * (1 - i * .08)); t.rotation.x = Math.PI; head.add(t); }
+  for (const z of [-.42, .42]) { const w = new THREE.Mesh(new THREE.SphereGeometry(.15, 14, 10), basic(0xffffff)); w.position.set(.25, .2, z); head.add(w); const p = new THREE.Mesh(new THREE.SphereGeometry(.08, 10, 8), basic(0x241a20)); p.position.set(.32, .2, z * 1.22); head.add(p);
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(.03, 6, 4), basic(0xffffff)); hl.position.set(.36, .25, z * 1.3); head.add(hl);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(.24, .05, .05), basic(0x2e6a2c)); brow.position.set(.25, .4, z); brow.rotation.z = -.3; head.add(brow); }
+  const cheekL = new THREE.Mesh(new THREE.CircleGeometry(.1, 16), basic(0xffa9bd, { transparent: true, opacity: 0 })); cheekL.position.set(.5, -.05, .5); head.add(cheekL);
+  for (const z of [-.6, .6]) { const arm = ol(new THREE.CapsuleGeometry(.09, .25, 4, 8), green, 1.1); arm.position.set(1.3, 1.45, z); arm.rotation.z = -.9; g.add(arm); }
+  const legs = []; for (const z of [-.5, .5]) { const lg = new THREE.Group(); lg.position.set(.05, .9, z); g.add(lg);
+    const th = ol(new THREE.CapsuleGeometry(.3, .4, 6, 12), green, 1.05); th.position.y = -.35; lg.add(th); const ft = ol(new THREE.SphereGeometry(.28, 14, 10), green, 1.06); ft.scale.set(1.4, .5, 1); ft.position.set(.15, -.82, 0); lg.add(ft);
+    for (let k = -1; k <= 1; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry(.04, .1, 6), basic(0xffffff)); c.position.set(.52, -.85, k * .12); c.rotation.z = -Math.PI / 2; lg.add(c); } legs.push(lg); }
+  const tail = new THREE.Group(); tail.position.set(-1.2, 1.3, 0); g.add(tail);
+  const tc = ol(new THREE.ConeGeometry(.55, 2.2, 20), green, 1.04); tc.rotation.z = Math.PI / 2 + .25; tc.position.set(-1.0, -.25, 0); tail.add(tc);
+  for (let i = 0; i < 7; i++) { const sp = ol(new THREE.ConeGeometry(.16 - i * .012, .38 - i * .02, 6), spike, 1.08); const x = 1.0 - i * .45; sp.position.set(x, 1.35 + .92 * Math.sqrt(Math.max(0, 1 - (x / 1.45) ** 2)) + .1, 0); sp.rotation.z = -x * .25; g.add(sp); }
+  for (let i = 0; i < 3; i++) { const sp = ol(new THREE.ConeGeometry(.1, .24, 6), spike, 1.08); sp.position.set(-1.9 - i * .55, 1.0 - i * .16, 0); sp.rotation.z = .4; tail.add(sp); sp.position.x -= -1.2; }
+  g.userData = { head, jaw, legs, tail, cheek: cheekL }; return g; }
+function makeDrumstick() { const g = new THREE.Group(); const meat = ol(new THREE.SphereGeometry(.22, 16, 12), toon(0xb8662c), 1.06); meat.scale.set(1, 1.3, 1); meat.position.y = .25; g.add(meat);
+  const bone = ol(new THREE.CylinderGeometry(.045, .045, .3, 8), toon(0xfff3dc), 1.1); bone.position.y = -.05; g.add(bone);
+  for (const x of [-.05, .05]) { const k = ol(new THREE.SphereGeometry(.06, 10, 8), toon(0xfff3dc), 1.1); k.position.set(x, -.22, 0); g.add(k); } return g; }
+{ let dino = null, meat = null, sx0 = 0, sy0 = 0, dx = 0, ddir = -1;
+  const DN = { in: 1.8, roar: 3.0, offer: 4.4, eat: 5.6, hop: 6.2, ride: 11.2, off: 11.8, end: 13.2 };
+  act('dino', { g: 'scene', label: '🦖 馴服恐龍', dur: DN.end, isNew: 1,
+    enter() { sx0 = me.px; sy0 = groundY(); dino = makeDino(); scene.add(dino); dino.rotation.x = .18; dx = W + me.S * 3; ddir = -1; talk('咚…咚…？', 1.4); },
+    exit() { if (dino) scene.remove(dino); dino = null; if (meat) me.holdR.remove(meat); meat = null; me.swimOff = null; },
+    pose(P, t) { if (!dino) return; const sc = me.S * .95, u = dino.userData; dino.scale.setScalar(sc);
+      let walking = false, target = dx;
+      if (t < DN.in) { target = lerp(W + sc * 3, sx0 + sc * 4.4, ease(t / DN.in)); walking = true; }
+      else if (t < DN.offer) target = sx0 + sc * 4.4;
+      else if (t < DN.eat) target = sx0 + sc * 3.3;
+      else if (t < DN.ride) { const v = t - DN.hop; target = t < DN.hop ? sx0 + sc * 3.3 : W / 2 + Math.sin(v * .8) * W * .22; walking = t > DN.hop; ddir = Math.cos(v * .8) >= 0 ? 1 : -1; }
+      else { target = t < DN.off ? dx : dx + (t - DN.off) * 220; walking = t > DN.off; ddir = 1; }
+      if (t < DN.hop) ddir = -1; dx = target;
+      dino.position.set(dx, -sy0 + (walking ? Math.abs(Math.sin(t * 7)) * 4 : 0), -40); dino.rotation.y = ddir < 0 ? Math.PI : 0;
+      u.legs.forEach((l, i) => l.rotation.z = walking ? Math.sin(t * 7 + i * Math.PI) * .45 : 0); u.tail.rotation.y = Math.sin(t * (t > DN.eat && t < DN.ride ? 9 : 2.5)) * (t > DN.eat ? .45 : .15);
+      let jawOpen = 0; if (t > DN.in && t < DN.roar) jawOpen = .65 + Math.sin(t * 30) * .05; if (t > DN.offer && t < DN.eat) jawOpen = Math.max(0, Math.sin((t - DN.offer) * 9)) * .5;
+      u.jaw.rotation.z = -jawOpen; u.head.rotation.z = t > DN.in && t < DN.roar ? .25 : t > DN.offer - .5 && t < DN.eat ? -.35 : 0; u.cheek.material.opacity = t > DN.eat ? .9 : 0;
+      // 吉祥物
+      P.turn = .9;
+      if (t < DN.in) { P.wide = t > .6 ? 1 : 0; return; }
+      if (t < DN.roar) { P.wide = 1; P.sq = t > DN.in + .4 ? 1 : 0; P.cry = t > DN.in + .6 ? .6 : 0; both(P, 'up'); P.roll = Math.sin(t * 40) * .04; P.lean = -.15; return; }
+      if (t < DN.eat) { hR(P, [1.0, 1.1, 1.1]); hL(P, 'chest'); P.lean = .12; P.eye = 1; P.mouth = .2; return; }
+      if (t < DN.hop) { P.happy = 1; both(P, 'high'); return; }
+      if (t < DN.ride) { const k = seg(t, DN.hop, DN.hop + .45); me.swimOff = { x: lerp(sx0, dx - ddir * sc * .1, k), y: sy0 - sc * 2.25 * k - Math.sin(k * Math.PI) * 30 }; P.turn = ddir * .6; P.happy = 1; P.mouth = .35;
+        hR(P, Math.floor(t * 1.2) % 2 ? 'high' : 'up'); hL(P, 'up'); P.y = Math.abs(Math.sin(t * 7)) * .06; P.lLy = P.lRy = .15; P.lLx = -.7; P.lRx = .7; return; }
+      const k = seg(t, DN.ride, DN.off); me.swimOff = { x: lerp(me.px, sx0, k), y: lerp(sy0 - sc * 2.25, sy0, k) - Math.sin(k * Math.PI) * 30 };
+      if (t > DN.off + .3) me.swimOff = null; P.happy = 1; hR(P, 'up', Math.sin(t * 11) * .25, .25); P.turn = .5; },
+    ev(t0, t1) { if (!dino) return;
+      if (t1 < DN.in && every(t0, t1, .45)) { shakeAmt = 3; puff('咚', new THREE.Vector3(dx, -sy0 + me.S * .2, 60), { color: '#c8e8b0', size: .3, vy: 20, life: .5 }); }
+      if (cross(t0, t1, DN.in + .1)) { bigText('吼————！', 1.2, '#9dff8f'); shakeAmt = 10; talk('哇啊啊！恐龍！', 1.2); }
+      if (cross(t0, t1, DN.roar - .4)) talk('別、別怕…', 1);
+      if (cross(t0, t1, DN.roar)) { meat = makeDrumstick(); hold(me.holdR, meat, [0, .05, .1], [0, 0, -.4]); talk('請你吃這個！', 1.4); }
+      if (cross(t0, t1, DN.eat - .5)) { if (meat) me.holdR.remove(meat); meat = null; puff('啊嗚', W2(dino.userData.head, .9, .3, 0), { size: .34, vy: 30, life: .7 }); }
+      if (t1 > DN.eat - .3 && t1 < DN.hop && every(t0, t1, .25)) puff('♥', W2(dino.userData.head, .3, .8, 0), { color: '#ff6fa5', vy: 50, size: .3, life: 1, wob: 10 });
+      if (cross(t0, t1, DN.eat)) { talk('牠變乖了！', 1.4); bigText('馴服成功！', 1.3, '#9dff8f'); }
+      if (cross(t0, t1, DN.hop + .5)) talk(pickNo('dinoRide', ['衝啊～恐龍號！', '馨岑！我騎恐龍了！', '誰敢欺負馨岑，恐龍咬他！']), 2);
+      if (t1 > DN.hop && t1 < DN.ride && every(t0, t1, .45)) { shakeAmt = 2; }
+      if (cross(t0, t1, DN.ride - 2.2)) talk(pickNo('dinoMid', ['恐龍說牠也喜歡馨岑', '以後牠也會保護馨岑喔', '下次帶馨岑一起騎！']), 2);
+      if (cross(t0, t1, DN.off + .2)) talk('掰掰～恐龍！', 1.4); } }); }
 
 // ── 祝福馨岑 ──
 function makeIngot() { const g = new THREE.Group(), gold = toon(0xffcf4a);
@@ -1250,13 +1506,14 @@ for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue; const b = docum
 const tog = (id, f) => { const b = document.getElementById(id); b.onclick = () => { b.classList.toggle('on'); f(b.classList.contains('on')); }; };
 tog('auto', v => { auto = v; tfAll = false; }); tog('blend', v => blend = v); tog('springy', v => springy = v);
 tog('zoom', v => me.S = foe.S = v ? 56 : 23); tog('slow', v => slow = v ? .35 : 1); tog('oldGrip', v => oldGrip = v);
-const PLAN = ['walk', 'beach', 'flood', 'rich', 'shoo', 'luck', 'heart', 'beckon', 'rice', 'sitEdge', 'tf_wizard', 'wave', 'walk', 'coins', 'duel', 'dance', 'grabDemo', 'write', 'tf_fire', 'sleep', 'wake', 'stretch', 'run', 'sausage', 'tf_sword', 'sneeze', 'trip', 'tf_off', 'shy', 'walk', 'tea', 'tf_ninja', 'jump', 'tf_ice', 'sitFloor', 'tf_chef', 'tf_off'];
+const PLAN = ['walk', 'dino', 'icecream', 'plane', 'donut', 'cutlet', 'melon', 'car', 'train', 'bbq', 'beach', 'flood', 'rich', 'shoo', 'luck', 'heart', 'beckon', 'rice', 'sitEdge', 'tf_wizard', 'wave', 'walk', 'coins', 'duel', 'dance', 'grabDemo', 'write', 'tf_fire', 'sleep', 'wake', 'stretch', 'run', 'sausage', 'tf_sword', 'sneeze', 'trip', 'tf_off', 'shy', 'walk', 'tea', 'tf_ninja', 'jump', 'tf_ice', 'sitFloor', 'tf_chef', 'tf_off'];
 let planI = 0;
 
 // ── 手指拖曳（抓起來） ──
 const fingerEl = document.getElementById('finger');
 let drag = null;
 const cardTop = () => stage.querySelector('.card.main').offsetTop;
+const groundY = cardTop;
 function grabAt(x, y, demo = false) { drag = { x, y, vx: 0, vy: 0, lt: performance.now(), demo }; setAct('held'); fingerEl.classList.add('on'); }
 function moveTo(x, y) { if (!drag) return; const now = performance.now(), dt = Math.max(8, now - drag.lt) / 1000; drag.vx = drag.vx * .5 + (x - drag.x) / dt * .5; drag.vy = drag.vy * .5 + (y - drag.y) / dt * .5; drag.x = x; drag.y = y; drag.lt = now; }
 function release() { if (!drag) return; fingerEl.classList.remove('on'); me.vx = THREE.MathUtils.clamp(drag.vx, -1400, 1400); me.vy = THREE.MathUtils.clamp(drag.vy, -1600, 1200); me.spinV = me.vx * .01; me.spinA = 0; drag = null; demoT = -1; setAct('fly'); }
