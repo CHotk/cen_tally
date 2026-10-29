@@ -305,6 +305,9 @@ class TallyBookPage extends ConsumerStatefulWidget {
   ConsumerState<TallyBookPage> createState() => _TallyBookPageState();
 }
 
+/// 吉祥物跟雪球先藏起來（2026-10-29 使用者要求）。程式都留著，改回 true 就回來。
+const _showMascots = false;
+
 class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   /// 吉祥物可以站的東西（結餘卡、每天那張卡、每一筆、按鈕列）。
   final _platKeys = <String, GlobalKey>{};
@@ -439,15 +442,17 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
     return _page(
       context,
       bottomKey: _pk('bottom'),
-      overlay: TallyPetLayer(
-        platforms: () => _platKeys.values.toList(),
-        rows: () => [
-          for (final e in _platKeys.entries)
-            if (e.key.startsWith('row-')) e.value,
-        ],
-        globe: _globeKey,
-        cheers: _shakes,
-      ),
+      overlay: !_showMascots
+          ? null
+          : TallyPetLayer(
+              platforms: () => _platKeys.values.toList(),
+              rows: () => [
+                for (final e in _platKeys.entries)
+                  if (e.key.startsWith('row-')) e.value,
+              ],
+              globe: _globeKey,
+              cheers: _shakes,
+            ),
       top: AppTopBar(
         title: '我的記帳',
         // 標題直接放 App logo（2026-10-20 使用者要求）。
@@ -479,7 +484,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         // 160，整顆收在卡片裡（使用者：設計稿是在卡片內，不要凸出去）。數字到
         // 十萬、百萬也塞得下：放不下就整行等比例縮小（FittedBox）。
         // 雪球往上超出卡片，上面留空，不然會被列表頂端切掉。
-        const SizedBox(height: 30),
+        if (_showMascots) const SizedBox(height: 30),
         Stack(
           clipBehavior: Clip.none,
           // 卡片要撐滿整行（預設會縮成內容寬，雪球就跑到卡片外面了）。
@@ -487,7 +492,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
           children: [
             GlassCard(
               key: _pk('sum'),
-              padding: const EdgeInsets.fromLTRB(18, 16, 170, 14),
+              padding: EdgeInsets.fromLTRB(18, 16, _showMascots ? 170 : 18, 14),
               child: SizedBox(
                 height: 168 - 30,
                 child: Column(
@@ -534,16 +539,17 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
             // 雪球的上、左、右可以超出卡片、不被切；下面對齊卡片底邊切掉，像坐在
             // 卡片裡（2026-10-20 使用者要求）。這一格故意比卡片大，雪球才不會被
             // 這一格自己的邊切到。
-            Positioned(
-              top: -36,
-              right: -10,
-              bottom: 0,
-              width: 206,
-              child: KeyedSubtree(
-                key: _globeKey,
-                child: TallyGlobe(shakes: _shakes),
+            if (_showMascots)
+              Positioned(
+                top: -36,
+                right: -10,
+                bottom: 0,
+                width: 206,
+                child: KeyedSubtree(
+                  key: _globeKey,
+                  child: TallyGlobe(shakes: _shakes),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: Gap.lg),
