@@ -51,8 +51,8 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   /// 牠多大：每單位幾像素（牠大約 2 單位高 → 約 46px）。2026-10-20 使用者：縮小一點。
   static const _s = 23.0;
 
-  /// 動作之間停多久的倍數（2026-10-20 使用者：切換有點快，慢到 1.4 倍）。
-  static const _pace = 1.4;
+  /// 動作之間停多久的倍數（2026-10-20 使用者：切換有點快，慢到 1.4 倍；2026-11-02 再慢 1.5 倍＝2.1）。
+  static const _pace = 2.1;
 
   /// 真的出場才建（測試、非網頁不建，關頁面時也不會才去建它）。
   Ticker? _ticker;
