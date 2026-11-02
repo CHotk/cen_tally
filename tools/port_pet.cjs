@@ -43,7 +43,7 @@ const html = `<!doctype html>
   #big.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 </style>
 <script type="importmap">
-{ "imports": { "three": "../globe/vendor/three.module.min.js" } }
+{ "imports": { "three": "../globe/vendor/three.module.min.js", "three/addons/": "../globe/vendor/addons/" } }
 </script>
 </head>
 <body>
@@ -53,6 +53,11 @@ const html = `<!doctype html>
 <div class="bubble" id="bub0"></div>
 <div class="bubble foe" id="bub1"></div>
 <div id="big"></div>
+<script>
+// Blender 做的模型（tools/blender/pet_props.py，GLB）：App 裡從 models/ 抓，只載有放進 App 的動作用到的
+const APP_MODELS = ['car', 'train', 'grill'];
+window.getPetModelBuffer = n => APP_MODELS.includes(n) ? fetch('models/' + n + '.glb').then(r => r.ok ? r.arrayBuffer() : null) : null;
+</script>
 <script type="module">
 import * as THREE from 'three';
 const canvas = document.getElementById('c');
@@ -72,6 +77,7 @@ ${engine}
 // ════════════════ App 的控制層（Flutter 帶位置跟模式） ════════════════
 let springy = true;
 const snapNow = () => false;
+const groundY = () => fy; // 腳底（搭車、搭火車從這裡開始）
 let cur = 'idle', actT = 0, actionKey = null, fm = 'idle', moving = false, speed = 40, fx = -999, fy = -999, prevFx = null, returning = false, costumeAt = 0;
 me.S = foe.S = 23;
 // 這幾個動作自己會移動位置（對決、滑倒、忍者瞬移、淹水游泳），做的時候不跟 Flutter 的位置
