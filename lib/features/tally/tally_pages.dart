@@ -916,7 +916,7 @@ class _ItemDetail extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${_full(e.at)}\n${e.text}${e.device.isEmpty ? '' : '\n${e.device}'}',
+                      '${_full(e.at)}\n${e.text}',
                       style: const TextStyle(
                         fontSize: 13,
                         height: 1.4,
@@ -1381,62 +1381,151 @@ class _EventRow extends StatelessWidget {
         e.balanceBefore != null &&
         e.balanceAfter != null &&
         e.balanceBefore != e.balanceAfter;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _ActionTag(e.action),
-              const Spacer(),
-              Text(
-                _hm(e.at),
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.ink3,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            changes == null && e.action == TallyAction.itemUpdate
-                ? e.text
-                : _logItemLine(e),
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.35,
-              color: AppColors.ink,
-            ),
-          ),
-          if (changes != null)
-            for (final c in changes)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  c,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.mid,
-                  ),
-                ),
-              ),
-          if (balChanged || e.device.isNotEmpty) ...[
-            const SizedBox(height: 6),
+    return InkWell(
+      onTap: () => _card<void>(context, (ctx) => _EventDetail(event: e)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+        child: Row(
+          children: [
+            Expanded(child: _body(e, changes, balChanged)),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.ink3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _body(TallyEvent e, List<String>? changes, bool balChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _ActionTag(e.action),
+            const Spacer(),
             Text(
-              [
-                if (balChanged)
-                  '結餘 ${tallySigned(e.balanceBefore!)} → ${tallySigned(e.balanceAfter!)}',
-                if (e.device.isNotEmpty) e.device,
-              ].join('・'),
-              style: const TextStyle(fontSize: 12.5, color: AppColors.ink3),
+              _hm(e.at),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.ink3,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          changes == null && e.action == TallyAction.itemUpdate
+              ? e.text
+              : _logItemLine(e),
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.35,
+            color: AppColors.ink,
+          ),
+        ),
+        if (changes != null)
+          for (final c in changes)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                c,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.mid,
+                ),
+              ),
+            ),
+        // 裝置不顯示（2026-11-05 使用者要求；紀錄裡還留著）。
+        if (balChanged) ...[
+          const SizedBox(height: 6),
+          Text(
+            '結餘 ${tallySigned(e.balanceBefore!)} → ${tallySigned(e.balanceAfter!)}',
+            style: const TextStyle(fontSize: 12.5, color: AppColors.ink3),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// 點一筆異動看詳細：完整時間、那一筆的內容（修改的話有變的欄位用黃色標「舊 → 新」，
+/// 沒變的照列）、結餘變化。裝置不顯示（使用者要求），編號這類內部欄位也不顯示。
+class _EventDetail extends StatelessWidget {
+  const _EventDetail({required this.event});
+
+  final TallyEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = event;
+    Widget kv(String k, String v, {bool changed = false}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 76,
+            child: Text(
+              k,
+              style: const TextStyle(fontSize: 14, color: AppColors.ink3),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              v,
+              style: TextStyle(
+                fontSize: 14.5,
+                color: changed ? AppColors.mid : AppColors.ink,
+                fontWeight: changed ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+          ),
         ],
       ),
+    );
+    final isUpdate = e.action == TallyAction.itemUpdate;
+    final snap = e.action == TallyAction.itemDelete ? e.before : e.after;
+    final rows = <Widget>[];
+    if (snap != null) {
+      for (final (k, label) in _logFields) {
+        final a = _logValue(k, snap[k]);
+        final b = _logValue(k, e.before?[k]);
+        final changed = isUpdate && e.before != null && b != a;
+        rows.add(kv(label, changed ? '$b → $a' : a, changed: changed));
+      }
+      if (isUpdate &&
+          e.before != null &&
+          (e.before!['hidden'] ?? false) != (snap['hidden'] ?? false)) {
+        rows.add(
+          kv(
+            '備註遮蔽',
+            snap['hidden'] == true ? '不遮蔽 → 遮蔽' : '遮蔽 → 不遮蔽',
+            changed: true,
+          ),
+        );
+      }
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _title(e.action.label),
+        kv('時間', '${_ymd(e.at)} ${_hm(e.at)}'),
+        if (rows.isNotEmpty) ...[const SizedBox(height: 6), ...rows],
+        if (snap == null) kv('內容', e.text),
+        if (e.balanceBefore != null) ...[
+          const SizedBox(height: 6),
+          kv(
+            '結餘',
+            e.balanceBefore == e.balanceAfter
+                ? tallySigned(e.balanceBefore!)
+                : '${tallySigned(e.balanceBefore!)} → ${tallySigned(e.balanceAfter!)}',
+          ),
+        ],
+      ],
     );
   }
 }
