@@ -11,6 +11,33 @@ void main() {
   setUp(() => TallyRepository.deviceLabel = () => '測試機');
   soloTests();
 
+  test('按儲存但什麼都沒改：不存、不寫異動紀錄（同一天重選日期也算沒改）', () async {
+    final repo = TallyRepository(_MemoryStore());
+    final b = await repo.addBook('阿明');
+    final a = await repo.addItem(
+      bookId: b.id,
+      plus: true,
+      amount: 500,
+      note: '晚餐',
+      at: DateTime(2026, 10, 1, 18, 30, 45, 123),
+    );
+    final before = (await repo.events(b.id)).length;
+    // 表單重選同一天，會把時間洗成只剩時分。
+    final same = DateTime(2026, 10, 1, 18, 30);
+    expect(
+      await repo.editItem(a, plus: true, amount: 500, note: '晚餐', at: same),
+      isFalse,
+    );
+    expect((await repo.events(b.id)).length, before);
+    // 真的改了才記，而且保留原本的時間。
+    expect(
+      await repo.editItem(a, plus: true, amount: 600, note: '晚餐', at: same),
+      isTrue,
+    );
+    expect((await repo.events(b.id)).length, before + 1);
+    expect((await repo.items(b.id)).first.at, a.at);
+  });
+
   test('結餘、新增／修改時間、每個動作都留完整異動紀錄', () async {
     final repo = TallyRepository(_MemoryStore());
     final b = await repo.addBook('阿明');
@@ -111,7 +138,8 @@ void soloTests() {
     expect(find.byIcon(Icons.menu), findsNothing);
     expect(find.byTooltip('設定'), findsNothing);
     expect(find.byTooltip('改標題'), findsNothing);
-    expect(find.byTooltip('異動紀錄'), findsNothing);
+    // 2026-11-05 使用者要求：右上角有看異動紀錄的按鈕。
+    expect(find.byTooltip('異動紀錄'), findsOneWidget);
     expect(find.byTooltip('雲端同步'), findsOneWidget);
     expect(find.text('豪支出'), findsWidgets);
     expect(find.text('岑支出'), findsWidgets);

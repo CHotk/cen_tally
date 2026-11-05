@@ -215,13 +215,27 @@ class TallyRepository {
     return it;
   }
 
-  Future<void> editItem(
+  /// 回傳有沒有真的改（什麼都沒變就不存、不寫異動紀錄：防呆）。
+  Future<bool> editItem(
     TallyItem old, {
     required bool plus,
     required int amount,
     required String note,
     required DateTime at,
   }) async {
+    // 表單只能選「哪一天」：同一天就沿用原本的時間（重選同一天會把秒數洗掉，
+    // 不然會被當成「日期有改」，沒改也記一筆）。
+    final sameDay =
+        old.at.year == at.year &&
+        old.at.month == at.month &&
+        old.at.day == at.day;
+    if (sameDay) at = old.at;
+    if (old.plus == plus &&
+        old.amount == amount &&
+        old.note == note &&
+        old.at == at) {
+      return false;
+    }
     final it = old.copyWith(
       plus: plus,
       amount: amount,
@@ -229,12 +243,6 @@ class TallyRepository {
       at: at,
       updatedAt: DateTime.now(),
     );
-    if (old.plus == plus &&
-        old.amount == amount &&
-        old.note == note &&
-        old.at == at) {
-      return;
-    }
     final bal = await balance(old.bookId);
     await _putItem(it);
     await _log(
@@ -247,6 +255,7 @@ class TallyRepository {
       balanceBefore: bal,
       balanceAfter: bal - old.signed + it.signed,
     );
+    return true;
   }
 
   /// 遮蔽／取消遮蔽備註（跟著同步，換手機也一樣遮著）。

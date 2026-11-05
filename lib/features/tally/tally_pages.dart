@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -11,7 +10,6 @@ import '../../app/theme/colors.dart';
 import '../../app/theme/spacing.dart';
 import '../../app/theme/typography.dart';
 import '../../data/cloud/tally_sync.dart';
-import '../../data/export/file_download.dart';
 import '../../domain/models/tally.dart';
 import '../../shared/widgets/ambient_background.dart';
 import '../../shared/widgets/app_confirm_dialog.dart';
@@ -372,13 +370,15 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         at: r.at,
       );
     } else {
-      await repo.editItem(
+      final changed = await repo.editItem(
         old,
         plus: r.plus,
         amount: r.amount,
         note: r.note,
         at: r.at,
       );
+      // 什麼都沒改就不用歡呼（也沒有寫紀錄）。
+      if (!changed) return;
     }
     _shakes.value++;
     _load();
@@ -1199,7 +1199,7 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
     // 給人看的只留記帳本身的新增／修改／刪除；建帳本、改名、匯出這類系統動作
     // 不顯示（紀錄本身一筆都沒動，匯出 JSON 仍是完整的）。
     final visible = (all ?? const <TallyEvent>[])
-        .where((e) => _userActions.contains(e.action))
+        .where((e) => _userActions.contains(e.action) && _logWorthShowing(e))
         .toList();
     final shown = visible
         .where((e) => _action == null || e.action == _action)
@@ -1241,18 +1241,7 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
       top: AppTopBar(
         title: '異動紀錄',
         showSettings: false,
-        actions: [
-          _iconAction(Icons.download_rounded, '匯出 JSON（完整紀錄）', () {
-            final data = const JsonEncoder.withIndent('  ').convert([
-              for (final e in all ?? const <TallyEvent>[]) e.toJson(),
-            ]);
-            final n = DateTime.now();
-            saveTextFile(
-              '記帳異動紀錄_${n.year}${_two(n.month)}${_two(n.day)}.json',
-              data,
-            );
-          }),
-        ],
+        // 給使用者看的紀錄頁不放下載（2026-11-05 使用者要求）。
       ),
       children: [
         if (all == null)
@@ -1280,7 +1269,7 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 4),
             child: Text(
-              '共 ${shown.length} 筆・點一筆看改了什麼',
+              '共 ${shown.length} 筆',
               style: const TextStyle(fontSize: 13, color: AppColors.ink3),
             ),
           ),
@@ -1325,6 +1314,60 @@ class _ActionTag extends StatelessWidget {
   }
 }
 
+/// 紀錄頁顯示的欄位：使用者看得懂的四欄；編號、建立／修改時間這類內部欄位不顯示
+/// （紀錄裡都還在）。
+const _logFields = [
+  ('plus', '種類'),
+  ('amount', '金額'),
+  ('note', '備註'),
+  ('at', '日期'),
+];
+
+String _logValue(String k, Object? v) {
+  if (v == null) return '—';
+  if (k == 'plus') return v == true ? '豪支出' : '岑支出';
+  if (k == 'amount') return tallyMoney((v as num).toInt());
+  if (k == 'note') return '$v'.isEmpty ? '（沒寫）' : '$v';
+  if (k == 'at' && v is String) {
+    final d = DateTime.tryParse(v);
+    if (d != null) return _ymd(d.toLocal());
+  }
+  return '$v';
+}
+
+/// 一筆「修改」實際改了什麼（舊 → 新）。空的＝其實什麼都沒變（只是按了儲存）。
+/// 沒有改前改後資料的舊紀錄回傳 null（不知道，照原樣顯示）。
+List<String>? _logChanges(TallyEvent e) {
+  final b = e.before, a = e.after;
+  if (b == null || a == null) return null;
+  final out = <String>[];
+  for (final (k, label) in _logFields) {
+    final x = _logValue(k, b[k]), y = _logValue(k, a[k]);
+    if (x != y) out.add('$label　$x → $y');
+  }
+  if ((b['hidden'] ?? false) != (a['hidden'] ?? false)) {
+    out.add(a['hidden'] == true ? '備註改成遮蔽' : '取消備註遮蔽');
+  }
+  return out;
+}
+
+/// 這筆紀錄要不要給使用者看：修改但什麼都沒變的不顯示。
+bool _logWorthShowing(TallyEvent e) =>
+    e.action != TallyAction.itemUpdate || (_logChanges(e)?.isNotEmpty ?? true);
+
+/// 那一筆帳的一行描述：「＋ NT$500「晚餐」（11/5）」。
+String _logItemLine(TallyEvent e) {
+  final j = e.action == TallyAction.itemDelete ? e.before : e.after;
+  if (j != null) {
+    try {
+      return tallyItemLabel(TallyItem.fromJson(j));
+    } catch (_) {}
+  }
+  return e.text;
+}
+
+/// 一筆異動：標籤（新增／修改／刪除）、時間、是哪一筆帳；修改再用醒目的顏色列出
+/// 改了什麼（金額、日期、備註、種類）。資訊都在這一行，不用再點進去。
 class _EventRow extends StatelessWidget {
   const _EventRow({required this.event});
 
@@ -1333,168 +1376,67 @@ class _EventRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = event;
+    final changes = e.action == TallyAction.itemUpdate ? _logChanges(e) : null;
     final balChanged =
         e.balanceBefore != null &&
         e.balanceAfter != null &&
         e.balanceBefore != e.balanceAfter;
-    return InkWell(
-      onTap: () => _card<void>(context, (ctx) => _EventDetail(event: e)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _ActionTag(e.action),
-                      const Spacer(),
-                      Text(
-                        _hm(e.at),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.ink3,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    e.text,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.35,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                  if (balChanged || e.device.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      [
-                        if (balChanged)
-                          '結餘 ${tallySigned(e.balanceBefore!)} → ${tallySigned(e.balanceAfter!)}',
-                        if (e.device.isNotEmpty) e.device,
-                      ].join('・'),
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.ink3,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.ink3),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 一筆異動的完整內容：基本資料＋改之前／之後逐欄比對＋附加資料。
-class _EventDetail extends StatelessWidget {
-  const _EventDetail({required this.event});
-
-  final TallyEvent event;
-
-  /// 只顯示使用者看得懂的四欄＋遮蔽狀態；編號、建立／修改時間這類內部欄位不顯示
-  /// （紀錄裡都還在，匯出 JSON 看得到）。
-  static const _fields = [
-    ('plus', '種類'),
-    ('amount', '金額'),
-    ('note', '備註'),
-    ('at', '日期'),
-    ('hidden', '備註遮蔽'),
-  ];
-
-  String _v(String k, Object? v) {
-    if (v == null) return '—';
-    if (k == 'plus') return v == true ? '豪支出' : '岑支出';
-    if (k == 'amount') return tallyMoney((v as num).toInt());
-    if (k == 'note') return '$v'.isEmpty ? '（沒寫）' : '$v';
-    if (k == 'hidden') return v == true ? '遮蔽' : '不遮蔽';
-    if (k == 'at' && v is String) {
-      final d = DateTime.tryParse(v);
-      if (d != null) return _ymd(d.toLocal());
-    }
-    return '$v';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final e = event;
-    Widget kv(String k, String v, {bool changed = false}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 76,
-            child: Text(
-              k,
-              style: const TextStyle(fontSize: 14, color: AppColors.ink3),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              v,
-              style: TextStyle(
-                fontSize: 14.5,
-                color: changed ? AppColors.mid : AppColors.ink,
-                fontWeight: changed ? FontWeight.w700 : FontWeight.w400,
+          Row(
+            children: [
+              _ActionTag(e.action),
+              const Spacer(),
+              Text(
+                _hm(e.at),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.ink3,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            changes == null && e.action == TallyAction.itemUpdate
+                ? e.text
+                : _logItemLine(e),
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.35,
+              color: AppColors.ink,
             ),
           ),
+          if (changes != null)
+            for (final c in changes)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  c,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mid,
+                  ),
+                ),
+              ),
+          if (balChanged || e.device.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              [
+                if (balChanged)
+                  '結餘 ${tallySigned(e.balanceBefore!)} → ${tallySigned(e.balanceAfter!)}',
+                if (e.device.isNotEmpty) e.device,
+              ].join('・'),
+              style: const TextStyle(fontSize: 12.5, color: AppColors.ink3),
+            ),
+          ],
         ],
       ),
-    );
-    // 修改：只列有變的欄位（舊 → 新）；新增看新的、刪除看被刪的完整內容。
-    final isUpdate = e.action == TallyAction.itemUpdate;
-    final snap = e.action == TallyAction.itemDelete ? e.before : e.after;
-    final rows = <Widget>[];
-    for (final (k, label) in _fields) {
-      final b = _v(k, e.before?[k]), a = _v(k, e.after?[k]);
-      if (isUpdate) {
-        if (e.before != null && e.after != null && b != a) {
-          rows.add(kv(label, '$b → $a', changed: true));
-        }
-      } else if (snap != null) {
-        rows.add(kv(label, _v(k, snap[k])));
-      }
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _title(e.action.label),
-        kv('時間', '${_ymd(e.at)} ${_hm(e.at)}'),
-        if (rows.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(
-            isUpdate
-                ? '改了什麼'
-                : (e.action == TallyAction.itemDelete ? '被刪掉的內容' : '新增的內容'),
-            style: const TextStyle(fontSize: 14, color: AppColors.ink2),
-          ),
-          const SizedBox(height: 4),
-          ...rows,
-        ],
-        if (e.balanceBefore != null) ...[
-          const SizedBox(height: 6),
-          kv(
-            '結餘',
-            e.balanceBefore == e.balanceAfter
-                ? tallySigned(e.balanceBefore!)
-                : '${tallySigned(e.balanceBefore!)} → ${tallySigned(e.balanceAfter!)}',
-          ),
-        ],
-        if (e.device.isNotEmpty) kv('裝置', e.device),
-      ],
     );
   }
 }
