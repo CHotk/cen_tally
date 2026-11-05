@@ -472,11 +472,11 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         standalone: true,
         actions: [
           const _CloudButton(),
-          if (!widget.solo) ...[
-            _iconAction(Icons.history_rounded, '異動紀錄', () {
-              context.push('/log');
-            }),
-          ],
+          // 2026-11-05 使用者要求：右上角加按鈕看 log（首頁走的是 solo 模式，
+          // 原本這顆只有非 solo 才有，等於看不到）。
+          _iconAction(Icons.history_rounded, '異動紀錄', () {
+            context.push('/log');
+          }),
         ],
       ),
       children: [
@@ -1152,6 +1152,13 @@ class TallyLogPage extends ConsumerStatefulWidget {
   ConsumerState<TallyLogPage> createState() => _TallyLogPageState();
 }
 
+/// 異動紀錄畫面上顯示的動作（給人看的）。
+const _userActions = [
+  TallyAction.itemCreate,
+  TallyAction.itemUpdate,
+  TallyAction.itemDelete,
+];
+
 class _TallyLogPageState extends ConsumerState<TallyLogPage> {
   List<TallyEvent>? _events;
   TallyAction? _action;
@@ -1189,7 +1196,12 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
   @override
   Widget build(BuildContext context) {
     final all = _events;
-    final shown = (all ?? const <TallyEvent>[])
+    // 給人看的只留記帳本身的新增／修改／刪除；建帳本、改名、匯出這類系統動作
+    // 不顯示（紀錄本身一筆都沒動，匯出 JSON 仍是完整的）。
+    final visible = (all ?? const <TallyEvent>[])
+        .where((e) => _userActions.contains(e.action))
+        .toList();
+    final shown = visible
         .where((e) => _action == null || e.action == _action)
         .toList();
     final days = <String, List<TallyEvent>>{};
@@ -1230,10 +1242,10 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
         title: '異動紀錄',
         showSettings: false,
         actions: [
-          _iconAction(Icons.download_rounded, '匯出 JSON', () {
-            final data = const JsonEncoder.withIndent(
-              '  ',
-            ).convert([for (final e in shown) e.toJson()]);
+          _iconAction(Icons.download_rounded, '匯出 JSON（完整紀錄）', () {
+            final data = const JsonEncoder.withIndent('  ').convert([
+              for (final e in all ?? const <TallyEvent>[]) e.toJson(),
+            ]);
             final n = DateTime.now();
             saveTextFile(
               '記帳異動紀錄_${n.year}${_two(n.month)}${_two(n.day)}.json',
@@ -1256,10 +1268,8 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
                 _action == null,
                 () => setState(() => _action = null),
               ),
-              for (final a in TallyAction.values.where(
-                (a) => a != TallyAction.exportImage,
-              ))
-                if (all.any((e) => e.action == a))
+              for (final a in _userActions)
+                if (visible.any((e) => e.action == a))
                   _chip(
                     a.label,
                     _action == a,
@@ -1270,7 +1280,7 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 4),
             child: Text(
-              '共 ${shown.length} 筆・紀錄一筆都不刪・點一筆看完整內容',
+              '共 ${shown.length} 筆・點一筆看改了什麼',
               style: const TextStyle(fontSize: 13, color: AppColors.ink3),
             ),
           ),
@@ -1340,21 +1350,9 @@ class _EventRow extends StatelessWidget {
                   Row(
                     children: [
                       _ActionTag(e.action),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          e.bookName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                      ),
+                      const Spacer(),
                       Text(
-                        '${_hm(e.at)}:${_two(e.at.second)}',
+                        _hm(e.at),
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.ink3,
@@ -1404,27 +1402,25 @@ class _EventDetail extends StatelessWidget {
 
   final TallyEvent event;
 
-  static const _fieldNames = {
-    'plus': '種類',
-    'amount': '金額',
-    'note': '備註',
-    'at': '日期',
-    'name': '名稱',
-    'createdAt': '新增於',
-    'updatedAt': '修改於',
-    'deletedAt': '刪除於',
-    'hidden': '遮蔽',
-    'bookId': '帳本編號',
-    'id': '編號',
-  };
+  /// 只顯示使用者看得懂的四欄＋遮蔽狀態；編號、建立／修改時間這類內部欄位不顯示
+  /// （紀錄裡都還在，匯出 JSON 看得到）。
+  static const _fields = [
+    ('plus', '種類'),
+    ('amount', '金額'),
+    ('note', '備註'),
+    ('at', '日期'),
+    ('hidden', '備註遮蔽'),
+  ];
 
   String _v(String k, Object? v) {
     if (v == null) return '—';
-    if (k == 'plus') return v == true ? '＋' : '−';
+    if (k == 'plus') return v == true ? '豪支出' : '岑支出';
     if (k == 'amount') return tallyMoney((v as num).toInt());
-    if (v is String && (k == 'at' || k.endsWith('At'))) {
+    if (k == 'note') return '$v'.isEmpty ? '（沒寫）' : '$v';
+    if (k == 'hidden') return v == true ? '遮蔽' : '不遮蔽';
+    if (k == 'at' && v is String) {
       final d = DateTime.tryParse(v);
-      if (d != null) return _full(d);
+      if (d != null) return _ymd(d.toLocal());
     }
     return '$v';
   }
@@ -1432,7 +1428,7 @@ class _EventDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = event;
-    Widget kv(String k, String v) => Padding(
+    Widget kv(String k, String v, {bool changed = false}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1445,101 +1441,59 @@ class _EventDetail extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: SelectableText(
+            child: Text(
               v,
-              style: const TextStyle(fontSize: 14.5, color: AppColors.ink),
+              style: TextStyle(
+                fontSize: 14.5,
+                color: changed ? AppColors.mid : AppColors.ink,
+                fontWeight: changed ? FontWeight.w700 : FontWeight.w400,
+              ),
             ),
           ),
         ],
       ),
     );
-    final keys = <String>{...?e.before?.keys, ...?e.after?.keys};
+    // 修改：只列有變的欄位（舊 → 新）；新增看新的、刪除看被刪的完整內容。
+    final isUpdate = e.action == TallyAction.itemUpdate;
+    final snap = e.action == TallyAction.itemDelete ? e.before : e.after;
+    final rows = <Widget>[];
+    for (final (k, label) in _fields) {
+      final b = _v(k, e.before?[k]), a = _v(k, e.after?[k]);
+      if (isUpdate) {
+        if (e.before != null && e.after != null && b != a) {
+          rows.add(kv(label, '$b → $a', changed: true));
+        }
+      } else if (snap != null) {
+        rows.add(kv(label, _v(k, snap[k])));
+      }
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _title(e.action.label),
-        kv('時間', _full(e.at)),
-        kv('帳本', e.bookName),
-        kv('內容', e.text),
-        if (e.device.isNotEmpty) kv('裝置', e.device),
-        if (e.balanceBefore != null)
+        kv('時間', '${_ymd(e.at)} ${_hm(e.at)}'),
+        if (rows.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            isUpdate
+                ? '改了什麼'
+                : (e.action == TallyAction.itemDelete ? '被刪掉的內容' : '新增的內容'),
+            style: const TextStyle(fontSize: 14, color: AppColors.ink2),
+          ),
+          const SizedBox(height: 4),
+          ...rows,
+        ],
+        if (e.balanceBefore != null) ...[
+          const SizedBox(height: 6),
           kv(
             '結餘',
             e.balanceBefore == e.balanceAfter
                 ? tallySigned(e.balanceBefore!)
                 : '${tallySigned(e.balanceBefore!)} → ${tallySigned(e.balanceAfter!)}',
           ),
-        kv('紀錄編號', e.id),
-        if (e.itemId != null) kv('那一筆', e.itemId!),
-        if (keys.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          const Text(
-            '改之前 → 改之後',
-            style: TextStyle(fontSize: 14, color: AppColors.ink2),
-          ),
-          const SizedBox(height: 4),
-          for (final k in keys)
-            if (k != 'id' && k != 'bookId')
-              () {
-                final b = _v(k, e.before?[k]), a = _v(k, e.after?[k]);
-                final changed = e.before != null && b != a;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 76,
-                        child: Text(
-                          _fieldNames[k] ?? k,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.ink3,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          e.before == null
-                              ? a
-                              : e.after == null
-                              ? b
-                              : changed
-                              ? '$b → $a'
-                              : a,
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            color: changed ? AppColors.mid : AppColors.ink,
-                            fontWeight: changed
-                                ? FontWeight.w700
-                                : FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }(),
         ],
-        if (e.extra != null) ...[
-          const SizedBox(height: 10),
-          const Text(
-            '附加資料',
-            style: TextStyle(fontSize: 14, color: AppColors.ink2),
-          ),
-          for (final MapEntry(:key, :value) in e.extra!.entries)
-            kv(
-              const {
-                    'filename': '檔名',
-                    'itemCount': '圖上筆數',
-                    'ok': '成功',
-                    'error': '錯誤',
-                  }[key] ??
-                  key,
-              value is bool ? (value ? '是' : '否') : '$value',
-            ),
-        ],
+        if (e.device.isNotEmpty) kv('裝置', e.device),
       ],
     );
   }

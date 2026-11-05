@@ -31,9 +31,9 @@ Future<void> main() async {
 
 final _rootKey = GlobalKey<NavigatorState>();
 
-/// 首頁 `#/`：沒貼金鑰先貼，好了就是記帳本身。異動紀錄 `#/log`、同步設定
-/// `#/sync` 都沒有按鈕連過去，只有知道網址的人進得去（使用者不想讓朋友
-/// 知道有紀錄異動）。
+/// 首頁 `#/`：沒貼金鑰先貼，好了就是記帳本身。異動紀錄 `#/log` 從首頁右上角
+/// 的按鈕進去（2026-11-05 使用者要求）；同步設定 `#/sync` 沒有按鈕連過去，
+/// 只有知道網址的人進得去。
 final _router = GoRouter(
   navigatorKey: _rootKey,
   routes: [
