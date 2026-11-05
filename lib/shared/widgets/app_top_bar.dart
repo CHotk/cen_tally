@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/theme/colors.dart';
 import '../../app/theme/spacing.dart';
 import '../../app/theme/typography.dart';
 
 /// 頁面頂部列：標題＋右邊這一頁自己的按鈕。整個 App 就是記帳本身，沒有
-/// 返回鍵、功能選單、設定（從 Lume 拆出來時就是這樣要求的）。
+/// 功能選單、設定（從 Lume 拆出來時就是這樣要求的）；只有異動紀錄這種
+/// 從首頁點進去的頁面才開 [showBack] 放返回鍵。
 class AppTopBar extends StatelessWidget {
   const AppTopBar({
     super.key,
@@ -35,7 +37,17 @@ class AppTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const SizedBox(width: Gap.xs + Gap.sm),
+        if (showBack)
+          IconButton(
+            // 直接開網址進來（沒有上一頁）就回首頁。
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/'),
+            icon: const Icon(Icons.arrow_back_rounded, size: 24),
+            color: AppColors.ink,
+            tooltip: '返回',
+          )
+        else
+          const SizedBox(width: Gap.xs + Gap.sm),
         Expanded(
           child: titleWidget != null
               ? Align(alignment: Alignment.centerLeft, child: titleWidget)

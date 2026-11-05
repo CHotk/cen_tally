@@ -1240,6 +1240,7 @@ class _TallyLogPageState extends ConsumerState<TallyLogPage> {
       context,
       top: AppTopBar(
         title: '異動紀錄',
+        showBack: true,
         showSettings: false,
         // 給使用者看的紀錄頁不放下載（2026-11-05 使用者要求）。
       ),
