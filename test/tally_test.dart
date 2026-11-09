@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -94,6 +95,45 @@ void main() {
     expect(upd.bookName, '阿明');
     final exp = es.first;
     expect(exp.extra!['filename'], 'x.pdf');
+  });
+
+  test('同一毫秒連著記的異動／明細：異動紀錄新的在前、明細舊的在前（不靠 sort 剛好維持順序）', () async {
+    final store = _MemoryStore();
+    final same = DateTime(2026, 11, 9, 12, 0, 0, 123);
+    TallyEvent ev(String id) => TallyEvent(
+      id: id,
+      at: same,
+      action: TallyAction.itemCreate,
+      bookId: 'b',
+      bookName: '記帳',
+      text: id,
+    );
+    // 存檔是一筆一筆接在後面：e1 最舊、e30 最新，時間全部一樣（同一毫秒）。
+    final events = [for (var i = 1; i <= 30; i++) ev('e$i')];
+    store.data[TallyRepository.eventsKey] = jsonEncode([
+      for (final e in events) e.toJson(),
+    ]);
+    TallyItem item(String id) => TallyItem(
+      id: id,
+      bookId: 'b',
+      plus: true,
+      amount: 1,
+      note: id,
+      at: same,
+      createdAt: same,
+      updatedAt: same,
+    );
+    final items = [for (var i = 1; i <= 30; i++) item('i$i')];
+    store.data[TallyRepository.itemsKey] = jsonEncode([
+      for (final i in items) i.toJson(),
+    ]);
+    final repo = TallyRepository(store);
+    expect((await repo.events()).map((e) => e.id), [
+      for (var i = 30; i >= 1; i--) 'e$i',
+    ]);
+    expect((await repo.items()).map((e) => e.id), [
+      for (var i = 1; i <= 30; i++) 'i$i',
+    ]);
   });
 
   test('結餘說法', () {

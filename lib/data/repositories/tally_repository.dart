@@ -60,24 +60,44 @@ class TallyRepository {
         ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
   /// 一個帳本的每一筆，舊的在前（算累計結餘用）。
-  Future<List<TallyItem>> items([String? bookId]) async =>
-      (await itemsForUpload())
-          .where(
-            (i) =>
-                i.deletedAt == null && (bookId == null || i.bookId == bookId),
-          )
-          .toList()
-        ..sort((a, b) {
-          final c = a.at.compareTo(b.at);
-          return c != 0 ? c : a.createdAt.compareTo(b.createdAt);
-        });
+  ///
+  /// 時間一樣的（同一毫秒記的、或同一天同時間）照存進去的先後排：存檔是一筆一筆接在後面，
+  /// 所以編號小的比較舊。Dart 的 sort 不保證同分時維持原本順序，不另外排就會時有時無地
+  /// 順序亂掉（2026-11-09 修）。
+  Future<List<TallyItem>> items([String? bookId]) async {
+    final all = await itemsForUpload();
+    final list = [
+      for (var n = 0; n < all.length; n++)
+        if (all[n].deletedAt == null &&
+            (bookId == null || all[n].bookId == bookId))
+          (n, all[n]),
+    ];
+    list.sort((a, b) {
+      var c = a.$2.at.compareTo(b.$2.at);
+      if (c == 0) c = a.$2.createdAt.compareTo(b.$2.createdAt);
+      return c != 0 ? c : a.$1.compareTo(b.$1);
+    });
+    return [for (final e in list) e.$2];
+  }
 
   /// 異動紀錄，新的在前。
-  Future<List<TallyEvent>> events([String? bookId]) async =>
-      (await eventsForUpload())
-          .where((e) => bookId == null || e.bookId == bookId)
-          .toList()
-        ..sort((a, b) => b.at.compareTo(a.at));
+  ///
+  /// 時間一樣（同一毫秒內連著記好幾筆，例如新增帳本、新增兩筆）的，後存進去的排前面：
+  /// 存檔是一筆一筆接在後面，編號大的比較新。以前只比時間，同分時會維持「舊的在前」，
+  /// 順序就跟畫面說的「新的在前」對不上，而且 Dart 的 sort 不保證同分穩定，時有時無
+  /// （測試偶爾失敗就是這個，2026-11-09 修）。
+  Future<List<TallyEvent>> events([String? bookId]) async {
+    final all = await eventsForUpload();
+    final list = [
+      for (var n = 0; n < all.length; n++)
+        if (bookId == null || all[n].bookId == bookId) (n, all[n]),
+    ];
+    list.sort((a, b) {
+      final c = b.$2.at.compareTo(a.$2.at);
+      return c != 0 ? c : b.$1.compareTo(a.$1);
+    });
+    return [for (final e in list) e.$2];
+  }
 
   /// 現在的結餘（＋ 減 −）。沒有帳本概念：兩台裝置各自自動建的帳本同步後
   /// 會有兩本，算的是全部。[bookId] 留著只是沿用舊呼叫。

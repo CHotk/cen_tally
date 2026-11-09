@@ -1252,6 +1252,17 @@ class PetDuo {
     'b_soap_amnesia': [.3, .85],
     'b_soap_will': [.3, .7],
     'b_short_fridge': [.3, .7],
+    // 小劇場十齣（2026-11-09 使用者：也都做進去）
+    'b_s_boss': [.3, .7],
+    'b_s_revenge': [.3, .7],
+    'b_s_mole': [.3, .7],
+    'b_s_rebirth': [.3, .7],
+    'b_s_chase': [.3, .7],
+    'b_s_boba': [.3, .7],
+    'b_s_quit': [.3, .7],
+    'b_s_scam': [.3, .7],
+    'b_s_bomb': [.3, .7],
+    'b_s_origin': [.3, .7],
   };
 
   /// 兩隻正在約好見面或互動：各自先不要亂跑。
