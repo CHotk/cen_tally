@@ -710,6 +710,9 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     _setMode('hop');
   }
 
+  /// 被小八叫了：手上的事（單人動作、睡覺）先停下來。
+  void _interrupt() => _setMode('idle', until0: .3);
+
   /// 走到 [tx]（互動要站的位置）。
   void _seekTo(double tx) {
     final p = _platOf(plat);
@@ -1362,6 +1365,31 @@ class PetDuo {
       s.plat != null &&
       const {'idle', 'look', 'walk', 'run'}.contains(s.mode);
 
+  String _pickReply() {
+    const list = ['來了～', '來囉～', '等我一下！'];
+    String v;
+    do {
+      v = list[_rng.nextInt(list.length)];
+    } while (v == _lastReply);
+    return _lastReply = v;
+  }
+
+  String? _lastReply;
+
+  /// 吉伊現在能不能被小八叫走：閒著的，或在做單人動作／睡覺（到時候打斷）。
+  static bool _chiCanMeet(_TallyPetLayerState s) =>
+      s._visible &&
+      s.plat != null &&
+      const {
+        'idle',
+        'look',
+        'walk',
+        'run',
+        'act',
+        'sleep',
+        'sit',
+      }.contains(s.mode);
+
   static bool _there(_TallyPetLayerState s, double tx) =>
       s.mode == 'idle' && (s.x - tx).abs() < 6;
 
@@ -1392,7 +1420,9 @@ class PetDuo {
     _searchReact(a, b, all);
     switch (_phase) {
       case 'none':
-        if (!_free(a) || !_free(b)) return;
+        // 互動固定由小八發起（2026-11-09 使用者）：小八閒著就倒數，吉伊在做單人動作、睡覺也會配合
+        //（時間到時打斷手上的事、回應小八）；被抓著、掉下來、爬梯子這種不能打斷的就先等。
+        if (!_free(b) || !_chiCanMeet(a)) return;
         _meetIn -= dt;
         if (_meetIn <= 0) _start(a, b, all, w);
       case 'hop':
@@ -1442,13 +1472,13 @@ class PetDuo {
     }
 
     _act = pick();
-    final aCalls = _rng.nextBool();
-    final caller = aCalls ? a : b, other = aCalls ? b : a;
-    caller._say(aCalls ? '小八～！' : '吉伊～！', 1.6);
-    other._later(.7, () => other._say(aCalls ? '來囉～' : '來了～', 1.3));
+    // 小八叫、吉伊配合：吉伊正在做的事先停下來，回應一聲，兩隻互相走向對方
+    if (a.mode == 'act' || a.mode == 'sleep' || a.mode == 'sit') a._interrupt();
+    a._say(_pickReply(), 1.3);
+    b._say('吉伊～！', 1.6);
     _t = 0;
     if (pa.key != pb.key) {
-      caller._hopToPlat(aCalls ? pb : pa, other.x);
+      b._hopToPlat(pa, a.x); // 小八跳到吉伊那張卡片
       _phase = 'hop';
     } else {
       _seek(a, b, all, w);

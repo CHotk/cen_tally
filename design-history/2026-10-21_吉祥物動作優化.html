@@ -1517,7 +1517,7 @@ function hachiAI(dt, H) { AI.t += dt;
   else if (AI.mode === 'hop') { jumpPose(H, (AI.t % .8) / .8); H.turn = toMe * .5; }
   else if (AI.mode === 'wave') { hR(H, 'up', Math.sin(AI.t * 11) * .25 * seg(AI.t, .2, .4), .25, .1); H.happy = 1; H.mouth = .25; H.turn = toMe * .6; }
   else { H.turn = toMe * .45 + Math.sin(AI.t * .5) * .15; H.roll = Math.sin(AI.t * .8) * .03; } }
-function startSeek(now) { pendingAct = pickNo('meetAct', MEET_ACTS); seekWho = Math.random() < .5 ? 0 : 2; setAct('b_seek'); }
+function startSeek(now) { pendingAct = pickNo('meetAct', MEET_ACTS); seekWho = 2; setAct('b_seek'); } // 互動固定由小八發起（2026-11-09 使用者），吉伊配合
 // 互相走向對方：兩隻同時走到那個互動要站的位置，到了面對面一下就開始
 act('b_seek', { g: null, label: '互相走向對方', dur: 14,
   enter() { seekLast = clockT; seekArrive = null; talk(seekWho === 0 ? '小八～！' : '吉伊～！', 1.5, seekWho); },
