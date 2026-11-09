@@ -1386,7 +1386,7 @@ function startSeek(now) { pendingAct = pickNo('meetAct', MEET_ACTS); seekWho = 2
 // 互相走向對方：兩隻同時走到那個互動要站的位置，到了面對面一下就開始
 act('b_seek', { g: null, label: '互相走向對方', dur: 14,
   enter() { seekLast = clockT; seekArrive = null; talk(seekWho === 0 ? '小八～！' : '吉伊～！', 1.5, seekWho); },
-  exit() { meetIn = 16 + Math.random() * 10; },
+  exit() { meetIn = 10 + Math.random() * 30; }, // 每次 10～40 秒之間隨機抽（2026-11-09 使用者）
   pose(P, t, F, H) { const dt = Math.min(.1, clockT - seekLast); seekLast = clockT; const [fa, fb] = ACT_POS[pendingAct], tm = W * fa, th = W * fb;
     const mv = (p, to) => { const d = to - p.px, st = 66 * dt; if (Math.abs(d) <= st) { p.px = to; return true; } p.px += Math.sign(d) * st; return false; };
     const dm = mv(me, tm), dh = mv(hachi, th);
