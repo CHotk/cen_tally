@@ -43,7 +43,7 @@
   canvas#c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .bubble { position: absolute; transform: translate(-50%, -100%); padding: 6px 12px; border-radius: 14px; background: rgba(20,20,30,.82); border: 1px solid rgba(255,255,255,.18);
     font-size: 13px; font-weight: 800; white-space: nowrap; pointer-events: none; transition: opacity .2s; color: #fff; }
-  .bubble .h { color: #FF6FA5; } .bubble.foe { background: rgba(60,20,40,.85); border-color: rgba(255,90,130,.4); }
+  .bubble .h { color: #FF6FA5; } .bubble.foe { background: rgba(60,20,40,.85); border-color: rgba(255,90,130,.4); } .bubble.hachi { background: rgba(24,40,84,.88); border-color: rgba(130,170,255,.5); }
   .now { position: absolute; left: 14px; top: 12px; font-size: 12px; color: var(--ink2); background: rgba(0,0,0,.35); padding: 4px 10px; border-radius: 10px; }
   .big { position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%) scale(.6); font-size: 30px; font-weight: 900; letter-spacing: 2px; opacity: 0; pointer-events: none; white-space: nowrap;
     text-shadow: 0 0 12px rgba(255,200,87,.8), 0 2px 0 #000; color: #fff; transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1); }
@@ -83,6 +83,7 @@
     <h1>吉祥物動作優化</h1>
     <p>同一隻吉祥物，動作系統整個重做：換動作改成慢慢過渡、手真的會動（舊版手臂轉軸在手掌上，幾乎不會動）、身體可以前趴側躺、臉多了表情。<br>
     新增：吃東西、睡覺整套、坐卡片邊晃腳、席地坐、數錢、記帳、跳舞、揮手、伸懶腰、打噴嚏、滑倒、害羞；<b>抓起來</b>改成浮在手指上方＋重做掙扎；<b>變身</b>（魔法師、劍士、火焰、冰、廚師、忍者，可以一直變）；<b>黑色對手</b>登場持劍對決。<br>
+    <b>2026-11-09 新增：小八</b>（藍色頭頂、貓耳朵、笑嘴）可以跟吉伊互動——打招呼擊掌、分飯糰、抱抱、一起跳舞、猜拳、安慰愛哭的吉伊（右邊「吉伊 × 小八」那一區）。<br>
     左邊舞台可以直接用手指（滑鼠）拖牠、甩出去。右邊按鈕看單一動作，或開「自動演示」。</p>
   </div>
 
@@ -95,6 +96,7 @@
       <canvas id="c"></canvas>
       <div class="bubble" id="bub0" style="opacity:0"></div>
       <div class="bubble foe" id="bub1" style="opacity:0"></div>
+      <div class="bubble hachi" id="bub2" style="opacity:0"></div>
       <div class="big" id="big"></div>
       <div class="finger" id="finger"></div>
       <div class="now" id="now">待機</div>
@@ -117,6 +119,7 @@
     <div class="group"><h3>抓起來 <small>在舞台上直接拖牠、甩出去</small></h3><div class="btns" data-g="held"><button id="oldGrip">對照：舊版（牠在手指正下面）</button></div></div>
     <div class="group"><h3>變身 <small>像星之卡比的複製能力，可以一直變</small></h3><div class="btns" data-g="costume"></div></div>
     <div class="group"><h3>版本切換 <small>改過的都留著，點了馬上換（正在穿的會重新穿）</small></h3><div id="vers"></div></div>
+    <div class="group"><h3>吉伊 × 小八 <small>小八從右邊走進來跟吉伊互動；兩隻各自有對話泡泡（小八是藍色的）</small></h3><div class="btns" data-g="buddy"></div></div>
     <div class="group"><h3>對決</h3><div class="btns" data-g="duel"></div></div>
     <div class="group"><h3>場景 <small>淹水潛水（整個畫面）、沙灘度假（卡片上一小塊）、搭飛機、搭車、搭火車、烤肉、馴服恐龍</small></h3><div class="btns" data-g="scene"></div></div>
     <div class="group"><h3>祝福馨岑 <small>發財、好運、趕走小人</small></h3><div class="btns" data-g="bless"></div></div>
@@ -152,6 +155,10 @@
         <span class="tag n">新</span>恐龍：綠色暴龍咚咚咚走過來（畫面震動），張大嘴「吼——！」，牠嚇到眼睛閉成 &gt;&lt;、手舉高發抖、眼淚冒出來，鼓起勇氣拿出雞腿請牠吃，恐龍一口吃掉、臉紅冒愛心、尾巴狂搖，「馴服成功！」，牠跳上恐龍背上騎著在卡片上來回跑，最後跳下來揮手跟恐龍說掰掰。食物新增冰淇淋（雙球＋櫻桃＋彩色糖粒）、甜甜圈（粉紅糖霜）、雞排（紙袋裝）、西瓜（三角片、有籽、綠皮），一樣三口吃完、每口對準嘴巴。</div>
       <div class="note"><b>祝福馨岑</b><br>
         <span class="tag n">新</span>發財舞（戴財神帽、捧元寶左右扭，金幣紅包從天上掉下來）、招財（像招財貓一樣招手，金幣從兩邊飛進牠懷裡）、祈福好運（雙手合十、身上發光、幸運草跟星星飄上去、御守冒出來）、趕走小人（黑黑的小人從旁邊走過來，牠拿拖鞋一個一個打飛，最後貼上「退散」符）、比心祝福（雙手比愛心、大愛心浮起來、放煙火）。台詞都是祝福馨岑的，隨機但不會連續重複。</div>
+      <div class="note"><b>吉伊 × 小八</b>（2026-11-09 使用者：把小八放進去，兩隻要有互動）<br>
+        <span class="tag n">新</span>小八跟吉伊同一個身體做法，換成：頭頂藍色、前面留一個白色「八」字縫、藍色貓耳朵、笑嘴（開口是上揚的半圓＋粉紅舌頭）、沒有眉毛跟臉頰線。平常藏起來，互動時從右邊走進來，結束走掉。<br>
+        <b>見面打招呼</b>：互相揮手 → 走近擊掌（啪！火花）→ 一起跳兩下 → 小八揮手離開。<b>分飯糰</b>：小八拿出飯糰、走過去雙手遞給吉伊，吉伊「哇！給我的嗎？」接過來，三口吃完（臉頰鼓起來、飯糰越咬越小），開心跳。<b>抱抱</b>：兩隻張開手 → 走近 → 抱在一起左右搖、愛心飄上去 → 分開 → 害羞背過去摀臉。<b>一起跳舞</b>：左右搖擺（兩隻反方向）→ 牽手一起蹦 → 各自轉兩圈 → 舉手跳，音符飄。<b>猜拳</b>：「剪刀…石頭…布！」手上下搖三下，同時出（頭上浮出 ✊✋✌️），贏的跳起來、輸的垮下來掉淚，贏的拍拍說「別難過」，最後「再來一次！」（每次隨機）。<b>安慰</b>：吉伊先自己在哭（瀑布淚、>< 眼），小八走過來問「怎麼了？」，拍拍頭「沒事的…沒事的」，吉伊慢慢不哭、擦眼淚說謝謝，兩隻一起蹦，並肩走去吃好吃的。<br>
+        目前只在設計稿；要放進 App，這些動作會跟其他動作一起被抽（Flutter 那邊要多管一隻小八的位置）。</div>
       <div class="note"><b>做進 App 時</b><br>
         姿勢系統、模型、道具都在 web/pet/index.html（3D 那一塊）；Flutter 那邊多傳新模式名稱跟抓起來的「往上浮」位移。黑色對手是同一個模型換顏色，畫在同一個 3D 窗格裡。新台詞要加進字型預載清單。</div>
     </div>
@@ -219,9 +226,14 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const cross = (t0, t1, at) => t0 < at && t1 >= at;
 const every = (t0, t1, per, from = 0) => t1 > from && Math.floor((t0 - from) / per) !== Math.floor((t1 - from) / per);
 
-// ════════════════ 做一隻（主角、黑色對手共用） ════════════════
+// 小八的身體：同一個形狀，頭頂（66% 以上）畫成藍色，前面留一個「八」字形的白縫（跟 lume 的吉伊卡哇家族 3D 同一個畫法）
+const hachiGeo = (() => { const g = bodyGeo.clone(), pos = g.attributes.position, Hh = CY0 + B, blue = new THREE.Color(0x5e7fc4), white = new THREE.Color(0xfffdfb), col = [];
+  for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), c = y >= Hh * .66 && !(z > 0 && Math.abs(x) < (Hh - y) * .55 + .04) ? blue : white; col.push(c.r, c.g, c.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); return g; })();
+const hachiSkin = toon(0xffffff, { vertexColors: true });
+// ════════════════ 做一隻（主角、黑色對手、小八共用） ════════════════
 function makePet(o = {}) {
-  const dark = !!o.dark;
+  const dark = !!o.dark, hachi = !!o.hachi;
   const skin = toon(dark ? 0x2e2a38 : 0xfffdfb), outM = dark ? basic(0x8a6bff, { side: THREE.BackSide }) : OUT_DARK;
   const eyeM = basic(dark ? 0xff3d68 : 0x241a20), lineM = basic(dark ? 0xff9ab4 : 0x241a20);
   const p = { dark, cur: {}, vel: {}, px: 0, py: 0, S: 56, Sk: 1, dir: 1, earV: [0, 0], earX: [0, 0], prevY: 0, nextBlink: 2, swing: 0, swingV: 0, vx: 0, vy: 0, spinA: 0, spinV: 0 };
@@ -230,9 +242,12 @@ function makePet(o = {}) {
   const tiltG = p.tiltG = new THREE.Group(); tiltG.position.y = PIV; turnG.add(tiltG);
   const model = p.model = new THREE.Group(); model.position.y = -PIV; tiltG.add(model);
   const body = p.body = new THREE.Group(); model.add(body);
-  body.add(ol(bodyGeo, skin, 1.035, outM));
+  body.add(ol(hachi ? hachiGeo : bodyGeo, hachi ? hachiSkin : skin, 1.035, outM));
   p.ears = [];
-  for (const s of [-1, 1]) { const ear = ol(new THREE.SphereGeometry(.2, 32, 24), skin, 1.09, outM); ear.scale.set(1.05, .9, .85); ear.position.set(s * .5, topY(.5) - .02, .02); body.add(ear); p.ears.push({ m: ear, s }); }
+  for (const s of [-1, 1]) { let ear;
+    if (hachi) { ear = ol(new THREE.ConeGeometry(.26, .42, 4), toon(0x5e7fc4), 1.1, outM); ear.position.set(s * A * .52, topY(A * .52) + .08, .05); ear.rotation.set(0, Math.PI / 4, s * -.38); } // 小八：藍色貓耳朵
+    else { ear = ol(new THREE.SphereGeometry(.2, 32, 24), skin, 1.09, outM); ear.scale.set(1.05, .9, .85); ear.position.set(s * .5, topY(.5) - .02, .02); }
+    body.add(ear); p.ears.push({ m: ear, s }); }
   const face = p.face = new THREE.Group(); body.add(face);
   p.eyes = [];
   for (const s of [-1, 1]) {
@@ -248,17 +263,21 @@ function makePet(o = {}) {
     for (const k of [-1, 1]) { const l = new THREE.Mesh(new THREE.CapsuleGeometry(.024, .12, 4, 8), lineM); l.rotation.z = Math.PI / 2 + k * .5 * s; l.position.set(0, k * .042, 0); sq.add(l); }
     p.eyes.push({ ball, happy, shut, sq });
     const brow = new THREE.Mesh(new THREE.TorusGeometry(.14, .018, 8, 24, Math.PI * .7), lineM);
-    const bp = surf(s * .36, 1.36, .005); brow.position.copy(bp); brow.rotation.set(-.25, s * .32, Math.PI * .15 + (s < 0 ? 0 : .02) + (dark ? s * .55 : 0)); face.add(brow);
+    const bp = surf(s * .36, 1.36, .005); brow.position.copy(bp); brow.rotation.set(-.25, s * .32, Math.PI * .15 + (s < 0 ? 0 : .02) + (dark ? s * .55 : 0)); face.add(brow); if (hachi) brow.visible = false;
   }
   p.cheeks = [];
   for (const s of [-1, 1]) { const cp = surf(s * .66, .92, .03); const mat = basic(dark ? 0x9b5cff : 0xffa9bd, { transparent: true, opacity: dark ? .7 : .92 });
     const ch = new THREE.Mesh(new THREE.CircleGeometry(.17, 32), mat); ch.scale.set(1.35, .8, 1); ch.position.copy(cp); ch.lookAt(cp.clone().multiplyScalar(2).setY(cp.y)); face.add(ch);
-    for (let k = -1; k <= 1; k++) { const line = new THREE.Mesh(new THREE.CapsuleGeometry(.012, .09, 4, 8), lineM); line.position.set(k * .085, 0, .003); line.rotation.z = -.5; ch.add(line); }
+    if (!hachi) for (let k = -1; k <= 1; k++) { const line = new THREE.Mesh(new THREE.CapsuleGeometry(.012, .09, 4, 8), lineM); line.position.set(k * .085, 0, .003); line.rotation.z = -.5; ch.add(line); }
     p.cheeks.push({ m: ch, mat, s, base: cp.clone() }); }
   const mouth = p.mouth = new THREE.Group(); mouth.position.copy(surf(0, .9, .01)); face.add(mouth);
   const omega = p.omega = new THREE.Group(); omega.scale.setScalar(1.7); mouth.add(omega);
   for (const s of [-1, 1]) { const a = new THREE.Mesh(new THREE.TorusGeometry(.045, .012, 8, 20, Math.PI), lineM); a.rotation.z = Math.PI; a.position.x = s * .045; omega.add(a); }
   { const t = new THREE.Mesh(new THREE.SphereGeometry(.03, 12, 10), basic(0xff7f98)); t.scale.set(1, .7, .4); t.position.set(0, -.055, 0); omega.add(t); }
+  if (hachi) { // 小八：笑嘴（上揚的半圓＋粉紅舌頭），代替 ω
+    omega.children.forEach(c => c.visible = false); omega.scale.setScalar(1.25);
+    const sm = new THREE.Mesh(new THREE.CircleGeometry(.13, 24, Math.PI, Math.PI), lineM); sm.position.y = .04; omega.add(sm);
+    const tg = new THREE.Mesh(new THREE.CircleGeometry(.07, 20, Math.PI, Math.PI), basic(0xff7f98)); tg.position.set(0, -.01, .003); omega.add(tg); }
   const openM = p.openM = new THREE.Group(); mouth.add(openM);
   openM.add(new THREE.Mesh(new THREE.CircleGeometry(.11, 32), basic(0x3a1620)));
   { const tg = new THREE.Mesh(new THREE.CircleGeometry(.07, 24), basic(0xff7f98)); tg.scale.set(1, .55, 1); tg.position.set(0, -.05, .002); openM.add(tg); }
@@ -604,7 +623,7 @@ const W2 = (obj, x = 0, y = 0, z = 0) => obj.localToWorld(new THREE.Vector3(x, y
 let shakeAmt = 0;
 
 // ════════════════ 兩隻、道具實體 ════════════════
-const me = makePet(), foe = makePet({ dark: true }); foe.root.visible = false; foe.px = 9999;
+const me = makePet(), foe = makePet({ dark: true }), hachi = makePet({ hachi: true }); foe.root.visible = false; foe.px = 9999; hachi.root.visible = false; hachi.px = 9999;
 me.px = 200;
 const food = { tea5: makeTea5(), tea4: makeTea4(), tea3: makeTea3(), rice2: makeOnigiri2(), rice: makeOnigiri(), sausage: makeSausage(), sausage1: makeSausageV1(), tea: makeTea() };
 const book = makeBook(), pencil = makePencil();
@@ -620,7 +639,7 @@ const iceFloor = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.Mes
 iceFloor.rotation.x = -Math.PI / 2; iceFloor.position.set(1.4, .02, .4); iceFloor.visible = false; me.props.add(iceFloor);
 
 // ════════════════ 動作 ════════════════
-let say = [null, null], sayUntil = [0, 0], clockT = 0;
+let say = [null, null, null], sayUntil = [0, 0, 0], clockT = 0;
 const lastPick = {};
 // 隨機挑一句，不跟上一次一樣（2026-10-21 使用者：亂抽可以，但不要連續重複）
 function pickNo(key, list) { if (list.length < 2) return list[0]; let v; do v = list[Math.floor(Math.random() * list.length)]; while (v === lastPick[key]); lastPick[key] = v; return v; }
@@ -950,6 +969,143 @@ for (const k of Object.keys(COSTUMES)) {
 }
 act('tf_off', { g: 'costume', label: '變回來', dur: 1.0, enter() { if (costume) smoke(); wear(null); talk('變回來了', 1.2); },
   pose(P, t) { P.happy = 1; P.sy = t < .2 ? .85 : 1; } });
+
+// ── 吉伊 × 小八（2026-11-09 使用者要求：把小八放進去，兩隻要有互動）──
+// 小八是第三隻（hachi），跟黑色對手（foe）一樣平常藏起來，互動時才從右邊走進來。
+// 動作的 pose(P, t, F, H)：P＝吉伊、F＝黑色對手、H＝小八。
+let bx0 = 0, rps = [0, 1];
+const hachiRice = makeOnigiri2();
+const BIN = 1.5; // 小八走進來要幾秒
+const faceEach = (P, H, a = .8) => { P.turn = a; H.turn = -a; };
+const pulse = (t, at, w = .2) => Math.max(0, 1 - Math.abs(t - at) / w);
+function jumpPose(Q, k) { Q.happy = 1; Q.mouth = .35;
+  if (k < .25) { Q.sy = .8; Q.sx = 1.12; both(Q, 'rest', -.1); } else if (k < .75) { const j = (k - .25) / .5; Q.y = Math.sin(j * Math.PI) * .9; Q.sy = 1.12; Q.sx = .93; both(Q, 'high'); Q.lLy = Q.lRy = .02; } else { Q.sy = .82; Q.sx = 1.12; } }
+function buddyEnter() { bx0 = me.px; wear(null); hachi.root.visible = true; hachi.px = W + 90; hachi.py = me.py; Object.assign(hachi.cur, { turn: -.9, spin: 0, lean: 0, y: 0 }); }
+function buddyExit() { hachi.holdR.remove(hachiRice); me.holdR.remove(hachiRice); hachiRice.scale.setScalar(1); hachi.root.visible = false; hachi.px = 9999; me.px = THREE.MathUtils.clamp(me.px, 60, W - 60); }
+// 入場：吉伊走到左邊，小八從右邊走進來（t0 之後才出發）。還在走回 true。
+function buddyWalkIn(P, H, t, mL, hX, t0 = 0) { const k = Math.min(1, Math.max(0, (t - t0) / BIN));
+  me.px = lerp(bx0, mL, seg(t, 0, .8)); hachi.px = lerp(W + 90, hX, ease(k));
+  if (k > 0 && k < 1) walkCycle(H, t * 20, 0, -1);
+  if (t < .8 && Math.abs(bx0 - mL) > 20) walkCycle(P, t * 20, 0, mL > bx0 ? 1 : -1);
+  return t < t0 + BIN; }
+const meMid = () => new THREE.Vector3((me.px + hachi.px) / 2, -me.py + me.S * 3.0, 0);
+const HUG = [1.05, .8, .9]; // 抱的時候手伸到身體兩側（繞到對方背後）
+const BUDDY = { g: 'buddy', isNew: 1, enter: buddyEnter, exit: buddyExit };
+
+// 1. 見面打招呼：互相揮手 → 擊掌 → 一起跳
+act('b_hello', { ...BUDDY, label: '👋 見面打招呼', dur: 8.4,
+  pose(P, t, F, H) { const mL = W * .32, hX = W * .68, mid = W * .5;
+    if (buddyWalkIn(P, H, t, mL, hX)) { P.wide = t > 1 ? 1 : 0; return; }
+    faceEach(P, H);
+    if (t < 3.3) { const w = seg(t, 1.6, 1.8); hR(P, 'up', Math.sin(t * 11) * .25 * w, .25, .1); hR(H, 'up', Math.sin(t * 11 + 1.2) * .25 * w, .25, .1);
+      P.happy = H.happy = 1; P.mouth = H.mouth = .25; P.roll = Math.sin(t * 5.5) * .05; H.roll = Math.sin(t * 5.5 + 1) * .05; return; }
+    if (t < 4.7) { const k = seg(t, 3.3, 3.95); me.px = lerp(mL, mid - 70, k); hachi.px = lerp(hX, mid + 70, k);
+      hR(P, 'fwdHigh', 0, .1); hR(H, 'fwdHigh', 0, .1); hL(P, 'rest'); hL(H, 'rest'); P.happy = H.happy = 1; P.mouth = H.mouth = .3; P.lean = H.lean = t > 3.95 && t < 4.2 ? .25 : .08 * k; return; }
+    if (t < 6.7) { me.px = lerp(mid - 70, mid - 78, seg(t, 4.7, 5.2)); hachi.px = lerp(mid + 70, mid + 78, seg(t, 4.7, 5.2));
+      jumpPose(P, ((t - 4.7) % .8) / .8); jumpPose(H, ((t - 4.7 - .15) % .8 + .8) % .8 / .8); return; }
+    const v = t - 6.7; me.px = lerp(mid - 78, mL + 10, seg(v, 0, .5)); hachi.px = lerp(mid + 78, W + 110, seg(v, .5, 1.7));
+    if (v < .5) { faceEach(P, H, .3); P.happy = H.happy = 1; hR(P, 'up', Math.sin(t * 11) * .25, .25, .1); hR(H, 'up', Math.sin(t * 11) * .25, .25, .1); }
+    else { walkCycle(H, v * 20, 0, 1); P.turn = .5; P.happy = 1; hR(P, 'up', Math.sin(t * 11) * .25, .25, .1); } },
+  ev(t0, t1) { if (cross(t0, t1, 1.6)) { talk('小八～！', 1.5, 0); talk('吉伊～！', 1.5, 2); }
+    if (cross(t0, t1, 3.97)) { const at = meMid(); glow(at.clone().setY(-me.py + me.S * 1.7), 2.6, .35, 0xffe9a8); puff('啪！', at.clone().setY(-me.py + me.S * 2.2), { color: '#ffe27a', size: .5, vy: 20, life: .6 }); ball(at.clone().setY(-me.py + me.S * 1.7), 10, 0xffd36b, { r: .035, speed: 200, up: 40, life: .45, g: 500 }); shakeAmt = 4; }
+    if (cross(t0, t1, 4.9)) talk('耶～！', 1.4, 0);
+    if (cross(t0, t1, 7.0)) talk('明天見～', 1.4, 2); } });
+
+// 2. 分享飯糰：小八拿出飯糰遞給吉伊，吉伊三口吃完
+act('b_share', { ...BUDDY, label: '🍙 小八分飯糰給吉伊', dur: 10.2,
+  pose(P, t, F, H) { const mL = W * .3, hX = W * .72, near = mL + 140;
+    if (buddyWalkIn(P, H, t, mL, hX)) return;
+    me.px = mL; faceEach(P, H);
+    if (t < 2.5) { both(H, 'chest'); H.happy = 1; H.mouth = .2; return; }
+    if (t < 4.0) { hachi.px = lerp(hX, near, seg(t, 2.5, 3.3)); both(H, 'fwdHigh', -.2, .1); H.happy = 1; P.wide = 1; P.mouth = .3; return; }
+    hachi.px = lerp(near, near + 30, seg(t, 4.3, 5.0)); H.happy = 1;
+    if (t < 5.0) { both(P, 'chest'); P.happy = 1; P.mouth = .3; both(H, 'rest'); return; }
+    if (t < 7.7) { both(P, 'mouth'); P.puff = t > 5.5 ? .5 : 0; P.mouth = Math.max(pulse(t, 5.3), pulse(t, 6.1), pulse(t, 6.9)) * .8; P.happy = P.mouth < .1 ? 1 : 0; P.roll = Math.sin(t * 6) * .03;
+      hR(H, 'chest', Math.sin(t * 8) * .08); hL(H, 'chest', -Math.sin(t * 8) * .08); return; }
+    jumpPose(P, ((t - 7.7) % .8) / .8); P.puff = 0; both(H, 'chest', 0, 0); H.roll = Math.sin(t * 7) * .06; H.y = Math.abs(Math.sin(t * 5)) * .15; },
+  ev(t0, t1) { if (cross(t0, t1, 1.9)) { hold(hachi.holdR, hachiRice, [0, -.05, .05]); hachiRice.scale.setScalar(.001); hachiRice.userData.pop = 0; talk('吉伊，給你～', 1.8, 2); }
+    if (cross(t0, t1, 3.9)) { me.holdR.add(hachiRice); hachiRice.position.set(0, -.05, .05); glow(W2(me.holdR, 0, .8, 0), 1.4, .4); talk('哇！給我的嗎？', 1.4, 0); puff('！', W2(me.body, 0, 2.4, 0), { color: '#ffd36b', size: .45, vy: 0, life: .6 }); }
+    if (cross(t0, t1, 4.9)) talk('謝謝小八♡', 1.4, 0);
+    for (const [i, at] of [5.3, 6.1, 6.9].entries()) if (cross(t0, t1, at)) { hachiRice.scale.setScalar([.78, .56, .34][i]); for (let k = 0; k < 3; k++) puff('·', W2(me.body, 0, 1.0, 1.4), { color: '#ffffff', vx: (k - 1) * 40, vy: 30, size: .22, life: .4 }); }
+    if (cross(t0, t1, 7.6)) { me.holdR.remove(hachiRice); hachiRice.scale.setScalar(1); talk('好好吃♡', 1.6, 0); }
+    if (cross(t0, t1, 8.2)) talk('太好了～', 1.4, 2); } });
+
+// 3. 抱抱：走近、張開手、抱在一起、害羞分開
+act('b_hug', { ...BUDDY, label: '🤗 抱抱', dur: 9.2,
+  pose(P, t, F, H) { const mL = W * .28, hX = W * .72, mid = W * .5;
+    if (buddyWalkIn(P, H, t, mL, hX)) return;
+    faceEach(P, H);
+    if (t < 2.7) { for (const Q of [P, H]) { hR(Q, 'up', .2, .1); hL(Q, 'up', -.2, .1); Q.happy = 1; Q.mouth = .3; Q.sy = 1 + Math.sin(t * 6) * .02; } return; }
+    if (t < 3.5) { const k = seg(t, 2.7, 3.5); me.px = lerp(mL, mid - 54, k); hachi.px = lerp(hX, mid + 54, k); for (const Q of [P, H]) { both(Q, HUG); Q.happy = 1; Q.lean = .12 * k; } return; }
+    if (t < 5.9) { me.px = mid - 54; hachi.px = mid + 54; const s = Math.sin(t * 3); for (const Q of [P, H]) { both(Q, HUG); Q.happy = 1; Q.blush = 1; Q.lean = .18; Q.sx = 1.08; Q.sy = .95; } P.roll = s * .06; H.roll = s * .06; return; }
+    if (t < 6.5) { const k = seg(t, 5.9, 6.5); me.px = lerp(mid - 54, mL, k); hachi.px = lerp(mid + 54, hX, k); for (const Q of [P, H]) { Q.blush = 1; Q.happy = 1; hL(Q, 'cheek'); hR(Q, 'cheek'); } return; }
+    // 害羞：背過去、手摀臉
+    P.turn = -.55; H.turn = .55; for (const Q of [P, H]) { both(Q, 'cheek'); Q.blush = 1; Q.shut = 1; Q.mouth = .15; Q.roll = Math.sin(t * 9) * .05; Q.y = Math.abs(Math.sin(t * 6)) * .06; } },
+  ev(t0, t1) { if (cross(t0, t1, 1.8)) { talk('抱抱～', 1.4, 0); talk('好呀～', 1.4, 2); }
+    if (t1 > 3.6 && t0 < 5.9 && every(t0, t1, .42, 3.6)) puff('♡', meMid().add(new THREE.Vector3((Math.random() - .5) * 60, me.S * .3, 0)), { color: '#ff6fa5', vy: 70, size: .36, wob: 22, life: 1.1 });
+    if (cross(t0, t1, 3.7)) { glow(meMid().setY(-me.py + me.S * 1.3), 3, .5, 0xffb3d0); talk('嘿嘿～', 1.6, 2); }
+    if (cross(t0, t1, 6.8)) { talk('好害羞…', 1.6, 0); talk('我也是…', 1.6, 2); } } });
+
+// 4. 一起跳舞：左右搖、牽手轉圈、最後一起舉手跳
+act('b_dance', { ...BUDDY, label: '💃 一起跳舞', dur: 10.4,
+  pose(P, t, F, H) { const mL = W * .3, hX = W * .7, mid = W * .5;
+    if (buddyWalkIn(P, H, t, mL, hX)) return;
+    const u = t - BIN, ph = u / .5 * Math.PI, sn = Math.sin(ph);
+    if (u < 3) { P.turn = H.turn = 0; P.roll = sn * .12; H.roll = -sn * .12; P.y = Math.abs(sn) * .25; H.y = Math.abs(sn) * .25; P.happy = H.happy = 1; P.mouth = H.mouth = .3;
+      hR(P, 'up', 0, .35 * Math.max(0, sn)); hL(P, 'up', 0, .35 * Math.max(0, -sn)); hR(H, 'up', 0, .35 * Math.max(0, -sn)); hL(H, 'up', 0, .35 * Math.max(0, sn)); return; }
+    if (u < 5) { const k = seg(u, 3, 3.6); me.px = lerp(mL, mid - 70, k); hachi.px = lerp(hX, mid + 70, k); faceEach(P, H, .6 * k);
+      for (const Q of [P, H]) { both(Q, 'front', 0, 0); Q.happy = 1; Q.mouth = .3; Q.y = Math.abs(sn) * .3; Q.roll = sn * .1 * (Q === P ? 1 : -1); } return; }
+    if (u < 6.8) { const k = (u - 5) / 1.8; for (const Q of [P, H]) { Q.spin = ease(Math.min(1, k * 1.1)) * Math.PI * 4 * (Q === P ? 1 : -1); Q.y = Math.sin(Math.min(1, k) * Math.PI) * .8; both(Q, 'high'); Q.happy = 1; Q.mouth = .4; } return; }
+    me.px = lerp(me.px, mid - 70, .1); hachi.px = lerp(hachi.px, mid + 70, .1);
+    for (const Q of [P, H]) { jumpPose(Q, ((u - 6.8) % .8) / .8); } },
+  ev(t0, t1) { if (cross(t0, t1, 1.8)) { talk('跳舞囉～♪', 1.6, 2); talk('一起一起♪', 1.6, 0); }
+    if (t1 > BIN && every(t0, t1, .33, BIN)) puff(Math.random() < .5 ? '♪' : '♫', meMid().add(new THREE.Vector3((Math.random() - .5) * 150, me.S * .4, 0)), { color: '#ffd36b', vy: 60, size: .38, wob: 25, life: 1.2 });
+    if (cross(t0, t1, BIN + 5)) bigText('轉圈圈～', 1.0, '#ffe27a');
+    if (cross(t0, t1, BIN + 6.8)) { talk('好開心！', 1.4, 0); talk('再一次～', 1.4, 2); } } });
+
+// 5. 猜拳：剪刀石頭布，贏的跳起來，輸的垮下來，贏的再去拍拍他
+act('b_rps', { ...BUDDY, label: '✊ 猜拳', dur: 9.8,
+  enter() { buddyEnter(); const a = Math.floor(Math.random() * 3); rps = [a, (a + 1 + Math.floor(Math.random() * 2)) % 3]; },
+  pose(P, t, F, H) { const mL = W * .3, hX = W * .7;
+    if (buddyWalkIn(P, H, t, mL, hX)) return;
+    faceEach(P, H, .9);
+    const win = (rps[0] - rps[1] + 3) % 3 === 1 ? 0 : 1, WN = win === 0 ? P : H, LS = win === 0 ? H : P; // 0 石頭 1 布 2 剪刀：布贏石頭、剪刀贏布、石頭贏剪刀
+    if (t < 3.7) { const b = t - 1.8; const bob = b > 0 && b < 1.8 ? Math.abs(Math.sin(b / .6 * Math.PI)) * .3 : 0; for (const Q of [P, H]) { both(Q, 'front', bob - .1, 0); Q.mouth = b > 0 && b < 1.8 ? .3 : 0; Q.y = bob * .3; } return; }
+    if (t < 4.7) { for (const Q of [P, H]) hR(Q, 'fwdHigh', 0, -.1); for (const Q of [P, H]) { Q.wide = 1; } return; }
+    const u = t - 4.7;
+    if (u < 2.2) { WN.happy = 1; jumpPose(WN, (u % .8) / .8); LS.lean = .35 * seg(u, 0, .4); LS.sy = .9; LS.mouth = .5; LS.sq = u > .6 ? 1 : 0; LS.cry = u > 1.0 ? .6 : 0; both(LS, 'rest'); return; }
+    if (u < 4.2) { WN.happy = 1; hR(WN, 'fwdHigh', 0, .1 + Math.sin(u * 9) * .1); hL(WN, 'rest'); WN.lean = .12; LS.lean = .2; LS.sy = .93; LS.cry = Math.max(0, 1 - (u - 2.2) / 1.2) * .6; LS.sq = u < 3.2 ? 1 : 0; LS.shut = u >= 3.2 ? 1 : 0; LS.blush = .6; both(LS, 'eye'); return; }
+    P.happy = H.happy = 1; hR(P, 'up', 0, .3); hR(H, 'up', 0, .3); P.mouth = H.mouth = .3; },
+  ev(t0, t1) { const E = ['✊', '✋', '✌️'], win = (rps[0] - rps[1] + 3) % 3 === 1 ? 0 : 1;
+    if (cross(t0, t1, 1.7)) { talk('猜拳！', 1.2, 0); talk('好～', 1.2, 2); }
+    for (const [i, w] of ['剪刀', '石頭', '布'].entries()) if (cross(t0, t1, 1.9 + i * .6)) bigText(w + (i === 2 ? '！' : '…'), .55, i === 2 ? '#ffe27a' : '#ffffff');
+    if (cross(t0, t1, 3.7)) { puff(E[rps[0]], W2(me.body, 0, 2.7, 0), { size: .9, vy: 5, life: 1.8 }); puff(E[rps[1]], W2(hachi.body, 0, 2.7, 0), { size: .9, vy: 5, life: 1.8 }); shakeAmt = 3; }
+    if (cross(t0, t1, 4.8)) { const W_ = win === 0 ? me : hachi; glow(W2(W_.body, 0, 1.2, 1), 2.6, .5); talk('贏了～！', 1.5, win === 0 ? 0 : 2); talk('嗚…輸了…', 1.8, win === 0 ? 2 : 0); }
+    if (cross(t0, t1, 6.4)) { talk('別難過～', 1.6, win === 0 ? 0 : 2); }
+    if (cross(t0, t1, 8.1)) { talk('再來一次！', 1.5, 0); talk('好啊！', 1.5, 2); } } });
+
+// 6. 安慰：吉伊愛哭，小八走過來拍拍頭，最後一起去吃好吃的
+act('b_comfort', { ...BUDDY, label: '🥹 小八安慰愛哭的吉伊', dur: 12.0,
+  pose(P, t, F, H) { const mL = W * .28, hX = mL + 125;
+    const cryNow = t < 4.4;
+    if (t < 1.0) { me.px = lerp(bx0, mL, seg(t, 0, .8)); hachi.px = W + 90; } else if (buddyWalkIn(P, H, t, mL, hX, 1.0)) { /* 小八走過來，吉伊繼續哭 */ } else { me.px = mL; hachi.px = hX; }
+    if (cryNow) { P.cry = t < 3.0 ? 1 : 1 - seg(t, 3.0, 4.4); P.sq = t < 3.6 ? 1 : 0; P.shut = t >= 3.6 ? 1 : 0; P.mouth = .7 * (1 - seg(t, 3, 4.2)); both(P, 'eye'); P.sy = .92; P.lean = .22; P.roll = Math.sin(t * 14) * (t < 3 ? .05 : .02); P.sw = 0; }
+    const arrived = t >= 1.0 + BIN;
+    if (!arrived) { return; }
+    P.turn = .5; H.turn = -.9;
+    if (t < 4.6) { hR(H, 'fwdHigh', 0, .22 + Math.sin((t - 2.5) * 10) * .1, .1); hL(H, 'rest'); H.mouth = .15; H.lean = .06; return; }
+    if (t < 6.6) { const k = seg(t, 4.4, 4.9); P.cry = 0; P.sq = 0; P.shut = 0; P.sy = lerp(.92, 1, k); P.lean = lerp(.22, .02, k); P.blush = 1; P.mouth = .1; hR(P, 'eye', Math.sin(t * 10) * .05); hL(P, 'rest'); P.turn = .6; H.happy = 1; hR(H, 'rest'); hL(H, 'rest'); return; }
+    if (t < 8.2) { P.happy = H.happy = 1; P.mouth = H.mouth = .3; jumpPose(P, ((t - 6.6) % .8) / .8); both(H, 'up'); H.y = Math.abs(Math.sin((t - 6.6) * 7)) * .3; return; }
+    const v = t - 8.2, ph = v * 16; me.px = lerp(mL, W * .42, ease(Math.min(1, v / 3.6))); hachi.px = me.px + 125;
+    if (v < 3.6) { walkCycle(P, ph, 0, 1); walkCycle(H, ph + 1, 0, 1); P.happy = H.happy = 1; } else { faceEach(P, H, .3); P.happy = H.happy = 1; hR(P, 'up', Math.sin(t * 11) * .2, .25); hR(H, 'up', Math.sin(t * 11) * .2, .25); } },
+  ev(t0, t1) { if (t1 < 3.2 && every(t0, t1, .5)) puff('💧', W2(me.body, (Math.random() - .5) * 1.4, 1.6, 1), { size: .3, vy: -20, g: 60, life: .9 });
+    if (cross(t0, t1, .2)) talk('嗚嗚嗚…', 2, 0);
+    if (cross(t0, t1, 2.2)) { talk('吉伊？怎麼了？', 1.6, 2); puff('？', W2(hachi.body, 0, 2.5, 0), { color: '#ffd36b', size: .45, vy: 0, life: .7 }); }
+    if (cross(t0, t1, 3.0)) talk('沒事的…沒事的', 2, 2);
+    if (cross(t0, t1, 4.7)) { glow(W2(me.body, 0, 1.4, 1), 2.4, .5, 0xfff0c0); talk('嗯…謝謝你', 1.8, 0); }
+    if (t1 > 4.8 && t0 < 6.6 && every(t0, t1, .55, 4.8)) puff('♡', W2(me.body, (Math.random() - .5), 2.4, 0), { color: '#ff6fa5', vy: 60, size: .3, wob: 18, life: 1 });
+    if (cross(t0, t1, 6.7)) { talk('去吃好吃的吧！', 1.7, 2); talk('好～！', 1.5, 0); }
+    if (cross(t0, t1, 11.8)) talk('一起加油～', 1.2, 2); } });
 
 // ── 對決 ──
 const DU = { enter: .9, draw: 1.6, still: 2.3, c1: 3.0, c2: 3.6, c3: 4.2, leap: 4.7, air: 5.15, pass: 6.0, judge: 7.0, leave: 8.2, end: 10.0 };
@@ -1779,8 +1935,9 @@ for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue; const b = docum
   document.getElementById('vClose').onclick = () => wrap.classList.remove('on'); wrap.addEventListener('click', e => { if (e.target === wrap) wrap.classList.remove('on'); }); }
 const tog = (id, f) => { const b = document.getElementById(id); b.onclick = () => { b.classList.toggle('on'); f(b.classList.contains('on')); }; };
 tog('auto', v => { auto = v; }); tog('blend', v => blend = v); tog('springy', v => springy = v);
-tog('zoom', v => me.S = foe.S = v ? 56 : 23); tog('slow', v => slow = v ? .35 : 1); tog('oldGrip', v => oldGrip = v);
+tog('zoom', v => me.S = foe.S = hachi.S = v ? 56 : 23); tog('slow', v => slow = v ? .35 : 1); tog('oldGrip', v => oldGrip = v);
 const PLAN = ['walk', 'iceage', 'dino', 'icecream', 'plane', 'donut', 'cutlet', 'melon', 'car', 'train', 'bbq', 'beach', 'flood', 'rich', 'shoo', 'luck', 'heart', 'beckon', 'rice', 'sitEdge', 'tf_wizard', 'wave', 'walk', 'coins', 'duel', 'dance', 'grabDemo', 'write', 'tf_fire', 'sleep', 'wake', 'stretch', 'run', 'sausage', 'tf_sword', 'sneeze', 'trip', 'tf_off', 'shy', 'walk', 'tea', 'tf_ninja', 'jump', 'tf_ice', 'sitFloor', 'tf_chef', 'tf_off'];
+PLAN.push('b_hello', 'b_share', 'b_hug', 'b_dance', 'b_rps', 'b_comfort');
 let planI = 0;
 
 // ── 手指拖曳（抓起來） ──
@@ -1807,7 +1964,7 @@ function demoStep(dt) { if (demoT < 0 || !drag) return; demoT += dt; const t = d
   moveTo(x, y); }
 
 // ════════════════ 每一幀 ════════════════
-const bub = [document.getElementById('bub0'), document.getElementById('bub1')];
+const bub = [document.getElementById('bub0'), document.getElementById('bub1'), document.getElementById('bub2')];
 const clock = new THREE.Clock();
 let paused = false;
 function frame() { const rdt = Math.min(clock.getDelta(), 1 / 30); if (!paused) tick(rdt * slow); renderer.render(scene, camera); requestAnimationFrame(frame); }
@@ -1830,13 +1987,13 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   else if (me.swimOff) { me.px += (me.swimOff.x - me.px) * Math.min(1, dt * 6); me.py += (me.swimOff.y - me.py) * Math.min(1, dt * 6); }
   else if (cur !== 'held') me.py += (top - me.py) * Math.min(1, dt * 20);
   // ── 目標姿勢 ──
-  const P = { ...BASE }, F = { ...BASE };
+  const P = { ...BASE }, F = { ...BASE }, Hh = { ...BASE };
   if (a.walk) { walkCycle(P, clockT * a.walk * .16, a.walk > 80 ? 1 : 0); if (walkTo != null) { const step = a.walk * dt; if (Math.abs(walkTo - me.px) <= step) { me.px = walkTo; walkTo = null; } else me.px += Math.sign(walkTo - me.px) * step; } }
-  else a.pose?.(P, actT, F);
+  else a.pose?.(P, actT, F, Hh);
   if (cur === 'held') P.roll += me.swing;
   a.ev?.(t0, actT);
-  springTo(me, P, dt); if (foe.root.visible) { foe.py = top; springTo(foe, F, dt); }
-  applyPet(me, dt); if (foe.root.visible) applyPet(foe, dt);
+  springTo(me, P, dt); if (foe.root.visible) { foe.py = top; springTo(foe, F, dt); } if (hachi.root.visible) { hachi.py = top; springTo(hachi, Hh, dt); }
+  applyPet(me, dt); if (foe.root.visible) applyPet(foe, dt); if (hachi.root.visible) applyPet(hachi, dt);
   if (pillow.visible) { pillow.userData.t = (pillow.userData.t || 0) + dt; const k = Math.min(1, pillow.userData.t / .35); const s = Math.max(.001, ease(k) * (1 + Math.sin(k * Math.PI) * .3)); pillow.position.set(-1.25, .25, .1); pillow.scale.set(1.3 * s, .42 * s, .9 * s); }
   // ── 特效 ──
   for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.age += dt; const k = q.age / q.life; q.v.y += q.g * dt;
@@ -1854,13 +2011,13 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   if (auto && (cur === 'sitEdge' || cur === 'sitFloor') && actT > 7) setAct('idle');
   if (auto && cur === 'sleep' && actT > SL.lie + 8) setAct('wake');
   // ── 對話泡泡：跟著頭頂（含跳起來、被拎起來），一行不換行 ──
-  for (const [i, p] of [[0, me], [1, foe]]) { const b = bub[i];
+  for (const [i, p] of [[0, me], [1, foe], [2, hachi]]) { const b = bub[i];
     if (say[i] && clockT < sayUntil[i] && p.root.visible) { const head = W2(p.body, 0, 2.2, 0); b.style.opacity = 1; b.innerHTML = say[i].replace('♡', '<span class="h">♡</span>'); b.style.left = head.x + 'px'; b.style.top = (-head.y - 6) + 'px'; }
     else b.style.opacity = 0; }
 }
 me.py = cardTop(); setAct('idle'); talk('馨岑妳好啊♡', 2.4);
 requestAnimationFrame(frame);
-window.__pet = { advance(sec) { paused = true; for (let i = 0; i < sec * 60; i++) tick(1 / 60); }, play() { paused = false; }, setAct, get act() { return cur; }, get t() { return actT; }, set t(v) { actT = v; }, me, foe, grabAt, moveTo, release, wear, get drag() { return drag; } };
+window.__pet = { advance(sec) { paused = true; for (let i = 0; i < sec * 60; i++) tick(1 / 60); }, play() { paused = false; }, setAct, get act() { return cur; }, get t() { return actT; }, set t(v) { actT = v; }, me, foe, hachi, grabAt, moveTo, release, wear, get drag() { return drag; } };
 </script>
 <div id="viewer"><div class="t" id="vTitle"></div><canvas id="vc"></canvas><div class="s" id="vSub"></div><button id="vClose">關閉</button></div>
 </body>
