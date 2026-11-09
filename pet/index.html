@@ -2262,7 +2262,7 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   if (costume && !cur.startsWith('tf_') && clockT - costumeAt > 40 && cur !== 'held') { for (let i = 0; i < 8; i++) puff('●', W2(me.body, (Math.random() - .5) * 2, Math.random() * 2.2, 0), { color: '#e8e8f0', vy: 20, size: .5, grow: 1.5, life: .7 }); wear(null); }
   // ── 台詞泡泡：跟著頭頂（含跳起來、被捏起來），一行不換行 ──
   for (const [i, p] of [[0, me], [1, foe], [2, hachi]]) { const b = bub[i];
-    if (say[i] && clockT < sayUntil[i] && p.root.visible && p.S > 2) { const head = W2(p.body, 0, 2.25, 0); b.style.opacity = 1; const html = say[i].replace('♡', '<span class="h">♡</span>'); if (b.innerHTML !== html) b.innerHTML = html; b.style.left = head.x + 'px'; b.style.top = (-head.y - 4) + 'px'; }
+    if (say[i] && clockT < sayUntil[i] && p.root.visible && p.S > 2) { const head = W2(p.body, 0, 2.25, 0); b.style.opacity = 1; const html = say[i].replace('♡', '<span class="h">♡</span>'); if (b.innerHTML !== html) b.innerHTML = html; b.style.left = head.x + 'px'; b.style.top = Math.max(20, -head.y - 4) + 'px'; }
     else b.style.opacity = 0; }
 }
 // 自己的迴圈只在 Flutter 沒在帶的時候畫（剛載入、Flutter 那邊暫停時）
