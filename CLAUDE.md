@@ -79,3 +79,18 @@ App 裡的雪球程式是從設計稿 `design-history/2026-10-21_雪球底座與
 產生出來的檔。模型在 `web/globe/models/`（Kenney 的放 `h/`、`p/`，旁邊要有 `Textures/colormap.png`）；
 設計稿用的是同一批模型打包成的 `design-history/assets/globe_models.js`（file:// 開也能載），加模型兩邊都要放。
 單獨測雪球：`go: "globe/index.html?scene=train"`，`window.__globe.stats()` 讀效果／粒子數。
+
+## 小八（2026-11-09 使用者：小八常駐、跟吉伊互動）
+
+- 吉伊、小八**各一個 3D 窗格**（兩個 iframe：`pet/index.html` 跟 `pet/index.html#who=hachi`，用 `#` 不用 `?` 是因為
+  Flutter 的離線快取只認沒帶參數的路徑）。兩個窗格載的是同一份 `web/pet/index.html`（同樣由設計稿 port 來），差別只在
+  `ROLE`／`SELF`：小八那個窗格只畫小八、位置跟走路爬梯子的模式是他自己的。Flutter 這邊是兩個 `TallyPetLayer`（`who:` 不同），
+  共用一個 `PetDuo` 導演（`tally_pet.dart` 最下面）。
+- 小八走路、爬梯子、跳下去、被捏起來都跟吉伊一樣（同一份程式）；小八**不做單人動作**（吃東西、變身、場景…），主要動作是互動。
+- 互動（設計稿裡 `b_` 開頭的動作）：兩隻都閒著時倒數（第一次約 16 秒、之後 28～52 秒；網址加 `?meet=1` 縮短，測試用）→ 一隻先喊
+  → 不同張卡片就由喊的那隻跳過去 → 兩隻同時走到這個互動要站的位置（兩隻現在位置的中間，`PetDuo._pos` 要跟設計稿
+  `ACT_POS` 一致）→ 同時叫兩個窗格開始同一個互動（`{a, cx, ox}`，兩邊各算同一套時間、只畫自己那隻，動作座標整體平移 `BO.x`）→
+  做完各自回報站的位置（`{done, x}`）→ 再各自去逛。App 裡目前只放 6 個（打招呼、分飯糰、抱抱、跳舞、猜拳、安慰）；
+  設計稿的「八點檔・小壞話」先只放設計稿參考，要放進 App 再把 `_pos` 加上去。
+- 測試：用 `tools/cdp_test.mjs` 開 `?meet=1`、先在 IndexedDB 放假的 `cen_tally.sync.config.v1`、`tally.books.v1`、`tally.items.v1`
+  （要有幾筆明細才有卡片可站）；iframe 在 `document.querySelectorAll('iframe')`，各自的 `contentWindow.__pet` 看得到 act／位置。

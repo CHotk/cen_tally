@@ -307,6 +307,9 @@ class TallyBookPage extends ConsumerStatefulWidget {
 const _showPet = true;
 const _showGlobe = false;
 
+/// 小八常駐（2026-11-09 使用者）：false 就只有吉伊，程式都留著。
+const _showHachi = true;
+
 class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   /// 吉祥物可以站的東西（結餘卡、每天那張卡、每一筆、按鈕列）。
   final _platKeys = <String, GlobalKey>{};
@@ -314,6 +317,9 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
 
   /// 雪球那一格（吉祥物「從雪球跳出來」進場用）。
   final _globeKey = GlobalKey();
+
+  /// 吉伊跟小八的相遇互動導演（兩隻共用）。
+  final _duo = PetDuo();
 
   /// 記一筆就 +1，雪球搖一下。
   final _shakes = ValueNotifier<int>(0);
@@ -457,14 +463,31 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
       bottomKey: _pk('bottom'),
       overlay: !_showPet
           ? null
-          : TallyPetLayer(
-              platforms: () => _platKeys.values.toList(),
-              rows: () => [
-                for (final e in _platKeys.entries)
-                  if (e.key.startsWith('row-')) e.value,
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                TallyPetLayer(
+                  platforms: () => _platKeys.values.toList(),
+                  rows: () => [
+                    for (final e in _platKeys.entries)
+                      if (e.key.startsWith('row-')) e.value,
+                  ],
+                  globe: _globeKey,
+                  cheers: _shakes,
+                  duo: _duo,
+                ),
+                // 小八：另一個窗格，走路、爬梯子、跳下去跟吉伊一樣，主要是跟吉伊互動
+                if (_showHachi)
+                  TallyPetLayer(
+                    who: 'hachi',
+                    platforms: () => _platKeys.values.toList(),
+                    rows: () => [
+                      for (final e in _platKeys.entries)
+                        if (e.key.startsWith('row-')) e.value,
+                    ],
+                    duo: _duo,
+                  ),
               ],
-              globe: _globeKey,
-              cheers: _shakes,
             ),
       top: AppTopBar(
         title: '我的記帳',

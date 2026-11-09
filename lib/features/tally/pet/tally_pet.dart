@@ -22,6 +22,8 @@ class TallyPetLayer extends StatefulWidget {
     this.rows,
     this.globe,
     this.cheers,
+    this.who = 'chiikawa',
+    this.duo,
   });
 
   /// 可以站的東西（卡片、按鈕列）的 key，上緣就是地板。
@@ -35,6 +37,13 @@ class TallyPetLayer extends StatefulWidget {
 
   /// 記一筆時 +1：牠開心跳一下。
   final ValueNotifier<int>? cheers;
+
+  /// 這一隻是誰：'chiikawa'（吉伊）或 'hachi'（小八，2026-11-09 使用者：小八常駐）。
+  /// 小八走路、爬梯子、跳下去跟吉伊一樣，主要動作是跟吉伊互動（見 [PetDuo]）。
+  final String who;
+
+  /// 兩隻共用的「相遇互動」導演（兩隻都要傳同一個）。
+  final PetDuo? duo;
 
   @override
   State<TallyPetLayer> createState() => _TallyPetLayerState();
@@ -58,6 +67,9 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   Ticker? _ticker;
   Duration _last = Duration.zero;
   final _rng = math.Random();
+
+  bool get _hachi => widget.who == 'hachi';
+  void _send(Map<String, Object> m) => sendPetPose(m, widget.who);
 
   // 狀態
   double x = 80, y = 120, vx = 0, vy = 0;
@@ -93,7 +105,17 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     return v;
   }
 
-  void _chat() => _say(_pickNo('line', _lines), 2.4);
+  /// 小八的台詞。
+  static const _hachiLines = [
+    '馨岑～今天也要加油！',
+    '吉伊呢？',
+    '嘿嘿～',
+    '馨岑記帳了嗎？',
+    '鑫鑫腸好香…',
+    '馨岑辛苦了～',
+  ];
+
+  void _chat() => _say(_pickNo('line', _hachi ? _hachiLines : _lines), 2.4);
 
   // ── 動作（設計稿 design-history/2026-10-21_吉祥物動作優化.html，3D 那邊演，做完回報） ──
   // 2026-10-21 使用者：設計稿裡的全部做進 App。
@@ -124,7 +146,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     mode = 'act';
     t = 0;
     until = maxSec;
-    sendPetPose({'a': a, 'f': face, 'mv': 0});
+    _send({'a': a, 'f': face, 'mv': 0});
   }
 
   void Function()? _undone;
@@ -133,6 +155,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   void initState() {
     super.initState();
     if (!petSupported) return; // 測試、非網頁：沒有吉祥物
+    widget.duo?._reg(this);
     widget.cheers?.addListener(_cheer);
     // 出場：等 3D 那邊說準備好了（模型編譯好、畫完第一幀），再多等一下下才淡入、
     // 從上面掉到卡片上（2026-10-20 使用者：剛開時東西還在載入，進場會卡，要準備好
@@ -151,12 +174,22 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       });
     }
 
-    _unready = listenPetReady(start);
-    _undone = listenPetDone((_) {
-      if (mounted && mode == 'act') {
+    _unready = listenPetReady(start, widget.who);
+    _undone = listenPetDone((act, endX) {
+      if (!mounted) return;
+      if (act.startsWith('b_')) {
+        // 互動做完：站在結束的位置（3D 那邊報回來的），再各自去逛
+        if (endX != null) {
+          final p = _platOf(plat);
+          x = p == null ? endX : endX.clamp(p.x1, p.x2).toDouble();
+        }
+        _buddyAct = false;
+        widget.duo?._finished(this);
+        _setMode('idle', until0: (.8 + _rng.nextDouble()) * _pace);
+      } else if (mode == 'act') {
         _setMode('idle', until0: (.6 + _rng.nextDouble()) * _pace);
       }
-    });
+    }, widget.who);
     Timer(const Duration(seconds: 12), start);
   }
 
@@ -164,7 +197,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
 
   // ── 進場（2026-10-20 使用者：六種隨機，設計稿同一套） ──
   // 出場固定說這句（2026-10-21 使用者要求，愛心是粉紅色）。
-  void _greet() => _say('馨岑妳好啊♡', 2.8);
+  void _greet() => _say(_hachi ? '馨岑～我來了！' : '馨岑妳好啊♡', 2.8);
 
   /// 照 [clock] 排的待辦（不用 Timer：關頁面就跟著 ticker 一起停）。
   final _todo = <(double, void Function())>[];
@@ -189,7 +222,36 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     _popT = 0;
   }
 
+  /// 小八出場：吉伊出場一陣子之後，從畫面右邊跑進來。
+  void _enterHachi() {
+    x = y = -300;
+    plat = null;
+    _later(4.5, () {
+      if (!mounted) return;
+      final rows = _rows();
+      final row = rows.isNotEmpty ? rows.first : null;
+      final sz = (context.findRenderObject() as RenderBox?)?.size;
+      if (row == null || sz == null) {
+        x = (sz?.width ?? 300) - 80;
+        y = 110;
+        _show();
+        _setMode('fall', vx0: -30, vy0: 0);
+        _later(.9, _greet);
+        return;
+      }
+      x = sz.width + 30;
+      y = row.y;
+      plat = row.key;
+      face = -1;
+      target = row.x2 - 90;
+      speed = 150;
+      _show();
+      _setMode('enterRun');
+    });
+  }
+
   void _enter() {
+    if (_hachi) return _enterHachi();
     const kinds = ['drop', 'door', 'chute', 'globe', 'run', 'poof'];
     // 網址加 ?ent=door 之類可以指定（看效果、測試用）
     final forced = Uri.base.queryParameters['ent'];
@@ -277,6 +339,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
 
   @override
   void dispose() {
+    widget.duo?._unreg(this);
     _unready?.call();
     _undone?.call();
     widget.cheers?.removeListener(_cheer);
@@ -315,7 +378,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
 
   // 泡泡改在 3D 那邊畫（2026-10-21：跟頭頂同一幀，跳起來、被捏起來都在正上方；字是瀏覽器的字型，
   // 不會有 CanvasKit 中文字還沒下載的空白）。
-  void _say(String s, [double sec = 1.6]) => sendPetPose({'say': s, 'sd': sec});
+  void _say(String s, [double sec = 1.6]) => _send({'say': s, 'sd': sec});
 
   void _setMode(String m, {double? until0, double? vy0, double? vx0}) {
     if (m != 'fall') ignore = null;
@@ -328,7 +391,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     }
     if (vx0 != null) vx = vx0;
     if (m != 'climb') ladderTop = ladderBot = null;
-    sendPetPose({
+    _send({
       'm': m == 'enterRun' ? 'run' : (m == 'hop' ? 'happy' : m),
       'f': face,
       'mv': 0,
@@ -374,10 +437,15 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       return _setMode('look', until0: 2.2 * _pace);
     }
     if (r < .88) {
+      // 小八主要動作是跟吉伊互動（PetDuo），自己只逛不做單人動作
+      if (_hachi) {
+        go(42);
+        return _setMode('walk');
+      }
       final a = _pickAct();
       return _act(a, a.startsWith('sit') ? 5.5 * _pace : 18);
     }
-    if (r < .91) return _setMode('sleep', until0: 9 * _pace);
+    if (r < .91 && !_hachi) return _setMode('sleep', until0: 9 * _pace);
     if (r < .95) return _setMode('happy', vy0: -330);
     if (_rng.nextDouble() < .3) _chat();
     _setMode('idle', until0: (1.5 + _rng.nextDouble() * 2) * _pace);
@@ -430,6 +498,10 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     if (puffAt != null && clock - puffAt! > .7) puffAt = null;
     if (chuteGoneAt != null && clock - chuteGoneAt! > .9) chuteGoneAt = null;
 
+    // 互動到一半站的那張卡片捲走了：兩隻都結束互動，回去各自逛
+    if (_buddyAct && (plat == null || _platOf(plat, all) == null)) {
+      widget.duo?._cancel();
+    }
     if (plat != null) {
       final p = _platOf(plat, all);
       if (p == null) {
@@ -448,7 +520,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       final f = d.sign.toInt();
       if (f != face) {
         face = f;
-        sendPetPose({'f': face});
+        _send({'f': face});
       }
       x += d.sign * math.min(d.abs(), speed * dt);
       moving = true;
@@ -457,7 +529,14 @@ class _TallyPetLayerState extends State<TallyPetLayer>
 
     switch (mode) {
       case 'idle' || 'look' || 'sit':
-        if (t > until) _think(all);
+        if (t > until) {
+          // 兩隻正在約好見面（跳過去、走過去、互動中）就先不要亂跑
+          if (widget.duo?.busy ?? false) {
+            until = t + .6;
+          } else {
+            _think(all);
+          }
+        }
       case 'sleep':
         if (t > until) _act('wake', 5);
       case 'act':
@@ -480,7 +559,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
           y = tp.y;
           plat = tp.key;
           _setMode('idle', until0: (.8 + _rng.nextDouble()) * _pace);
-          sendPetPose({'land': 1});
+          _send({'land': 1});
         }
       case 'enterRun':
         if (step()) {
@@ -504,7 +583,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
             chuteGoneX = x;
             chuteGoneY = y - _s * 1.7;
             _setMode('idle', until0: 1.5);
-            sendPetPose({'land': 1});
+            _send({'land': 1});
             _greet();
             break;
           }
@@ -578,7 +657,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
                   'idle',
                   until0: (.5 + _rng.nextDouble() * 1.2) * _pace,
                 );
-                sendPetPose({'land': 1});
+                _send({'land': 1});
               }
               break;
             }
@@ -592,15 +671,57 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       case 'dizzy':
         if (t > until) _setMode('idle', until0: 1);
     }
+    if (!_hachi) widget.duo?._tick(dt, all, size.width);
     _frameNo++;
     if (moving != _wasMoving) {
       _wasMoving = moving;
-      sendPetPose({'mv': moving ? 1 : 0, 'sp': speed, 'f': face});
+      _send({'mv': moving ? 1 : 0, 'sp': speed, 'f': face});
     }
     setState(() {});
   }
 
   bool _wasMoving = false;
+
+  // ── 跟另一隻互動（PetDuo 指揮） ──
+  /// 正在做互動動作（3D 那邊自己算位置）：Flutter 的影子、接手指的格子先收起來。
+  bool _buddyAct = false;
+
+  /// 跳到 [p] 那張卡片、落在 [nearX] 附近（跟對方在不同張卡片時，主動去找的那隻用）。
+  void _hopToPlat(_Plat p, double nearX) {
+    hopKey = p.key;
+    hx0 = x;
+    hy0 = y;
+    hx1 = (nearX + (x < nearX ? -90 : 90))
+        .clamp(p.x1 + 10, p.x2 - 10)
+        .toDouble();
+    face = hx1 >= x ? 1 : -1;
+    plat = null;
+    _setMode('hop');
+  }
+
+  /// 走到 [tx]（互動要站的位置）。
+  void _seekTo(double tx) {
+    final p = _platOf(plat);
+    target = p == null ? tx : tx.clamp(p.x1 + 8, p.x2 - 8).toDouble();
+    speed = 62;
+    face = target >= x ? 1 : -1;
+    _setMode('walk');
+  }
+
+  /// 開始互動 [act]：兩隻同時開始，中心點 [cx]，[otherX] 是另一隻現在的位置。
+  void _startBuddy(String act, double cx, double otherX) {
+    mode = 'act';
+    t = 0;
+    until = 60;
+    _buddyAct = true;
+    _send({'a': act, 'f': face, 'mv': 0, 'cx': cx, 'ox': otherX});
+  }
+
+  void _endBuddy() {
+    if (!_buddyAct) return;
+    _buddyAct = false;
+    _setMode('idle', until0: .8 * _pace);
+  }
 
   // ── 跳到別張卡片（站的那張捲出畫面時，2026-10-21 使用者：掉下去再從上面掉回來不夠順） ──
   GlobalKey? hopKey;
@@ -645,7 +766,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
       if (p != null) dy = p.y - y;
     }
     _dyNow = dy;
-    sendPetPose({'x': x, 'y': y + dy, 's': _s * math.max(.001, _pop)});
+    _send({'x': x, 'y': y + dy, 's': _s * math.max(.001, _pop)});
     return dy;
   }
 
@@ -673,7 +794,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   @override
   Widget build(BuildContext context) {
     if (!petSupported) return const SizedBox.shrink();
-    final shadowY = plat != null ? y : null;
+    final shadowY = plat != null && !_buddyAct ? y : null;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -725,7 +846,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
             child: AnimatedOpacity(
               opacity: _visible ? 1 : 0.01,
               duration: const Duration(milliseconds: 500),
-              child: buildPetView(),
+              child: buildPetView(widget.who),
             ),
           ),
         ),
@@ -739,7 +860,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
                 const Positioned(left: 0, top: 0, child: SizedBox()),
                 // 接手指的透明格子（只有牠那麼大）
                 Positioned(
-                  left: _visible ? x - _s : -999,
+                  left: _visible && !_buddyAct ? x - _s : -999,
                   top: y - _s * 2.3,
                   width: _s * 2,
                   height: _s * 2.3,
@@ -1093,5 +1214,174 @@ class _RenderFollow extends RenderProxyBox {
   @override
   void applyPaintTransform(RenderBox child, Matrix4 transform) {
     transform.translateByDouble(0, _last, 0, 1);
+  }
+}
+
+/// 吉伊跟小八的「相遇互動」導演（2026-11-09 使用者：小八常駐，偶爾會互相去找對方、在中間互動）。
+/// 兩隻各一個 [TallyPetLayer]（各自一個 3D 窗格），共用同一個 PetDuo：
+/// 兩隻都閒著（站著、東張西望、走路）時倒數，時間到就有一隻先喊對方；不在同一張卡片就由喊的那隻跳過去；
+/// 然後兩隻同時走到這個互動要站的位置（兩隻現在位置的中間）；到了就同時叫兩個 3D 窗格開始同一個互動動作
+/// （web/pet 的 b_ 開頭動作，兩邊各算同一套時間、只畫自己那隻）；做完各自回報站的位置，再各自去逛。
+class PetDuo {
+  _TallyPetLayerState? _a, _b; // 吉伊、小八
+  String _phase = 'none'; // none / hop / walk / act
+  double _meetIn = _first;
+  double _t = 0;
+  String? _act;
+  double _cx = 0, _xa = 0, _xb = 0;
+  int _pending = 0;
+  final _rng = math.Random();
+  String? _last;
+
+  /// 網址加 ?meet=1 可以縮短等待（看效果、測試用）。
+  static final _fast = Uri.base.queryParameters['meet'] != null;
+  static final double _first = _fast ? 2 : 16;
+
+  /// 互動動作（設計稿 b_ 開頭）：吉伊、小八各站畫面寬度的幾成（跟 web/pet 裡各動作自己的位置一樣）。
+  static const _pos = <String, List<double>>{
+    'b_hello': [.32, .68],
+    'b_share': [.3, .72],
+    'b_hug': [.28, .72],
+    'b_dance': [.3, .7],
+    'b_rps': [.3, .7],
+    'b_comfort': [.28, .82],
+  };
+
+  /// 兩隻正在約好見面或互動：各自先不要亂跑。
+  bool get busy => _phase != 'none';
+
+  void _reg(_TallyPetLayerState s) {
+    if (s._hachi) {
+      _b = s;
+    } else {
+      _a = s;
+    }
+  }
+
+  void _unreg(_TallyPetLayerState s) {
+    if (_a == s) _a = null;
+    if (_b == s) _b = null;
+    _phase = 'none';
+  }
+
+  static bool _free(_TallyPetLayerState? s) =>
+      s != null &&
+      s._visible &&
+      s.plat != null &&
+      const {'idle', 'look', 'walk', 'run'}.contains(s.mode);
+
+  static bool _there(_TallyPetLayerState s, double tx) =>
+      s.mode == 'idle' && (s.x - tx).abs() < 6;
+
+  void _rest() {
+    _phase = 'none';
+    _act = null;
+    _t = 0;
+    _meetIn = _fast ? 6 : 28 + _rng.nextDouble() * 24;
+  }
+
+  /// 其中一隻被打斷（站的卡片捲走了）：兩隻都結束互動、回去各自逛。
+  void _cancel() {
+    _a?._endBuddy();
+    _b?._endBuddy();
+    _rest();
+  }
+
+  void _finished(_TallyPetLayerState s) {
+    if (_phase != 'act') return;
+    if (--_pending <= 0) _rest();
+  }
+
+  /// 吉伊那隻每一幀呼叫（[all] 是目前能站的卡片、[w] 是畫面寬度）。
+  void _tick(double dt, List<_Plat> all, double w) {
+    final a = _a, b = _b;
+    if (a == null || b == null) return;
+    switch (_phase) {
+      case 'none':
+        if (!_free(a) || !_free(b)) return;
+        _meetIn -= dt;
+        if (_meetIn <= 0) _start(a, b, all, w);
+      case 'hop':
+        _t += dt;
+        if (_t > 12) return _cancel();
+        if (a.plat != null &&
+            a.plat == b.plat &&
+            a.mode == 'idle' &&
+            b.mode == 'idle') {
+          _seek(a, b, all, w);
+        }
+      case 'walk':
+        _t += dt;
+        if (_t > 14) return _cancel();
+        if (_there(a, _xa) && _there(b, _xb)) {
+          final ax = a.x, bx = b.x;
+          a._startBuddy(_act!, _cx, bx);
+          b._startBuddy(_act!, _cx, ax);
+          _pending = 2;
+          _phase = 'act';
+          _t = 0;
+        }
+      case 'act':
+        _t += dt;
+        if (_t > 60) _cancel();
+    }
+  }
+
+  void _start(
+    _TallyPetLayerState a,
+    _TallyPetLayerState b,
+    List<_Plat> all,
+    double w,
+  ) {
+    final pa = a._platOf(a.plat, all), pb = b._platOf(b.plat, all);
+    if (pa == null || pb == null) {
+      _meetIn = 3;
+      return;
+    }
+    String pick() {
+      final keys = _pos.keys.toList();
+      String v;
+      do {
+        v = keys[_rng.nextInt(keys.length)];
+      } while (keys.length > 1 && v == _last);
+      return _last = v;
+    }
+
+    _act = pick();
+    final aCalls = _rng.nextBool();
+    final caller = aCalls ? a : b, other = aCalls ? b : a;
+    caller._say(aCalls ? '小八～！' : '吉伊～！', 1.6);
+    other._later(.7, () => other._say(aCalls ? '來囉～' : '來了～', 1.3));
+    _t = 0;
+    if (pa.key != pb.key) {
+      caller._hopToPlat(aCalls ? pb : pa, other.x);
+      _phase = 'hop';
+    } else {
+      _seek(a, b, all, w);
+    }
+  }
+
+  /// 兩隻在同一張卡片了：算互動中心（兩隻現在位置的中間，不超出卡片），兩隻同時走過去。
+  void _seek(
+    _TallyPetLayerState a,
+    _TallyPetLayerState b,
+    List<_Plat> all,
+    double w,
+  ) {
+    final p = a._platOf(a.plat, all);
+    if (p == null) return _cancel();
+    final half = w * .34;
+    var cx = (a.x + b.x) / 2;
+    cx = p.x2 - p.x1 > 2 * half
+        ? cx.clamp(p.x1 + half, p.x2 - half).toDouble()
+        : (p.x1 + p.x2) / 2;
+    final pos = _pos[_act]!;
+    _cx = cx;
+    _xa = (cx + (pos[0] - .5) * w).clamp(p.x1 + 8, p.x2 - 8).toDouble();
+    _xb = (cx + (pos[1] - .5) * w).clamp(p.x1 + 8, p.x2 - 8).toDouble();
+    a._seekTo(_xa);
+    b._seekTo(_xb);
+    _phase = 'walk';
+    _t = 0;
   }
 }

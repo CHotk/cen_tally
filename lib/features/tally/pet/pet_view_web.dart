@@ -9,18 +9,18 @@ import 'package:web/web.dart' as web;
 /// 這個 iframe 不接手指（pointer-events: none），捏、點都是 Flutter 那邊的透明格子在接。
 const petSupported = true;
 
-web.HTMLIFrameElement? _frame;
-var _registered = false;
+/// 吉伊跟小八各一個窗格（2026-11-09 使用者：小八常駐）；[who] 是 'chiikawa'（預設）或 'hachi'。
+final _frames = <String, web.HTMLIFrameElement>{};
+final _registered = <String>{};
 
-Widget buildPetView() {
-  if (!_registered) {
-    _registered = true;
-    ui_web.platformViewRegistry.registerViewFactory('tally-pet', (int id) {
+Widget buildPetView([String who = 'chiikawa']) {
+  if (_registered.add(who)) {
+    ui_web.platformViewRegistry.registerViewFactory('tally-pet-$who', (int id) {
       _passThrough(id);
       final f = web.HTMLIFrameElement()
-        ..src = 'pet/index.html'
+        ..src = who == 'chiikawa' ? 'pet/index.html' : 'pet/index.html#who=$who'
         ..setAttribute('allowtransparency', 'true')
-        ..setAttribute('title', '吉祥物');
+        ..setAttribute('title', who == 'chiikawa' ? '吉祥物' : '吉祥物（小八）');
       f.style
         ..border = 'none'
         ..width = '100%'
@@ -28,11 +28,11 @@ Widget buildPetView() {
         ..background = 'transparent'
         ..pointerEvents = 'none'
         ..colorScheme = 'normal';
-      _frame = f;
+      _frames[who] = f;
       return f;
     });
   }
-  return const HtmlElementView(viewType: 'tally-pet');
+  return HtmlElementView(viewType: 'tally-pet-$who');
 }
 
 /// 這個窗格蓋滿整個畫面，只把 iframe 設成不接手指不夠：Flutter 包在外面的
@@ -48,9 +48,9 @@ void _passThrough(int id) {
             as web.HTMLElement?;
     host?.style.pointerEvents = 'none';
     final root = web.document.querySelector('flt-glass-pane')?.shadowRoot;
-    if (root != null && root.querySelector('#pet-pass') == null) {
+    if (root != null && root.querySelector('#pet-pass-$id') == null) {
       final css = web.document.createElement('style') as web.HTMLStyleElement
-        ..id = 'pet-pass'
+        ..id = 'pet-pass-$id'
         ..textContent =
             'flt-platform-view-slot:has(> slot[name="flt-pv-slot-$id"])'
             '{pointer-events:none !important}';
@@ -65,10 +65,16 @@ void _passThrough(int id) {
 }
 
 /// 3D 那邊準備好了（web/pet 送 {pet: {ready: 1}}）就呼叫 [onReady]。
-void Function() listenPetReady(void Function() onReady) {
+void Function() listenPetReady(
+  void Function() onReady, [
+  String who = 'chiikawa',
+]) {
   final handler = ((web.MessageEvent e) {
     final d = e.data.dartify();
-    if (d is Map && d['pet'] is Map && (d['pet'] as Map)['ready'] != null) {
+    if (d is Map &&
+        d['pet'] is Map &&
+        (d['pet'] as Map)['ready'] != null &&
+        ((d['pet'] as Map)['who'] ?? 'chiikawa') == who) {
       onReady();
     }
   }).toJS;
@@ -77,11 +83,19 @@ void Function() listenPetReady(void Function() onReady) {
 }
 
 /// 3D 那邊做完一個動作（吃東西、變身、對決…，web/pet 送 {pet: {done: 動作}}）就呼叫 [onDone]。
-void Function() listenPetDone(void Function(String act) onDone) {
+/// 互動動作（b_ 開頭）做完時，另外帶回這隻最後站的位置 x。
+void Function() listenPetDone(
+  void Function(String act, double? x) onDone, [
+  String who = 'chiikawa',
+]) {
   final handler = ((web.MessageEvent e) {
     final d = e.data.dartify();
-    if (d is Map && d['pet'] is Map && (d['pet'] as Map)['done'] != null) {
-      onDone('${(d['pet'] as Map)['done']}');
+    if (d is Map &&
+        d['pet'] is Map &&
+        (d['pet'] as Map)['done'] != null &&
+        ((d['pet'] as Map)['who'] ?? 'chiikawa') == who) {
+      final m = d['pet'] as Map;
+      onDone('${m['done']}', (m['x'] as num?)?.toDouble());
     }
   }).toJS;
   web.window.addEventListener('message', handler);
@@ -90,8 +104,8 @@ void Function() listenPetDone(void Function(String act) onDone) {
 
 /// 直接呼叫 3D 頁的 petPose（同一個網站），當場畫，跟 Flutter 同一幀；
 /// 還沒載好（沒有 petPose）才退回 postMessage。
-void sendPetPose(Map<String, Object> pose) {
-  final w = _frame?.contentWindow;
+void sendPetPose(Map<String, Object> pose, [String who = 'chiikawa']) {
+  final w = _frames[who]?.contentWindow;
   if (w == null) return;
   try {
     final o = w as JSObject;

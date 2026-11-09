@@ -23,7 +23,9 @@ const html = `<!doctype html>
     {a: 動作}            做一個動作（吃東西、變身、對決、淹水…，見設計稿），做完送 {pet: {done: 動作}}
     {land: 1}            落地壓扁一下
     {say: 台詞, sd: 秒}  說話（泡泡畫在這裡，跟頭頂同一幀）
-  送給 Flutter：{pet: {ready: 1}}（畫好第二幀）、{pet: {done: 動作}}。
+  送給 Flutter：{pet: {ready: 1, who}}（畫好第二幀）、{pet: {done: 動作, who, x}}（x＝互動結束時自己站的位置）。
+  兩隻各一個窗格（2026-11-09）：網址 #who=hachi 是小八那個窗格（用 # 不用 ?，Flutter 的離線快取才認得是同一個檔）（只畫小八，位置跟模式是他自己的），沒帶是吉伊。
+  互動動作（b_ 開頭）兩個窗格同時開始、各自算同一套時間，只畫自己那隻：{a, cx（互動中心 x）, ox（另一隻現在的 x）}。
   Three.js 打包在 ../globe/vendor。※ 角色版權屬原作者，私人使用。
 -->
 <style>
@@ -37,7 +39,7 @@ const html = `<!doctype html>
   /* 台詞：一行不換行、置中在頭上（2026-10-21 使用者） */
   .bubble { position: absolute; z-index: 3; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .18s;
     font: 800 12.5px/1.2 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.5); }
-  .bubble .h { color: #FF6FA5; } .bubble.foe { color: #ffc2d4; }
+  .bubble .h { color: #FF6FA5; } .bubble.foe { color: #ffc2d4; } .bubble.hachi { color: #cfe0ff; }
   #big { position: absolute; z-index: 3; left: 50%; top: 32%; transform: translate(-50%, -50%) scale(.6); font: 900 24px/1 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     letter-spacing: 2px; opacity: 0; white-space: nowrap; color: #fff; text-shadow: 0 0 12px rgba(255,200,87,.8), 0 2px 0 #000; transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1); }
   #big.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -52,6 +54,7 @@ const html = `<!doctype html>
 <div id="water"><div class="wv"></div><div class="rays"></div></div>
 <div class="bubble" id="bub0"></div>
 <div class="bubble foe" id="bub1"></div>
+<div class="bubble hachi" id="bub2"></div>
 <div id="big"></div>
 <script>
 // Blender 做的模型（tools/blender/pet_props.py，GLB）：App 裡從 models/ 抓，只載有放進 App 的動作用到的
@@ -79,9 +82,14 @@ let springy = true;
 const snapNow = () => false;
 const groundY = () => fy; // 腳底（搭車、搭火車從這裡開始）
 let cur = 'idle', actT = 0, actionKey = null, fm = 'idle', moving = false, speed = 40, fx = -999, fy = -999, prevFx = null, returning = false, costumeAt = 0;
-me.S = foe.S = 23;
+// 兩隻各一個窗格：#who=hachi 是小八那個（SELF＝小八），沒帶是吉伊。互動動作兩邊同時跑、只畫自己那隻。
+const ROLE = location.hash.includes('who=hachi') ? 'hachi' : 'chiikawa', IS_HACHI = ROLE === 'hachi', SELF = IS_HACHI ? hachi : me;
+if (IS_HACHI) selfRef = hachi;
+companion = true; // 互動從兩隻現在站的位置開始（不是從畫面外走進來）
+me.S = foe.S = hachi.S = 23;
 // 這幾個動作自己會移動位置（對決、滑倒、忍者瞬移、淹水游泳），做的時候不跟 Flutter 的位置
 const OWN = new Set(['duel', 'trip', 'tf_ninja', 'flood']);
+const isOwn = k => OWN.has(k) || k.startsWith('b_'); // 互動（b_）也是自己算位置
 // Flutter 那邊的模式（不是設計稿裡的動作）
 const APP = {
   loco: { pose(P, t) { if (moving) walkCycle(P, clockT * speed * .16, speed > 80 ? 1 : 0); else ACTS.idle.pose(P, t); } },
@@ -89,49 +97,55 @@ const APP = {
   climb: { pose(P, t) { P.turn = Math.PI; const ph = clockT * 9, s = Math.sin(ph); hR(P, [.85, 1.45 + s * .35, -.35]); hL(P, [.85, 1.45 - s * .35, -.35]); P.lLy = .06 + Math.max(0, s) * .25; P.lRy = .06 + Math.max(0, -s) * .25; } },
   fall: { pose(P) { both(P, 'high'); P.wide = 1; P.mouth = .6; P.lLy = P.lRy = .2; } },
   happy: { pose(P) { both(P, 'high'); P.happy = 1; P.mouth = .4; P.sy = 1.08; },
-    ev(t0, t1) { if (every(t0, t1, .18)) puff('✦', W2(me.body, (Math.random() - .5) * 2, 2.1, 0), { color: ['#ffd36b', '#ff9fbe', '#8fd3ff'][Math.floor(Math.random() * 3)], vy: 40, size: .2, life: .6 }); } },
+    ev(t0, t1) { if (every(t0, t1, .18)) puff('✦', W2(SELF.body, (Math.random() - .5) * 2, 2.1, 0), { color: ['#ffd36b', '#ff9fbe', '#8fd3ff'][Math.floor(Math.random() * 3)], vy: 40, size: .2, life: .6 }); } },
   chute: { pose(P) { both(P, [.6, 2.15, .1]); P.roll = Math.sin(clockT * 1.8) * .12; P.happy = .6; } },
 };
 function setAct(name) { if (name === cur) return; (ACTS[cur] || APP[cur])?.exit?.(); chairV1.visible = false; sparkV1.visible = false;
   if (cur === 'sleep' && name !== 'wake') { pillow.visible = false; me.hat.remove(nightcap); me.snot.visible = false; }
-  if (OWN.has(cur) && !OWN.has(name)) returning = true;
+  if (cur.startsWith('b_') && !name.startsWith('b_')) { me.px += BO.x; hachi.px += BO.x; BO.x = 0; } // 互動結束：動作座標換回畫面座標
+  if (isOwn(cur) && !isOwn(name)) returning = true;
   cur = name; actT = 0; (ACTS[name] || APP[name])?.enter?.(); if (name.startsWith('tf_')) costumeAt = clockT; }
 function modeOf(m) { if (m === 'walk' || m === 'run' || m === 'toLadder' || m === 'enterRun') return 'loco'; if (m === 'sit') return 'sitEdge';
   if (m === 'enter' || m === 'idle') return 'idle'; if (APP[m] || ACTS[m]) return m; return 'idle'; }
 function apply(p) {
-  if (p.x != null) { fx = p.x; fy = p.y; } if (p.s != null) me.S = foe.S = Math.max(.01, p.s);
-  if (p.f) me.dir = p.f; if (p.mv != null) moving = !!p.mv; if (p.sp) speed = p.sp;
+  if (p.x != null) { fx = p.x; fy = p.y; } if (p.s != null) me.S = foe.S = hachi.S = Math.max(.01, p.s);
+  if (p.f) SELF.dir = p.f; if (p.mv != null) moving = !!p.mv; if (p.sp) speed = p.sp;
   if (p.land) { me.cur.sy = .72; me.cur.sx = 1.2; }
-  if (p.say) talk(p.say, p.sd || 1.6);
-  if (p.a && ACTS[p.a]) { actionKey = p.a; setAct(p.a); }
+  if (p.say) talk(p.say, p.sd || 1.6, IS_HACHI ? 2 : 0);
+  if (p.a && ACTS[p.a]) { actionKey = p.a;
+    if (p.a.startsWith('b_')) { // 互動：中心點、另一隻現在的位置
+      BO.x = (p.cx != null ? p.cx : W / 2) - W / 2; SELF.px = fx; SELF.py = fy; const o = IS_HACHI ? me : hachi; o.px = p.ox != null ? p.ox : fx; o.py = fy; }
+    setAct(p.a); }
   else if (p.m && p.m !== 'act') { fm = p.m; actionKey = null; setAct(modeOf(p.m)); }
 }
 let drivenAt = -1;
 window.petPose = p => { apply(p); if (p.x != null) { drivenAt = performance.now(); frame(); } };
 addEventListener('message', e => { const p = e.data && e.data.pet; if (p) apply(p); });
-const post = m => { try { parent.postMessage(m, '*'); } catch (_) {} };
+const post = m => { try { m.pet.who = ROLE; parent.postMessage(m, '*'); } catch (_) {} };
 
-const bub = [document.getElementById('bub0'), document.getElementById('bub1')];
+const bub = [document.getElementById('bub0'), document.getElementById('bub1'), document.getElementById('bub2')];
 const clock = new THREE.Clock();
 function frame() { tick(Math.min(clock.getDelta(), 1 / 30)); renderer.render(scene, camera); }
 function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   const a = ACTS[cur] || APP[cur];
   // ── 位置 ──
   if (me.swimOff) { me.px += (me.swimOff.x - me.px) * Math.min(1, dt * 6); me.py += (me.swimOff.y - me.py) * Math.min(1, dt * 6); }
-  else if (OWN.has(cur)) { me.py = fy; }
-  else if (returning && Math.abs(fx - me.px) + Math.abs(fy - me.py) > 2) { const k = Math.min(1, dt * 9); me.px += (fx - me.px) * k; me.py += (fy - me.py) * k; }
-  else { returning = false; me.px = fx; me.py = fy; }
+  else if (isOwn(cur)) { me.py = hachi.py = fy; }
+  else if (returning && Math.abs(fx - SELF.px) + Math.abs(fy - SELF.py) > 2) { const k = Math.min(1, dt * 9); SELF.px += (fx - SELF.px) * k; SELF.py += (fy - SELF.py) * k; }
+  else { returning = false; SELF.px = fx; SELF.py = fy; }
   // 被捏著：放大一點、跟著手指甩（鐘擺）
   const vx = prevFx == null ? 0 : (fx - prevFx) / Math.max(dt, 1e-3); prevFx = fx;
-  me.Sk += ((cur === 'held' ? 1.15 : 1) - me.Sk) * Math.min(1, dt * 10);
-  if (cur === 'held') { me.swingV += ((THREE.MathUtils.clamp(-vx * .0011, -.7, .7) - me.swing) * 90 - me.swingV * 8) * dt; me.swing += me.swingV * dt; } else me.swing *= Math.pow(.02, dt);
+  SELF.Sk += ((cur === 'held' ? 1.15 : 1) - SELF.Sk) * Math.min(1, dt * 10);
+  if (cur === 'held') { SELF.swingV += ((THREE.MathUtils.clamp(-vx * .0011, -.7, .7) - SELF.swing) * 90 - SELF.swingV * 8) * dt; SELF.swing += SELF.swingV * dt; } else SELF.swing *= Math.pow(.02, dt);
   // ── 姿勢 ──
-  const P = { ...BASE }, F = { ...BASE };
-  a?.pose?.(P, actT, F);
-  if (cur === 'held') P.roll += me.swing;
+  const P = { ...BASE }, F = { ...BASE }, Hh = { ...BASE };
+  const Q = IS_HACHI && !cur.startsWith('b_') ? Hh : P; // 小八窗格：走路、爬梯子這些是小八自己的姿勢；互動是兩隻一起（P＝吉伊、Hh＝小八）
+  a?.pose?.(Q, actT, F, Hh);
+  if (cur === 'held') Q.roll += SELF.swing;
   a?.ev?.(t0, actT);
-  springTo(me, P, dt); if (foe.root.visible) { foe.py = me.py; springTo(foe, F, dt); }
-  applyPet(me, dt); if (foe.root.visible) applyPet(foe, dt);
+  springTo(me, P, dt); springTo(hachi, Hh, dt); if (foe.root.visible) { foe.py = me.py; springTo(foe, F, dt); }
+  if (IS_HACHI) me.root.visible = false; hachi.root.visible = IS_HACHI; // 這個窗格只畫自己那隻
+  applyPet(me, dt); applyPet(hachi, dt); if (foe.root.visible) applyPet(foe, dt);
   if (pillow.visible) { pillow.userData.t = (pillow.userData.t || 0) + dt; const k = Math.min(1, pillow.userData.t / .35); const s = Math.max(.001, ease(k) * (1 + Math.sin(k * Math.PI) * .3)); pillow.position.set(-1.25, .25, .1); pillow.scale.set(1.3 * s, .42 * s, .9 * s); }
   // ── 特效 ──
   for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.age += dt; const k = q.age / q.life; q.v.y += q.g * dt;
@@ -143,18 +157,18 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   if (shakeAmt > .3) { canvas.style.transform = 'translate(' + (Math.random() - .5) * shakeAmt * .6 + 'px,' + (Math.random() - .5) * shakeAmt * .6 + 'px)'; shakeAmt *= Math.pow(.004, dt); } else if (canvas.style.transform) { canvas.style.transform = ''; shakeAmt = 0; }
   if (bigUntil && clockT > bigUntil) { bigEl.classList.remove('on'); bigUntil = 0; }
   // ── 動作做完：告訴 Flutter ──
-  if (actionKey && a?.dur && actT >= a.dur) { const k = actionKey; actionKey = null; setAct('idle'); post({ pet: { done: k } }); }
+  if (actionKey && a?.dur && actT >= a.dur) { const k = actionKey; actionKey = null; const endX = SELF.px + BO.x; setAct('idle'); post({ pet: { done: k, x: endX } }); }
   // 變身久了自己變回來（像卡比一樣先留著能力一陣子）
   if (costume && !cur.startsWith('tf_') && clockT - costumeAt > 40 && cur !== 'held') { for (let i = 0; i < 8; i++) puff('●', W2(me.body, (Math.random() - .5) * 2, Math.random() * 2.2, 0), { color: '#e8e8f0', vy: 20, size: .5, grow: 1.5, life: .7 }); wear(null); }
   // ── 台詞泡泡：跟著頭頂（含跳起來、被捏起來），一行不換行 ──
-  for (const [i, p] of [[0, me], [1, foe]]) { const b = bub[i];
+  for (const [i, p] of [[0, me], [1, foe], [2, hachi]]) { const b = bub[i];
     if (say[i] && clockT < sayUntil[i] && p.root.visible && p.S > 2) { const head = W2(p.body, 0, 2.25, 0); b.style.opacity = 1; const html = say[i].replace('♡', '<span class="h">♡</span>'); if (b.innerHTML !== html) b.innerHTML = html; b.style.left = head.x + 'px'; b.style.top = (-head.y - 4) + 'px'; }
     else b.style.opacity = 0; }
 }
 // 自己的迴圈只在 Flutter 沒在帶的時候畫（剛載入、Flutter 那邊暫停時）
 (function loop() { if (performance.now() - drivenAt > 250) frame(); requestAnimationFrame(loop); })();
 requestAnimationFrame(() => requestAnimationFrame(() => post({ pet: { ready: 1 } })));
-window.__pet = { setAct, get act() { return cur; }, me, foe, ACTS }; // 測試用
+window.__pet = { setAct, get act() { return cur; }, me, foe, hachi, ACTS, ROLE, BO }; // 測試用
 </script>
 </body>
 </html>

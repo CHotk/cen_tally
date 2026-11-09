@@ -83,7 +83,7 @@
     <h1>吉祥物動作優化</h1>
     <p>同一隻吉祥物，動作系統整個重做：換動作改成慢慢過渡、手真的會動（舊版手臂轉軸在手掌上，幾乎不會動）、身體可以前趴側躺、臉多了表情。<br>
     新增：吃東西、睡覺整套、坐卡片邊晃腳、席地坐、數錢、記帳、跳舞、揮手、伸懶腰、打噴嚏、滑倒、害羞；<b>抓起來</b>改成浮在手指上方＋重做掙扎；<b>變身</b>（魔法師、劍士、火焰、冰、廚師、忍者，可以一直變）；<b>黑色對手</b>登場持劍對決。<br>
-    <b>2026-11-09 新增：小八</b>（藍色頭頂、貓耳朵、笑嘴）可以跟吉伊互動——打招呼擊掌、分飯糰、抱抱、一起跳舞、猜拳、安慰愛哭的吉伊（右邊「吉伊 × 小八」那一區）。<br>
+    <b>2026-11-09 新增：小八</b>（藍色頭頂、貓耳朵、笑嘴）可以跟吉伊互動——打招呼擊掌、分飯糰、抱抱、一起跳舞、猜拳、安慰愛哭的吉伊（右邊「吉伊 × 小八」那一區），還有<b>八點檔戲碼跟偷說馨岑小壞話</b>（「八點檔・小壞話」那一區，先放設計稿參考）。<br>
     左邊舞台可以直接用手指（滑鼠）拖牠、甩出去。右邊按鈕看單一動作，或開「自動演示」。</p>
   </div>
 
@@ -121,6 +121,7 @@
     <div class="group"><h3>變身 <small>像星之卡比的複製能力，可以一直變</small></h3><div class="btns" data-g="costume"></div></div>
     <div class="group"><h3>版本切換 <small>改過的都留著，點了馬上換（正在穿的會重新穿）</small></h3><div id="vers"></div></div>
     <div class="group"><h3>吉伊 × 小八 <small>下面按鈕＝小八從右邊走進來互動；想看兩隻都在畫面上、偶爾自己互相找，開左邊「👭 兩隻常駐」</small></h3><div class="btns" data-g="buddy"></div></div>
+    <div class="group"><h3>八點檔・小壞話 <small>2026-11-09 新增，先放設計稿參考（App 裡還沒有）：雨中下跪、潑水、失憶、搶遺產，加上偷偷說馨岑的小壞話被抓包</small></h3><div class="btns" data-g="soap"></div></div>
     <div class="group"><h3>對決</h3><div class="btns" data-g="duel"></div></div>
     <div class="group"><h3>場景 <small>淹水潛水（整個畫面）、沙灘度假（卡片上一小塊）、搭飛機、搭車、搭火車、烤肉、馴服恐龍</small></h3><div class="btns" data-g="scene"></div></div>
     <div class="group"><h3>祝福馨岑 <small>發財、好運、趕走小人</small></h3><div class="btns" data-g="bless"></div></div>
@@ -161,6 +162,9 @@
         <b>見面打招呼</b>：互相揮手 → 走近擊掌（啪！火花）→ 一起跳兩下 → 小八揮手離開。<b>分飯糰</b>：小八拿出飯糰、走過去雙手遞給吉伊，吉伊「哇！給我的嗎？」接過來，三口吃完（臉頰鼓起來、飯糰越咬越小），開心跳。<b>抱抱</b>：兩隻張開手 → 走近 → 抱在一起左右搖、愛心飄上去 → 分開 → 害羞背過去摀臉。<b>一起跳舞</b>：左右搖擺（兩隻反方向）→ 牽手一起蹦 → 各自轉兩圈 → 舉手跳，音符飄。<b>猜拳</b>：「剪刀…石頭…布！」手上下搖三下，同時出（頭上浮出 ✊✋✌️），贏的跳起來、輸的垮下來掉淚，贏的拍拍說「別難過」，最後「再來一次！」（每次隨機）。<b>安慰</b>：吉伊先自己在哭（瀑布淚、>< 眼），小八走過來問「怎麼了？」，拍拍頭「沒事的…沒事的」，吉伊慢慢不哭、擦眼淚說謝謝，兩隻一起蹦，並肩走去吃好吃的。<br>
         <b>兩隻常駐</b>（左邊工具列「👭 兩隻常駐」）：小八一直在畫面上自己逛——走來走去、東張西望、跳一下、對你揮手；吉伊照原本的動作。吉伊閒著（待機或走路）時有個倒數（約 5～9 秒後第一次，之後每 16～26 秒），時間到就有一隻先喊對方（「小八～！」或「吉伊～！」，另一隻回「來囉～」）→ 兩隻同時走向這個互動要站的位置（畫面中間）→ 面對面 → 開始上面其中一個互動（隨機、不連續重複）→ 結束各自再去逛。場景、對決這種大場面小八先躲起來，結束再回來。「現在就互相去找對方」可以不用等倒數直接看。<br>
         目前只在設計稿；要放進 App，這些動作會跟其他動作一起被抽（Flutter 那邊要多管一隻小八的位置）。</div>
+      <div class="note"><b>八點檔・小壞話</b>（2026-11-09 使用者：多一個像八點檔的戲碼，甚至可以開玩笑說馨岑的小壞話；先放設計稿參考）<br>
+        <span class="tag n">新</span>都是玩笑話、沒有惡意。<b>小聲說馨岑小壞話</b>：兩隻頭靠頭、手遮嘴輪流說（六組隨機：忘記記帳、偷偷買東西、熬夜、存鑫鑫腸、拖到最後一天補十天、說了八次「最後一次」），說到正開心突然停住、一起看向螢幕外冒冷汗，馬上改口「我們在說馨岑今天好漂亮喔～」。<b>八點檔・雨中下跪</b>：畫面變暗下雨打雷、「第 88 集」，吉伊背對著哭，小八衝過來跪下哀求，原來是偷吃了飯糰，吉伊「…你偷吃我的飯糰？？」，吉伊冷冷說「…我們絕交。」轉身走掉，小八一個人留在雨裡哭（不要和好結局，太假）。<b>八點檔・潑水</b>：小八氣呼呼說「你吃了我最後一顆飯糰！」把水潑到吉伊身上，吉伊面無表情淋著說「…那顆飯糰是馨岑的。」小八崩潰道歉。<b>八點檔・失憶</b>：吉伊撞到頭倒下，醒來「…你是誰？」小八崩潰，回憶殺（畫面變褐色，飯糰、唱歌、夕陽輪流浮出來），吉伊突然「鑫鑫腸！你還欠我一根鑫鑫腸！」小八「…你根本沒失憶吧！」。<b>八點檔・搶遺產</b>：兩隻搶一堆金幣「這是阿嬤留給我的！」，搖晃拔河，突然馨岑出聲「我的預算！」金幣消失，兩隻癱坐，最後約好「一起去跟馨岑要零用錢」。每個結尾都有「明日待續…」。<br>
+        <b>短劇・冰箱裡的人</b>（2026-11-09 使用者：再來一個不用刻意和好、有戲劇張力的，最好像 AI 短劇，短、急、有戲劇性）：只有十幾秒，一開場就是鉤子——小八背對著冷冷說「我都看到了。」→ 吉伊「…看到什麼？」→ 閃光轉場、小八猛然轉身「昨晚十二點，你在冰箱前面做什麼？」→ 吉伊冒冷汗找藉口 → 雷聲「謊言！」小八亮出證據「我拍到了。」→ <b>反轉</b>：吉伊面無表情反問「…那你半夜為什麼會在我家冰箱前面？」→ 小八僵住、吉伊指著他「你是來偷吃的！」→ 兩個對瞪、心跳聲「咚…咚…」→ <b>反轉二</b>：冰箱「叮——」，兩隻同時轉頭看向螢幕外，馨岑的聲音「誰動我鑫鑫腸？」→ 畫面切黑「【未完待續】」。沒有和好，停在最緊張的地方。</div>
       <div class="note"><b>做進 App 時</b><br>
         姿勢系統、模型、道具都在 web/pet/index.html（3D 那一塊）；Flutter 那邊多傳新模式名稱跟抓起來的「往上浮」位移。黑色對手是同一個模型換顏色，畫在同一個 3D 窗格裡。新台詞要加進字型預載清單。</div>
     </div>
@@ -233,6 +237,9 @@ const hachiGeo = (() => { const g = bodyGeo.clone(), pos = g.attributes.position
   for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), c = y >= Hh * .66 && !(z > 0 && Math.abs(x) < (Hh - y) * .55 + .04) ? blue : white; col.push(c.r, c.g, c.b); }
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); return g; })();
 const hachiSkin = toon(0xffffff, { vertexColors: true });
+// App 用：兩隻各有一個窗格時，互動動作用「動作座標」算位置，畫的時候整體平移 BO.x（互動的中心點）；selfRef 是這個窗格自己那隻（預設吉伊）
+const BO = { x: 0 };
+let selfRef = null;
 // ════════════════ 做一隻（主角、黑色對手、小八共用） ════════════════
 function makePet(o = {}) {
   const dark = !!o.dark, hachi = !!o.hachi;
@@ -984,7 +991,7 @@ const faceEach = (P, H, a = .8) => { P.turn = a; H.turn = -a; };
 const pulse = (t, at, w = .2) => Math.max(0, 1 - Math.abs(t - at) / w);
 function jumpPose(Q, k) { Q.happy = 1; Q.mouth = .35;
   if (k < .25) { Q.sy = .8; Q.sx = 1.12; both(Q, 'rest', -.1); } else if (k < .75) { const j = (k - .25) / .5; Q.y = Math.sin(j * Math.PI) * .9; Q.sy = 1.12; Q.sx = .93; both(Q, 'high'); Q.lLy = Q.lRy = .02; } else { Q.sy = .82; Q.sx = 1.12; } }
-function buddyEnter() { bx0 = me.px; wear(null); BIN = companion ? .3 : 1.5; hachi.root.visible = true; if (!companion) { hachi.px = W + 90; Object.assign(hachi.cur, { turn: -.9, spin: 0, lean: 0, y: 0 }); } hStart = hachi.px; hachi.py = me.py; }
+function buddyEnter() { bx0 = me.px - BO.x; wear(null); BIN = companion ? .3 : 1.5; hachi.root.visible = true; if (!companion) { hachi.px = W + 90; Object.assign(hachi.cur, { turn: -.9, spin: 0, lean: 0, y: 0 }); } hStart = hachi.px - BO.x; hachi.py = me.py; }
 function buddyExit() { hachi.holdR.remove(hachiRice); me.holdR.remove(hachiRice); hachiRice.scale.setScalar(1); if (!companion) { hachi.root.visible = false; hachi.px = 9999; } me.px = THREE.MathUtils.clamp(me.px, 60, W - 60); }
 // 入場：吉伊走到左邊，小八從右邊走進來（t0 之後才出發）。還在走回 true。
 function buddyWalkIn(P, H, t, mL, hX, t0 = 0) { const k = Math.min(1, Math.max(0, (t - t0) / BIN));
@@ -992,7 +999,7 @@ function buddyWalkIn(P, H, t, mL, hX, t0 = 0) { const k = Math.min(1, Math.max(0
   if (k > 0 && k < 1) walkCycle(H, t * 20, 0, -1);
   if (t < .8 && Math.abs(bx0 - mL) > 20) walkCycle(P, t * 20, 0, mL > bx0 ? 1 : -1);
   return t < t0 + BIN; }
-const meMid = () => new THREE.Vector3((me.px + hachi.px) / 2, -me.py + me.S * 3.0, 0);
+const meMid = () => new THREE.Vector3((me.px + hachi.px) / 2 + BO.x, -me.py + me.S * 3.0, 0);
 const HUG = [1.05, .8, .9]; // 抱的時候手伸到身體兩側（繞到對方背後）
 const BUDDY = { g: 'buddy', isNew: 1, enter: buddyEnter, exit: buddyExit };
 
@@ -1111,13 +1118,201 @@ act('b_comfort', { ...BUDDY, label: '🥹 小八安慰愛哭的吉伊', dur: 12.
     if (cross(t0, t1, 6.7)) { talk('去吃好吃的吧！', 1.7, 2); talk('好～！', 1.5, 0); }
     if (cross(t0, t1, 11.8)) talk('一起加油～', 1.2, 2); } });
 
+// ── 八點檔・小壞話（2026-11-09 使用者：多一個像八點檔的戲碼，甚至可以開玩笑說馨岑的小壞話；先放設計稿參考）──
+// 台詞都是玩笑話、沒有惡意：馨岑愛睡懶覺、忘記記帳、買太多、愛吃鑫鑫腸…；每次隨機抽一組，不連續重複。
+const GOSSIP = [
+  ['欸欸，你知道嗎…', '什麼什麼？', '馨岑昨天又忘記記帳了！', '真的假的？上次也是！'],
+  ['噓…我跟你說喔', '嗯嗯～', '馨岑又偷偷買了一堆東西', '我昨天看到她在拆包裹！'],
+  ['馨岑每天都說要早點睡', '然後呢？', '結果昨晚兩點還在滑手機', '她明天又要爬不起來了～'],
+  ['馨岑說她在存錢耶', '真的嗎？', '可是鑫鑫腸買了一大堆', '那根本是在存鑫鑫腸吧！'],
+  ['你有沒有發現…', '發現什麼？', '馨岑記帳都拖到最後一天才記', '對對對，一次補十天！'],
+  ['我偷偷告訴你', '快說快說！', '馨岑上次說「最後一次」', '她已經說了第八次了！'],
+];
+let rainOn = false, gossip = GOSSIP[0], soapMemo = [];
+const rainGeo = new THREE.BufferGeometry(), RN = 150, rainP = new Float32Array(RN * 6), rainX = new Float32Array(RN), rainY = new Float32Array(RN);
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainP, 3));
+const rainLines = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xa8dcff, transparent: true, opacity: .6, depthTest: false })); rainLines.renderOrder = 9; rainLines.visible = false; rainLines.frustumCulled = false; scene.add(rainLines);
+function rainStep(dt) { rainLines.visible = rainOn; if (!rainOn) return;
+  for (let i = 0; i < RN; i++) { if (rainY[i] === 0 && rainX[i] === 0) { rainX[i] = Math.random() * (W + 80); rainY[i] = -Math.random() * H; }
+    rainY[i] -= 900 * dt; rainX[i] -= 150 * dt; if (rainY[i] < -H - 20) { rainY[i] = 10 + Math.random() * 40; rainX[i] = Math.random() * (W + 80); }
+    rainP.set([rainX[i], rainY[i], 150, rainX[i] + 5, rainY[i] + 22, 150], i * 6); }
+  rainGeo.attributes.position.needsUpdate = true; }
+function lightning() { glow(new THREE.Vector3(W * .5, -H * .25, 200), 40, .3, 0xffffff); shakeAmt = 8; }
+function sepia(on) { dim.style.background = on ? 'radial-gradient(circle at 50% 55%, rgba(120,80,30,.15), rgba(60,35,10,.7))' : ''; dim.style.opacity = on ? 1 : 0; }
+const SOAP = { g: 'soap', isNew: 1, enter: buddyEnter, exit() { buddyExit(); rainOn = false; rainLines.visible = false; sepia(false); dim.style.opacity = 0; } };
+const SOAP_END = (t0, t1, at) => { if (cross(t0, t1, at)) bigText('明日待續…', 2.0, '#ffffff'); };
+
+// 1. 小聲說馨岑的小壞話：頭靠頭、手遮嘴，說得正開心，被抓包
+act('b_gossip', { ...SOAP, label: '🤫 小聲說馨岑小壞話', dur: 14,
+  enter() { buddyEnter(); gossip = pickNo('gossip', GOSSIP); },
+  pose(P, t, F, H) { const mL = W * .32, hX = W * .68, mid = W * .5, z = Zs();
+    if (buddyWalkIn(P, H, t, mL, hX)) return;
+    if (t < 2.4) { faceEach(P, H); return; }
+    if (t < 9.0) { const k = seg(t, 2.4, 3.2); me.px = lerp(mL, mid - 52 * z, k); hachi.px = lerp(hX, mid + 52 * z, k); faceEach(P, H, .9);
+      const a = (t > 3.0 && t < 5.0) || (t > 6.6 && t < 8.0), b = (t > 5.0 && t < 6.6) || (t > 8.0 && t < 8.9);
+      P.lean = H.lean = .16 * k; hR(P, 'mouth'); hR(H, 'mouth'); hL(P, 'rest'); hL(H, 'rest');
+      P.mouth = a ? .3 + Math.abs(Math.sin(t * 14)) * .2 : 0; H.mouth = b ? .3 + Math.abs(Math.sin(t * 14)) * .2 : 0; P.happy = H.happy = 1; P.roll = Math.sin(t * 9) * .02; H.roll = -Math.sin(t * 9) * .02; return; }
+    me.px = lerp(me.px, mid - 70 * z, .1); hachi.px = lerp(hachi.px, mid + 70 * z, .1);
+    if (t < 11.2) { P.turn = H.turn = 0; P.wide = H.wide = 1; both(P, 'rest'); both(H, 'rest'); P.sx = H.sx = .96; P.mouth = H.mouth = .12; return; }
+    P.turn = H.turn = 0; P.happy = H.happy = 1; P.blush = H.blush = 1; P.mouth = H.mouth = .3; hR(P, 'up', Math.sin(t * 11) * .25, .25, .1); hR(H, 'up', Math.sin(t * 11 + 1) * .25, .25, .1); },
+  ev(t0, t1) { const g = gossip;
+    if (cross(t0, t1, 3.0)) talk(g[0], 1.9, 0); if (cross(t0, t1, 5.0)) talk(g[1], 1.5, 2);
+    if (cross(t0, t1, 6.6)) talk(g[2], 1.9, 0); if (cross(t0, t1, 8.0)) talk(g[3], 1.4, 2);
+    if (cross(t0, t1, 9.0)) { bigText('！', .8, '#ffd36b'); shakeAmt = 4; puff('💦', W2(me.body, .8, 2.2, 0), { size: .5, vy: 20, life: .9 }); puff('💦', W2(hachi.body, -.8, 2.2, 0), { size: .5, vy: 20, life: .9 }); puff('（看向螢幕外）', meMid().add(new THREE.Vector3(0, me.S * 1.2, 0)), { color: '#ff9ac8', size: .34, vy: 0, life: 2 }); }
+    if (cross(t0, t1, 9.3)) { talk('…！', 1.4, 0); talk('…！', 1.4, 2); }
+    if (cross(t0, t1, 11.2)) { talk('我們在說馨岑今天好漂亮喔～', 2.2, 0); }
+    if (cross(t0, t1, 11.8)) talk('對對對！超漂亮！', 1.8, 2);
+    if (cross(t0, t1, 13.0)) talk('（等一下再說）', 1.2, 0); } });
+
+// 2. 八點檔：雨中下跪求原諒（原來是偷吃了飯糰）
+act('b_soap_rain', { ...SOAP, label: '🌧 八點檔・雨中下跪', dur: 18,
+  pose(P, t, F, H) { const mL = W * .3, hX = mL + 150 * Zs();
+    if (t < 1.0) { me.px = lerp(bx0, mL, seg(t, 0, .8)); hachi.px = hStart; } else hachi.px = lerp(hStart, hX, ease(seg(t, 2.6, 4.4)));
+    if (t >= 2.6 && t < 4.4) walkCycle(H, t * 24, 1, -1);
+    // 吉伊背對著、站在雨裡哭
+    if (t < 9.6) { P.turn = -.7; P.cry = t > 4.4 ? 1 : .6; P.sq = 1; P.lean = .16; both(P, 'cheek'); P.sy = .96; P.roll = Math.sin(t * 6) * .02; }
+    if (t >= 4.4) { // 小八跪下哀求（一直跪到最後）
+      const k = seg(t, 4.4, 4.9); H.turn = -.9; H.sy = lerp(1, .62, k); H.y = -.1 * k; H.cry = 1; H.sq = 1; H.lean = .1;
+      if (t < 6.4) both(H, 'chest'); else hR(H, 'up', Math.sin(t * 6) * .15, .3, .1), hL(H, 'up', -Math.sin(t * 6) * .15, .3, .1); }
+    if (t >= 9.6 && t < 12.4) { P.cry = .5; P.sq = 0; P.wide = 1; P.turn = lerp(-.7, .8, seg(t, 9.6, 10.3)); P.mouth = .5; hR(P, 'fwdHigh', 0, -.1); P.lean = .08; }
+    if (t >= 12.4) { // 吉伊冷冷地說絕交、轉身走掉；小八還跪在雨裡
+      const k = seg(t, 12.6, 16.2); P.turn = -.9; P.sq = 0; P.cry = 0; P.sy = 1; P.lean = .06; P.mouth = 0; me.px = lerp(mL, mL - 150 * Zs(), k); if (k > 0 && k < 1) walkCycle(P, t * 16, 0, -1);
+      if (t > 15.2) { H.sy = lerp(.62, .5, seg(t, 15.2, 16.2)); H.lean = .5 * seg(t, 15.2, 16.2); both(H, 'ground'); H.cry = 1; H.sq = 1; } } },
+  ev(t0, t1) { rainStep(Math.max(0, t1 - t0));
+    if (cross(t0, t1, .1)) { rainOn = true; dim.style.opacity = 1; puff('♬', new THREE.Vector3(W * .5, -H * .2, 0), { color: '#9fb8ff', size: .6, vy: 15, life: 2 }); }
+    if (cross(t0, t1, 1.0)) talk('嗚…為什麼…', 1.8, 0);
+    if (cross(t0, t1, 1.8) || cross(t0, t1, 6.4) || cross(t0, t1, 10.0)) lightning();
+    if (cross(t0, t1, 2.7)) { talk('吉伊——！', 1.6, 2); bigText('第 88 集', 1.4, '#ffe27a'); }
+    if (cross(t0, t1, 4.7)) talk('原諒我！我不是故意的！', 2.0, 2);
+    if (cross(t0, t1, 6.6)) talk('你走開！我不想再見到你！', 2.2, 0);
+    if (cross(t0, t1, 8.5)) talk('我不走！我再也不會偷吃你的飯糰了！', 2.6, 2);
+    if (cross(t0, t1, 9.8)) { bigText('什麼！？', 1.2, '#ffd36b'); puff('！', W2(me.body, 0, 2.6, 0), { color: '#ffd36b', size: .55, vy: 0, life: .7 }); }
+    if (cross(t0, t1, 10.8)) talk('…你偷吃我的飯糰？？', 2.0, 0);
+    if (cross(t0, t1, 11.6)) talk('呃…', 1.0, 2);
+    if (cross(t0, t1, 12.4)) talk('…我們絕交。', 2.2, 0);
+    if (cross(t0, t1, 14.4)) { lightning(); talk('吉伊——！！', 2.0, 2); }
+    if (cross(t0, t1, 16.0)) talk('嗚嗚嗚…', 1.6, 2);
+    SOAP_END(t0, t1, 16.6); } });
+
+// 3. 八點檔：潑水（你吃了我最後一顆飯糰！）
+act('b_soap_splash', { ...SOAP, label: '💦 八點檔・潑水', dur: 11,
+  pose(P, t, F, H) { const mL = W * .32, hX = W * .68;
+    if (buddyWalkIn(P, H, t, mL, hX)) return;
+    faceEach(P, H, .8);
+    if (t < 4.9) { H.sq = 0; H.mouth = .4; H.lean = .12; H.roll = Math.sin(t * 26) * .03; both(H, 'chest'); if (t > 3.0) { hR(H, 'up', 0, .2); H.lean = .2; } P.wide = 1; P.lean = t > 3.2 ? -.2 : 0; return; }
+    if (t < 5.4) { hR(H, 'fwdHigh', 0, .1); hL(H, 'back'); H.lean = .3; P.lean = -.1; P.wide = 1; return; }
+    if (t < 8.8) { const u = t - 5.4; P.shut = 1; P.sy = .96; P.mouth = 0; P.turn = lerp(.8, 0, seg(u, 1.2, 2.2)); P.sq = 0; P.blush = 0; both(P, 'rest'); P.roll = Math.sin(t * 30) * Math.max(0, 1 - u) * .05; H.wide = 1; H.lean = -.1; both(H, 'cheek'); return; }
+    P.turn = .5; H.turn = -.8; P.shut = 0; P.eye = .6; P.sy = .96; both(P, 'rest'); H.lean = t > 9.4 ? .5 : .1; both(H, 'cheek'); H.sq = t > 9.4 ? 1 : 0; H.cry = t > 9.4 ? .6 : 0; },
+  ev(t0, t1) { if (cross(t0, t1, 1.8)) talk('你！你怎麼可以這樣！', 1.8, 2); if (cross(t0, t1, 3.0)) talk('…？我怎麼了？', 1.4, 0);
+    if (cross(t0, t1, 3.2)) { talk('你吃了我最後一顆飯糰！', 2.0, 2); bigText('第 168 集', 1.2, '#ffe27a'); }
+    if (cross(t0, t1, 4.4)) { talk('！', 1.0, 0); puff('！', W2(me.body, 0, 2.6, 0), { color: '#ffd36b', size: .5, vy: 0, life: .6 }); }
+    if (cross(t0, t1, 5.4)) { ball(W2(hachi.body, -1, 1.6, 1), 22, 0x7fd0ff, { dir: Math.PI, speed: 300, up: 20, life: .7, g: 500, r: .05 }); puff('💦', W2(me.body, .4, 2.0, 1), { size: .9, vy: 10, life: .9 }); bigText('潑——！', .9, '#7fd0ff'); shakeAmt = 6; }
+    if (t1 > 5.8 && t0 < 8.8 && every(t0, t1, .3, 5.8)) ball(W2(me.body, (Math.random() - .5) * 1.4, 1.8, 1), 1, 0x7fd0ff, { r: .035, speed: 5, up: -10, life: .6, g: 300 });
+    if (cross(t0, t1, 7.0)) talk('…那顆飯糰是馨岑的。', 2.0, 0);
+    if (cross(t0, t1, 8.2)) { bigText('！？', 1.0, '#ffd36b'); talk('咦？！', 1.2, 2); }
+    if (cross(t0, t1, 9.4)) talk('對不起！我賠你一顆！', 1.8, 2);
+    if (cross(t0, t1, 10.0)) talk('…要加海苔。', 1.2, 0); } });
+
+// 4. 八點檔：失憶（你是誰？→ 回憶殺 → 其實記得鑫鑫腸）
+act('b_soap_amnesia', { ...SOAP, label: '🤕 八點檔・失憶', dur: 20,
+  pose(P, t, F, H) { const mL = W * .3, hX = W * .3 + 130 * Zs();
+    if (t < 1.0) { me.px = lerp(bx0, mL, seg(t, 0, .8)); hachi.px = hStart; } else hachi.px = lerp(hStart, hX, ease(seg(t, 3.0, 4.6)));
+    if (t >= 3.0 && t < 4.6) walkCycle(H, t * 24, 1, -1);
+    if (t < 2.2) { P.turn = .6; P.happy = 1; P.mouth = .25; P.roll = Math.sin(t * 6) * .04; both(P, 'rest'); }
+    else if (t < 2.7) { const k = seg(t, 2.2, 2.7); P.lean = 1.3 * k; P.y = Math.sin(k * Math.PI) * .3; P.wide = 1; both(P, 'high'); }
+    else if (t < 6.5) { P.lean = 1.3; P.sq = 1; P.mouth = .2; P.turn = .6; P.roll = Math.sin(t * 3) * .02; }
+    else if (t < 7.6) { const k = seg(t, 6.5, 7.6); P.lean = 1.3 * (1 - k); P.shut = k < .7 ? 1 : 0; P.turn = lerp(.6, 0, k); P.mouth = .2; }
+    else { P.lean = 0; P.turn = t < 8.2 ? 0 : .8; P.wide = t > 8.0 && t < 9.5 ? 1 : 0; }
+    if (t >= 4.6) { H.turn = -.9; if (t < 6.8) { H.sy = .8; both(H, 'front'); H.roll = Math.sin(t * 12) * .08; H.cry = .6; H.sq = 1; }
+      else if (t < 10.0) { H.sy = 1; H.sq = 0; H.cry = t > 8.6 ? 1 : 0; H.wide = 1; H.lean = -.3; hR(H, 'fwdHigh', 0, -.1); hL(H, 'fwdHigh', 0, -.1); }
+      else if (t < 14.6) { H.lean = 0; H.cry = .3; both(H, 'chest'); H.happy = t > 13 ? 1 : 0; H.mouth = .3; }
+      else { H.cry = 0; H.sy = 1; H.wide = t < 16.6 ? 1 : 0; H.lean = t > 16 ? -.2 : 0; } }
+    if (t >= 10.0 && t < 14.6) { both(P, 'cheek'); P.sq = ((t - 10) % 1.4) < .5 ? 1 : 0; P.sy = .97; }
+    if (t >= 14.6 && t < 16.4) { P.happy = 1; hR(P, 'up', 0, .3); P.mouth = .4; P.turn = .8; }
+    if (t >= 16.6) { jumpPose(P, ((t - 16.6) % .8) / .8); jumpPose(H, ((t - 16.7) % .8 + .8) % .8 / .8); P.turn = .8; H.turn = -.8; } },
+  ev(t0, t1) { if (cross(t0, t1, .5)) talk('♪～', 1.4, 0);
+    if (cross(t0, t1, 2.5)) { bigText('咚！', .7, '#ffd36b'); shakeAmt = 8; for (let i = 0; i < 5; i++) puff('✦', W2(me.body, (i - 2) * .5, 2.2, 0), { color: '#ffd36b', vy: 40, size: .25, life: .8 }); }
+    if (t1 > 2.8 && t0 < 6.5 && every(t0, t1, .14, 2.8)) { const a = t1 * 7; puff('✦', W2(me.body, Math.cos(a) * 1.1, 1.6, Math.sin(a) * 1.1), { color: '#ffd36b', vy: 0, size: .2, life: .35 }); }
+    if (cross(t0, t1, 4.8)) talk('吉伊！吉伊你醒醒！', 2.0, 2);
+    if (cross(t0, t1, 6.8)) talk('…嗯？', 1.0, 0);
+    if (cross(t0, t1, 8.1)) talk('…你是誰？', 1.6, 0);
+    if (cross(t0, t1, 8.4)) { bigText('失憶！？', 1.4, '#ff6fa5'); lightning(); puff('？', W2(me.body, 0, 2.6, 0), { color: '#ffffff', size: .6, vy: 0, life: 1.2 }); }
+    if (cross(t0, t1, 8.7)) talk('我是小八啊！你最好的朋友！', 2.2, 2);
+    if (cross(t0, t1, 10.0)) { sepia(true); talk('還記得嗎？我們一起吃過飯糰…', 1.8, 2); puff('🍙', W2(hachi.body, -1.2, 3.0, 0), { size: .9, vy: 6, life: 1.6 }); }
+    if (cross(t0, t1, 11.7)) { talk('一起唱過歌…', 1.4, 2); puff('🎵', W2(hachi.body, -1.2, 3.0, 0), { size: .9, vy: 6, life: 1.4 }); }
+    if (cross(t0, t1, 13.0)) { talk('一起看過夕陽…', 1.4, 2); puff('🌅', W2(hachi.body, -1.2, 3.0, 0), { size: .9, vy: 6, life: 1.4 }); talk('…好像有點印象…', 1.4, 0); }
+    if (cross(t0, t1, 14.4)) { sepia(false); glow(W2(me.body, 0, 1.6, 1), 3, .5, 0xfff0c0); talk('鑫鑫腸！', 1.2, 0); }
+    if (cross(t0, t1, 14.9)) talk('我想起來了！你還欠我一根鑫鑫腸！', 2.4, 0);
+    if (cross(t0, t1, 16.6)) { talk('…你根本沒失憶吧！！', 2.0, 2); bigText('？！', 1.0, '#ffd36b'); shakeAmt = 5; }
+    if (cross(t0, t1, 17.8)) talk('嘿嘿～', 1.4, 0);
+    SOAP_END(t0, t1, 18.2); } });
+
+// 5. 八點檔：搶遺產（結果是馨岑這個月的預算）
+act('b_soap_will', { ...SOAP, label: '💰 八點檔・搶遺產', dur: 15.5,
+  enter() { buddyEnter(); soapMemo = []; const z = me.S;
+    for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.2 * z, .2 * z, .07 * z, 24), toon(0xffcf4a)); c.renderOrder = 6; c.visible = false; scene.add(c); soapMemo.push(c); } },
+  exit() { SOAP.exit(); for (const c of soapMemo) scene.remove(c); soapMemo = []; },
+  pose(P, t, F, H) { const mL = W * .3, hX = W * .7, mid = W * .5, z = Zs();
+    if (buddyWalkIn(P, H, t, mL, hX)) return;
+    const lunge = seg(t, 4.4, 4.9) * (t < 9.4 ? 1 : 0);
+    if (t < 9.4) { me.px = lerp(mL, mid - (70 - 44 * lunge) * z, seg(t, 1.8, 2.6)); hachi.px = lerp(hX, mid + (70 - 44 * lunge) * z, seg(t, 1.8, 2.6)); faceEach(P, H, .9); }
+    if (t < 4.4) { P.wide = 1; H.wide = 1; hR(P, 'front'); hR(H, 'front'); P.lean = H.lean = .06; return; }
+    if (t < 8.2) { const sh = Math.sin(t * 28) * .05; both(P, 'front', 0, .1); both(H, 'front', 0, .1); P.lean = H.lean = .3; P.roll = sh; H.roll = -sh; P.mouth = H.mouth = .5; return; }
+    if (t < 9.4) { P.wide = H.wide = 1; both(P, 'rest'); both(H, 'rest'); P.sx = H.sx = .95; return; }
+    if (t < 12.6) { me.px = lerp(me.px, mid - 90 * z, .08); hachi.px = lerp(hachi.px, mid + 90 * z, .08); P.lean = H.lean = lerp(1.1, 1.0, 0); P.sq = H.sq = 1; P.cry = H.cry = .6; both(P, 'ground'); both(H, 'ground'); P.turn = .5; H.turn = -.5; return; }
+    P.lean = H.lean = 0; faceEach(P, H, .6); P.happy = H.happy = 1; P.mouth = H.mouth = .3; jumpPose(P, ((t - 12.6) % .8) / .8); jumpPose(H, ((t - 12.7) % .8 + .8) % .8 / .8); },
+  ev(t0, t1) { const mid = W * .5, pileOn = t1 < 9.0, y0 = -me.py + me.S * .07;
+    soapMemo.forEach((c, i) => { c.visible = t1 >= 1.0 && t1 < 9.0; c.position.set(mid + BO.x + (i - 1.5) * me.S * .22, y0 + (i % 2) * me.S * .07, 40); c.rotation.x = Math.PI / 2 + .25; });
+    if (cross(t0, t1, 1.0)) puff('♬ 咚咚咚', new THREE.Vector3(mid + BO.x, -me.py + me.S * 2.4, 0), { color: '#ffd36b', size: .5, vy: 12, life: 2 });
+    if (cross(t0, t1, 2.4)) talk('這是阿嬤留給我的！', 1.8, 0);
+    if (cross(t0, t1, 3.8)) { talk('不對！阿嬤說要留給我！', 1.9, 2); bigText('第 233 集', 1.2, '#ffe27a'); }
+    if (cross(t0, t1, 4.9)) { shakeAmt = 5; talk('放手！', 1.0, 0); }
+    if (cross(t0, t1, 5.9)) talk('你才放手！', 1.0, 2);
+    if (t1 > 5.0 && t0 < 8.2 && every(t0, t1, .2, 5.0)) puff('✦', W2(me.body, 1.0 + Math.random(), 1.4, 1), { color: '#ffd36b', vy: 30, size: .22, life: .4 });
+    if (cross(t0, t1, 8.4)) { bigText('馨岑：我的預算！', 1.8, '#ff9ac8'); lightning(); }
+    if (cross(t0, t1, 9.4)) { glow(new THREE.Vector3(mid + BO.x, -me.py + me.S * .3, 100), 3, .5, 0xffe27a); for (let i = 0; i < 5; i++) puff('·', new THREE.Vector3(mid + BO.x + (i - 2) * me.S * .2, -me.py + me.S * .3, 0), { color: '#ffd36b', vy: 40, size: .25, life: .6 }); }
+    if (cross(t0, t1, 9.8)) { talk('…好吧。', 1.4, 0); talk('…對不起…', 1.4, 2); }
+    if (cross(t0, t1, 12.6)) { talk('那我們一起去跟馨岑要零用錢吧！', 2.2, 0); } if (cross(t0, t1, 13.4)) talk('好！', 1.2, 2);
+    SOAP_END(t0, t1, 13.8); } });
+
+// 6. 短劇（像 AI 短劇：短、急、一開頭就是鉤子、一路反轉、停在最緊張的地方，不和好）：冰箱裡的人
+// 節奏：每 1～2 秒一個轉折，大字當字幕、閃光當轉場；最後切黑「未完待續」。
+act('b_short_fridge', { ...SOAP, label: '🎬 短劇・冰箱裡的人（短、急、反轉）', dur: 14,
+  pose(P, t, F, H) { const mL = W * .3, hX = W * .7;
+    if (buddyWalkIn(P, H, t, mL, hX)) { P.turn = .8; H.turn = .8; return; }
+    const u = t - BIN; faceEach(P, H, .8); H.turn = lerp(.8, -.8, seg(u, 2.4, 2.65)); // 小八先背對著，被問到才猛然轉過來
+    if (u < .7) { P.happy = 1; P.mouth = .3; hR(P, 'up', Math.sin(u * 11) * .25, .25, .1); H.sy = .98; return; }
+    if (u < 2.4) { P.wide = 1; P.sx = .96; both(P, 'rest'); H.sy = .98; return; }
+    if (u < 3.8) { H.lean = .1; P.sx = .96; P.wide = 1; both(P, 'rest'); return; }
+    if (u < 5.0) { both(P, 'cheek'); P.turn = .8 + Math.sin(u * 9) * .3; P.mouth = .15; P.sy = .97; H.lean = .1; return; }
+    if (u < 6.2) { hR(H, 'fwdHigh', 0, .05); H.lean = .22; P.lean = -.25; P.wide = 1; both(P, 'rest'); return; }
+    if (u < 7.4) { P.turn = lerp(.8, 0, seg(u, 6.2, 6.5)); P.eye = .55; both(P, 'rest'); H.wide = 1; H.sx = .94; both(H, 'rest'); return; }
+    if (u < 8.6) { hR(P, 'fwdHigh', 0, .05); P.lean = .2; H.turn = -.8; both(H, 'cheek'); H.lean = -.2; H.wide = 1; return; }
+    if (u < 9.6) { P.roll = Math.sin(u * 34) * .012; H.roll = Math.sin(u * 34 + 1) * .012; P.wide = H.wide = 1; both(P, 'rest'); both(H, 'rest'); return; }
+    P.turn = lerp(.8, 0, seg(u, 9.6, 9.9)); H.turn = lerp(-.8, 0, seg(u, 9.6, 9.9)); P.wide = H.wide = 1; P.mouth = H.mouth = .15; P.sx = H.sx = .95; both(P, 'rest'); both(H, 'rest'); if (u > 11.6) P.sq = H.sq = 0; },
+  ev(t0, t1) { const u0 = t0 - BIN, u1 = t1 - BIN, X = a => cross(u0, u1, a);
+    if (X(0)) { dim.style.opacity = 1; bigText('第 1 集', .9, '#ffe27a'); shakeAmt = 7; }
+    if (X(.15)) talk('小八～！', 1.0, 0);
+    if (X(.75)) { talk('我都看到了。', 1.4, 2); shakeAmt = 5; }
+    if (X(1.6)) talk('…看到什麼？', 1.2, 0);
+    if (X(2.4)) { glow(new THREE.Vector3(W * .5, -me.py + me.S * 1.6, 200), 30, .25, 0xffffff); shakeAmt = 8; bigText('昨晚十二點', 1.0, '#ffffff'); talk('昨晚十二點，你在冰箱前面做什麼？', 2.0, 2); }
+    if (X(3.9)) { talk('我、我只是看有沒有過期…', 1.6, 0); puff('💦', W2(me.body, .9, 2.3, 0), { size: .5, vy: 20, life: .9 }); }
+    if (X(5.0)) { lightning(); bigText('謊言！', .8, '#ff5a7a'); talk('我拍到了。', 1.2, 2); puff('📸', W2(hachi.body, -.9, 2.8, 0), { size: .8, vy: 8, life: 1.0 }); }
+    if (X(5.3)) glow(new THREE.Vector3(W * .5, -me.py + me.S * 1.6, 200), 24, .2, 0xffffff);
+    if (X(6.3)) { talk('…那你半夜為什麼會在我家冰箱前面？', 2.0, 0); bigText('！？', .9, '#ffd36b'); puff('💦', W2(hachi.body, -.9, 2.3, 0), { size: .5, vy: 20, life: .9 }); }
+    if (X(7.5)) { talk('我、我是來…', 1.1, 2); talk('你是來偷吃的！', 1.3, 0); shakeAmt = 6; }
+    if (u1 > 8.6 && u0 < 9.6 && every(u0, u1, .5, 8.6)) { puff('咚…', meMid().add(new THREE.Vector3(0, me.S * .6, 0)), { color: '#ff9ab4', size: .5, vy: 5, life: .6 }); shakeAmt = 3; }
+    if (X(9.6)) { puff('叮——', new THREE.Vector3(W * .5 + BO.x, -me.py + me.S * 4.6, 0), { color: '#9fd8ff', size: .6, vy: 0, life: 1.2 }); talk('…？', 1.2, 0); talk('…！', 1.2, 2); }
+    if (X(10.4)) { bigText('馨岑：誰動我鑫鑫腸？', 1.6, '#ff9ac8'); lightning(); }
+    if (X(11.8)) { dim.style.background = 'rgba(0,0,0,.94)'; dim.style.opacity = 1; bigText('【未完待續】', 2.0, '#ffffff'); } } });
+
 // ── 常駐模式（2026-11-09 使用者）：兩隻都常駐在畫面上，各逛各的，偶爾會互相走向對方、在中間互動 ──
 // 流程：吉伊平常照原本的動作（走路、吃東西、睡覺…），小八自己逛（走、東張西望、跳、揮手）。
 // 吉伊閒著（待機或走路）時倒數，時間到就有一隻先喊對方 → 兩隻同時走向互動的位置（畫面中間）→ 面對面 → 開始互動 → 結束各自再去逛。
 // 大場面（場景、對決）小八先躲起來，結束再回來。
 let companion = false, hachiHidden = false, meetIn = 8, pendingAct = null, seekWho = 0, seekLast = 0, seekArrive = null;
-const MEET_ACTS = ['b_hello', 'b_share', 'b_hug', 'b_dance', 'b_rps', 'b_comfort'];
-const ACT_POS = { b_hello: [.32, .68], b_share: [.3, .72], b_hug: [.28, .72], b_dance: [.3, .7], b_rps: [.3, .7], b_comfort: [.28, .82] }; // 吉伊、小八各站畫面寬度的幾成（跟各動作自己的位置一樣）
+const MEET_ACTS = ['b_hello', 'b_share', 'b_hug', 'b_dance', 'b_rps', 'b_comfort', 'b_gossip', 'b_soap_rain', 'b_soap_splash', 'b_soap_amnesia', 'b_soap_will', 'b_short_fridge'];
+const ACT_POS = { b_hello: [.32, .68], b_share: [.3, .72], b_hug: [.28, .72], b_dance: [.3, .7], b_rps: [.3, .7], b_comfort: [.28, .82], b_gossip: [.32, .68], b_soap_rain: [.3, .85], b_soap_splash: [.32, .68], b_soap_amnesia: [.3, .85], b_soap_will: [.3, .7], b_short_fridge: [.3, .7] }; // 吉伊、小八各站畫面寬度的幾成（跟各動作自己的位置一樣）
 const AI = { mode: 'idle', t: 0, dur: 1.5, tx: 0 };
 function hachiAI(dt, H) { AI.t += dt;
   if (AI.t > AI.dur) { AI.t = 0; const r = Math.random();
@@ -1875,7 +2070,7 @@ for (const k of ['rich', 'beckon', 'heart', 'plane', 'car', 'train', 'bbq', 'din
   ACTS[k] = { g: v1.g, label: v1.label, isNew: 1, get dur() { return this.d?.dur ?? v1.dur; },
     enter() { this.d = VER[k] >= 2 ? ACTS[k + '2'] : ACTS[k + '1']; this.d.enter?.call(this.d); }, exit() { this.d?.exit?.call(this.d); },
     pose(P, t, F) { this.d.pose?.call(this.d, P, t, F); }, ev(a, b) { this.d.ev?.call(this.d, a, b); } }; }
-function walkCycle(P, ph, run, d = me.dir) { P.turn = d * .9; P.lean = .1 + run * .12; const s = Math.sin(ph), c = Math.cos(ph);
+function walkCycle(P, ph, run, d = (selfRef || me).dir) { P.turn = d * .9; P.lean = .1 + run * .12; const s = Math.sin(ph), c = Math.cos(ph);
   P.y = Math.abs(s) * (.06 + run * .06); P.roll = s * .06; P.sy = 1 - Math.abs(c) * .03 * (1 + run);
   P.lLz = .45 + s * .24; P.lRz = .45 - s * .24; P.lLy = .06 + Math.max(0, c) * .16; P.lRy = .06 + Math.max(0, -c) * .16; P.lLr = s * .5; P.lRr = -s * .5;
   hR(P, 'rest', 0, .05, s * .35 * (1 + run)); hL(P, 'rest', 0, .05, -s * .35 * (1 + run)); }
@@ -1921,7 +2116,7 @@ function applyPet(p, dt) { const c = p.cur;
   for (let i = 0; i < 2; i++) { const tg = springy ? THREE.MathUtils.clamp(-vy * .12 + p.swing * .8, -.6, .6) : 0;
     for (let s = 0, n = Math.ceil(dt / .004); s < n; s++) { p.earV[i] += ((tg - p.earX[i]) * 140 - p.earV[i] * 7) * (dt / n); p.earX[i] += p.earV[i] * (dt / n); }
     p.ears[i].m.rotation.z = p.ears[i].s * -.4 - p.ears[i].s * p.earX[i]; p.ears[i].m.rotation.x = p.earX[i] * .3; }
-  p.root.scale.setScalar(p.S * p.Sk); p.root.position.set(p.px, -p.py, 0); }
+  p.root.scale.setScalar(p.S * p.Sk); p.root.position.set(p.px + BO.x, -p.py, 0); }
 
 
 // ════════ 引擎結束 ════════
@@ -1944,6 +2139,7 @@ const PROB_NOTE = { wake: '睡完接著', grabDemo: '手指捏才會' };
 const probText = k => PROB_NOTE[k] ? PROB_NOTE[k] : APP_PROB[k] == null ? (ACTS[k]?.g === 'v1' ? '' : '未放進 App') : (APP_PROB[k] * 100).toFixed(1) + '%';
 const stopAuto = () => { auto = false; document.getElementById('auto').classList.remove('on'); };
 for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue; const b = document.createElement('button'); b.dataset.act = k; b.textContent = a.label;
+  if (k === 'iceage') { b.style.textDecoration = 'line-through'; b.title = '2026-11-09 使用者：不用一進來就放冰原歷險記，按鈕加刪除線（還是點得到）'; }
   if (a.isNew || a.redo) { const s = document.createElement('span'); s.className = 'new'; s.textContent = a.redo ? '重做' : '新'; b.append(s); }
   { const p = probText(k); if (p) { const s = document.createElement('span'); s.className = 'prob' + (p.endsWith('%') ? '' : ' off'); s.textContent = p; b.append(s); } }
   b.onclick = () => { stopAuto(); if (drag) release();
@@ -1984,7 +2180,7 @@ tog('buddy', v => { companion = v;
   else if (ACTS[cur].g !== 'buddy') { hachi.root.visible = false; hachi.px = 9999; } });
 { const b = document.createElement('button'); b.textContent = '👭 現在就互相去找對方'; b.onclick = () => { stopAuto(); if (!companion) document.getElementById('buddy').click(); if (drag) release(); startSeek(); };
   document.querySelector('[data-g="buddy"]').prepend(b); } tog('slow', v => slow = v ? .35 : 1); tog('oldGrip', v => oldGrip = v);
-const PLAN = ['walk', 'iceage', 'dino', 'icecream', 'plane', 'donut', 'cutlet', 'melon', 'car', 'train', 'bbq', 'beach', 'flood', 'rich', 'shoo', 'luck', 'heart', 'beckon', 'rice', 'sitEdge', 'tf_wizard', 'wave', 'walk', 'coins', 'duel', 'dance', 'grabDemo', 'write', 'tf_fire', 'sleep', 'wake', 'stretch', 'run', 'sausage', 'tf_sword', 'sneeze', 'trip', 'tf_off', 'shy', 'walk', 'tea', 'tf_ninja', 'jump', 'tf_ice', 'sitFloor', 'tf_chef', 'tf_off'];
+const PLAN = ['walk', 'dino', 'icecream', 'plane', 'donut', 'cutlet', 'melon', 'car', 'train', 'bbq', 'beach', 'flood', 'rich', 'shoo', 'luck', 'heart', 'beckon', 'rice', 'sitEdge', 'tf_wizard', 'wave', 'walk', 'coins', 'duel', 'dance', 'grabDemo', 'write', 'tf_fire', 'sleep', 'wake', 'stretch', 'run', 'sausage', 'tf_sword', 'sneeze', 'trip', 'tf_off', 'shy', 'walk', 'tea', 'tf_ninja', 'jump', 'tf_ice', 'sitFloor', 'tf_chef', 'tf_off'];
 PLAN.push('b_hello', 'b_share', 'b_hug', 'b_dance', 'b_rps', 'b_comfort');
 let planI = 0;
 
