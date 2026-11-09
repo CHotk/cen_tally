@@ -40,10 +40,17 @@ String tallyStatus(int balance) => '結餘 ${tallySigned(balance)}';
 
 Color _statusColor(int b) => b >= 0 ? AppColors.ok : _minusColor;
 
+/// 明細列表預先建好畫面上下各多遠的東西（像素）。捲到才建，但窗口抓大一點（約上下各兩個畫面），
+/// 捲動時要出現的那幾張卡早就建好了，不用等（2026-11-09 使用者）。
+const _listCache = 1600.0;
+
+/// [lazyCount]／[lazyBuilder]：接在 [children] 後面、捲到才建的那一大串（明細每一天一張卡）。
 Widget _page(
   BuildContext context, {
   required Widget top,
   required List<Widget> children,
+  int lazyCount = 0,
+  Widget Function(BuildContext, int)? lazyBuilder,
   Widget? bottom,
   Key? bottomKey,
   Widget? overlay,
@@ -61,12 +68,28 @@ Widget _page(
                 top,
                 const SizedBox(height: Gap.md),
                 Expanded(
-                  child: ListView(
-                    children: [
-                      ...children,
-                      SizedBox(height: Gap.lg + (bottom == null ? 0 : 92)),
-                    ],
-                  ),
+                  child: lazyBuilder == null
+                      ? ListView(
+                          children: [
+                            ...children,
+                            SizedBox(
+                              height: Gap.lg + (bottom == null ? 0 : 92),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          cacheExtent: _listCache,
+                          itemCount: children.length + lazyCount + 1,
+                          itemBuilder: (context, i) {
+                            if (i < children.length) return children[i];
+                            if (i < children.length + lazyCount) {
+                              return lazyBuilder(context, i - children.length);
+                            }
+                            return SizedBox(
+                              height: Gap.lg + (bottom == null ? 0 : 92),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
@@ -330,21 +353,14 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   List<TallyItem> _items = const [];
   bool _loaded = false;
 
-  /// 頂部搜尋框（2026-11-09 使用者）。
-  final _search = TextEditingController();
-
-  // 搜尋要順（2026-11-09 使用者：跟 Lume 記帳一樣順、用快取）：
-  // 1. 每一筆可以被搜到的字串、每一筆之後的累計結餘，載入時算一次（_index、_running）；
-  // 2. 打字時輸入框自己馬上更新，列表等停手 _searchDelay 才套用（_q）；
-  // 3. 同一個關鍵字的結果跟「一天一張卡」的分組存起來（_cacheQ…），重畫不重算。
-  static const _searchDelay = Duration(milliseconds: 120);
-  String _q = '';
-  Timer? _qTimer;
+  // 搜尋（2026-11-09 使用者）：首頁就是首頁，永遠是完整明細；搜尋框只是個入口，點下去才跳出
+  // 懸浮的搜尋面板（跟其他視窗一樣），搜完選一筆或點外面就整個關掉，首頁完全沒被動到。
+  // 為了順（跟 Lume 記帳一樣用快取）：每一筆可以被搜到的字串、累計結餘載入時算一次
+  // （_index、_running），同一個關鍵字的結果存起來（_results），首頁每一天的分組也存起來（_homeDays）。
   List<({TallyItem item, String hay})> _index = const [];
   Map<String, int> _running = const {};
-  String? _cacheQ;
-  List<TallyItem> _cacheShown = const [];
-  List<List<TallyItem>> _cacheDays = const [];
+  final _results = <String, List<TallyItem>>{};
+  List<List<TallyItem>> _homeDays = const [];
 
   @override
   void initState() {
@@ -357,8 +373,6 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
 
   @override
   void dispose() {
-    _qTimer?.cancel();
-    _search.dispose();
     _shakes.dispose();
     tallyRevision.removeListener(_load);
     super.dispose();
@@ -386,7 +400,8 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         _items = items;
         _running = running;
         _index = index;
-        _cacheQ = null;
+        _results.clear();
+        _homeDays = _byDay(items.reversed);
         _loaded = true;
       });
     }
@@ -394,68 +409,63 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
 
   int get _balance => _items.fold(0, (s, i) => s + i.signed);
 
-  /// 套用 [q] 的搜尋結果（新的在前）：同一個關鍵字存起來，重畫不重算。
-  List<TallyItem> _shown(String q) {
-    if (_cacheQ == q) return _cacheShown;
-    final terms = tallySearchTerms(q);
-    final out = terms.isEmpty
-        ? _items.reversed.toList()
-        : [
-            for (final e in _index.reversed)
-              if (terms.every(e.hay.contains)) e.item,
-          ];
-    _cacheQ = q;
-    _cacheShown = out;
-    _cacheDays = _byDay(out);
-    return out;
-  }
-
-  /// 打字：輸入框自己已經即時更新了，列表等停手 0.12 秒再套用（連打不會每個字都重畫整頁）；
-  /// 清成空的馬上套用。
-  void _onSearchText() {
-    _qTimer?.cancel();
-    if (_search.text.trim().isEmpty) {
-      _applySearch();
-      return;
-    }
-    _qTimer = Timer(_searchDelay, _applySearch);
-  }
-
-  /// 把輸入框現在的字套用到列表，順便告訴兩隻吉祥物（打字會跳上搜尋框、搜到／搜不到有反應）。
-  void _applySearch() {
-    _qTimer?.cancel();
-    final q = _search.text.trim();
-    final n = _shown(q).length;
-    setState(() => _q = q);
-    _duo.onSearch(q, n);
-  }
-
-  Widget _searchField() => TextField(
-    key: const ValueKey('tallySearch'),
-    controller: _search,
-    onChanged: (_) => _onSearchText(),
-    textInputAction: TextInputAction.search,
-    style: const TextStyle(fontSize: 15, color: AppColors.ink),
-    decoration: _input('搜尋（備註、金額、日期）').copyWith(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      prefixIcon: const Icon(
-        Icons.search_rounded,
-        size: 20,
-        color: AppColors.ink3,
-      ),
-      suffixIcon: _search.text.isEmpty
-          ? null
-          : IconButton(
-              tooltip: '清除',
-              icon: const Icon(Icons.close_rounded, size: 18),
-              color: AppColors.ink3,
-              onPressed: () {
-                _search.clear();
-                _applySearch();
-              },
+  /// 首頁的搜尋入口：看起來像搜尋框，點下去才跳出搜尋面板。
+  Widget _searchButton() => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      key: const ValueKey('tallySearch'),
+      onTap: _openSearch,
+      borderRadius: BorderRadius.circular(14),
+      child: Ink(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.search_rounded, size: 20, color: AppColors.ink3),
+            SizedBox(width: 10),
+            Text(
+              '搜尋（備註、金額、日期）',
+              style: TextStyle(color: AppColors.ink3, fontSize: 16),
             ),
+          ],
+        ),
+      ),
     ),
   );
+
+  /// 跳出懸浮的搜尋面板；選了一筆就關掉面板、打開那一筆的詳細，點外面或按取消就單純關掉。
+  Future<void> _openSearch() async {
+    final picked = await showGeneralDialog<TallyItem>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '關閉搜尋',
+      barrierColor: Colors.black.withValues(alpha: .5),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (ctx, _, _) => _SearchPanel(
+        index: _index,
+        running: _running,
+        cache: _results,
+        solo: widget.solo,
+        onQuery: _duo.onSearch,
+      ),
+      transitionBuilder: (ctx, a, _, child) => FadeTransition(
+        opacity: a,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, -.04),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: a, curve: Curves.easeOut)),
+          child: child,
+        ),
+      ),
+    );
+    _duo.onSearch('', _items.length); // 關了：吉祥物回到平常
+    if (picked != null && mounted) _openItem(picked);
+  }
 
   Future<void> _edit({bool plus = true, TallyItem? old}) async {
     final r = await showTallyItemForm(
@@ -538,9 +548,6 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
     final minusSum = _items
         .where((i) => !i.plus)
         .fold(0, (s, i) => s + i.amount);
-    // 搜尋：只篩下面的明細，結餘、累計結餘還是全部的（累計結餘載入時算好存在 _running）。
-    final q = _q;
-    final shown = _shown(q);
     final running = _running;
     return _page(
       context,
@@ -609,10 +616,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               builder: (context, cs) => Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  ListenableBuilder(
-                    listenable: _search,
-                    builder: (context, _) => _searchField(),
-                  ),
+                  _searchButton(),
                   Positioned(
                     left: 0,
                     top: 0,
@@ -704,26 +708,31 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
             message: '豪出的錢按「＋ 豪支出」，岑出的錢按「− 岑支出」',
           )
         else ...[
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 4),
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 4),
             child: Text(
-              q.isEmpty ? '明細・新的在上面・點一筆看詳細' : '找到 ${shown.length} 筆・點一筆看詳細',
-              style: const TextStyle(fontSize: 13.5, color: AppColors.ink2),
+              '明細・新的在上面・點一筆看詳細',
+              style: TextStyle(fontSize: 13.5, color: AppColors.ink2),
             ),
           ),
-          if (q.isNotEmpty && shown.isEmpty)
-            const InlineEmptyCard(title: '沒有符合的記錄', message: '換個關鍵字，或清掉搜尋框'),
-          // 一天一張卡，上面標日期、當天筆數跟小計（2026-10-20 使用者要求：
-          // 不同天要分開，不然混在一起）。
-          for (final day in _cacheDays) ...[
+        ],
+      ],
+      // 一天一張卡，上面標日期、當天筆數跟小計（2026-10-20 使用者要求：不同天要分開，不然混在一起）。
+      // 捲到才建（2026-11-09 使用者），窗口抓大一點（_listCache），捲動不用等。
+      lazyCount: _items.isEmpty ? 0 : _homeDays.length,
+      lazyBuilder: (context, n) {
+        final day = _homeDays[n];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             _DayHeader(items: day),
             GlassCard(
               key: _pk('day-${_ymd(day.first.at)}'),
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: [
-                  for (final (n, i) in day.indexed) ...[
-                    if (n > 0)
+                  for (final (k, i) in day.indexed) ...[
+                    if (k > 0)
                       const Divider(
                         height: 1,
                         indent: 16,
@@ -744,8 +753,8 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               ),
             ),
           ],
-        ],
-      ],
+        );
+      },
       bottom: Row(
         children: [
           Expanded(
@@ -769,6 +778,266 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
       ),
     );
   }
+}
+
+/// 搜尋面板（2026-11-09 使用者）：點首頁搜尋框跳出來的懸浮視窗，搜完選一筆或點外面就關掉，
+/// 首頁完全不動。結果用 [cache]（同一個關鍵字只算一次）、每一筆比對事先算好的字串，停手 0.12 秒才套用；
+/// 結果列表捲到才建，一次建到畫面上下各 1200px（窗口抓大一點，捲動不用等）。
+class _SearchPanel extends StatefulWidget {
+  const _SearchPanel({
+    required this.index,
+    required this.running,
+    required this.cache,
+    required this.solo,
+    required this.onQuery,
+  });
+
+  final List<({TallyItem item, String hay})> index;
+  final Map<String, int> running;
+  final Map<String, List<TallyItem>> cache;
+  final bool solo;
+
+  /// 每次套用搜尋就回報：打的字、搜到幾筆（吉祥物看了有反應）。
+  final void Function(String q, int n) onQuery;
+
+  @override
+  State<_SearchPanel> createState() => _SearchPanelState();
+}
+
+class _SearchPanelState extends State<_SearchPanel> {
+  static const _delay = Duration(milliseconds: 120);
+  static const _rowH = 78.0;
+
+  final _c = TextEditingController();
+  Timer? _t;
+  String _q = '';
+  List<TallyItem> _shown = const [];
+
+  @override
+  void dispose() {
+    _t?.cancel();
+    _c.dispose();
+    super.dispose();
+  }
+
+  void _onText() {
+    _t?.cancel();
+    if (_c.text.trim().isEmpty) {
+      _apply();
+      return;
+    }
+    _t = Timer(_delay, _apply);
+  }
+
+  void _apply() {
+    _t?.cancel();
+    final q = _c.text.trim();
+    final terms = tallySearchTerms(q);
+    final out = terms.isEmpty
+        ? const <TallyItem>[]
+        : widget.cache.putIfAbsent(q, () {
+            return [
+              for (final e in widget.index.reversed)
+                if (terms.every(e.hay.contains)) e.item,
+            ];
+          });
+    setState(() {
+      _q = q;
+      _shown = out;
+    });
+    widget.onQuery(q, out.length);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final maxH = mq.size.height - mq.padding.top - mq.viewInsets.bottom - 36;
+    final terms = tallySearchTerms(_q);
+    final plusSum = _shown.where((i) => i.plus).fold(0, (s, i) => s + i.amount);
+    final minusSum = _shown
+        .where((i) => !i.plus)
+        .fold(0, (s, i) => s + i.amount);
+    final listH = math.min(_shown.length * _rowH, math.max(0.0, maxH - 150));
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(14, mq.padding.top + 12, 14, 0),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 480, maxHeight: maxH),
+          child: Material(
+            color: Colors.transparent,
+            child: ClipRRect(
+              key: const ValueKey('tallySearchPanel'),
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: tallyAccent.withValues(alpha: .55),
+                      width: 1.3,
+                    ),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xE6262433), Color(0xEE161520)],
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ListenableBuilder(
+                              listenable: _c,
+                              builder: (context, _) => TextField(
+                                key: const ValueKey('tallySearchInput'),
+                                controller: _c,
+                                autofocus: true,
+                                onChanged: (_) => _onText(),
+                                textInputAction: TextInputAction.search,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.ink,
+                                ),
+                                decoration: _input('搜尋（備註、金額、日期）').copyWith(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.search_rounded,
+                                    size: 20,
+                                    color: tallyAccent,
+                                  ),
+                                  suffixIcon: _c.text.isEmpty
+                                      ? null
+                                      : IconButton(
+                                          tooltip: '清除',
+                                          icon: const Icon(
+                                            Icons.close_rounded,
+                                            size: 18,
+                                          ),
+                                          color: AppColors.ink3,
+                                          onPressed: () {
+                                            _c.clear();
+                                            _apply();
+                                          },
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('取消'),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
+                        child: _q.isEmpty
+                            ? const Text(
+                                '備註、金額、日期、豪／岑支出都能搜，空白隔開可以一次找多個',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.ink3,
+                                ),
+                              )
+                            : _shown.isEmpty
+                            ? const Text(
+                                '沒有符合的記錄，換個關鍵字試試',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: AppColors.ink2,
+                                ),
+                              )
+                            : Text(
+                                '找到 ${_shown.length} 筆・豪 ${tallyMoney(plusSum)}・岑 ${tallyMoney(minusSum)}・點一筆看詳細',
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: tallyAccent,
+                                ),
+                              ),
+                      ),
+                      if (_shown.isNotEmpty)
+                        SizedBox(
+                          height: listH,
+                          child: ListView.builder(
+                            cacheExtent: 1200,
+                            itemCount: _shown.length,
+                            itemBuilder: (context, i) {
+                              final it = _shown[i];
+                              return DecoratedBox(
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(color: AppColors.glassEdge),
+                                  ),
+                                ),
+                                child: _ItemRow(
+                                  item: it,
+                                  after: widget.running[it.id] ?? 0,
+                                  onTap: () => Navigator.pop(context, it),
+                                  solo: widget.solo,
+                                  terms: terms,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 備註裡符合關鍵字的字標底色（搜尋時一眼看出為什麼這筆被搜到）。
+List<InlineSpan> _highlight(String text, List<String> terms) {
+  if (terms.isEmpty) return [TextSpan(text: text)];
+  final low = text.toLowerCase();
+  if (low.length != text.length) return [TextSpan(text: text)];
+  final mark = List<bool>.filled(text.length, false);
+  for (final t in terms) {
+    var from = 0;
+    while (true) {
+      final i = low.indexOf(t, from);
+      if (i < 0) break;
+      for (var k = i; k < i + t.length; k++) {
+        mark[k] = true;
+      }
+      from = i + t.length;
+    }
+  }
+  final out = <InlineSpan>[];
+  var start = 0;
+  for (var k = 1; k <= text.length; k++) {
+    if (k == text.length || mark[k] != mark[start]) {
+      final seg = text.substring(start, k);
+      out.add(
+        mark[start]
+            ? TextSpan(
+                text: seg,
+                style: TextStyle(
+                  backgroundColor: tallyAccent.withValues(alpha: .38),
+                ),
+              )
+            : TextSpan(text: seg),
+      );
+      start = k;
+    }
+  }
+  return out;
 }
 
 /// 照日期分組（保持原本的先後）。
@@ -872,9 +1141,13 @@ class _ItemRow extends StatelessWidget {
     required this.after,
     required this.onTap,
     required this.solo,
+    this.terms = const [],
   });
 
   final bool solo;
+
+  /// 搜尋中的關鍵字：備註裡符合的字標底色。
+  final List<String> terms;
 
   final TallyItem item;
   final int after;
@@ -922,10 +1195,18 @@ class _ItemRow extends StatelessWidget {
                 children: [
                   TallyMosaic(
                     on: item.hidden && item.note.isNotEmpty,
-                    child: Text(
-                      item.note.isEmpty
-                          ? (item.plus ? '豪支出' : '岑支出')
-                          : item.note,
+                    child: Text.rich(
+                      TextSpan(
+                        children: item.note.isEmpty || item.hidden
+                            ? [
+                                TextSpan(
+                                  text: item.note.isEmpty
+                                      ? (item.plus ? '豪支出' : '岑支出')
+                                      : item.note,
+                                ),
+                              ]
+                            : _highlight(item.note, terms),
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

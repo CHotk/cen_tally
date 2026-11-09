@@ -115,6 +115,58 @@ void main() {
     expect(sw.elapsedMilliseconds / 20, lessThan(30));
   });
 
+  testWidgets('明細捲到才建：400 筆一開始只建畫面附近的，往下捲就看得到更後面的、不用等', (t) async {
+    t.view.physicalSize = const Size(400, 860);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final store = _MemoryStore();
+    final c = ProviderContainer(
+      overrides: [keyValueStoreProvider.overrideWithValue(store)],
+    );
+    addTearDown(c.dispose);
+    final repo = c.read(tallyRepositoryProvider);
+    final b = await repo.addBook('記帳');
+    for (var n = 0; n < 400; n++) {
+      // 每天一筆，n 越大越新（畫面上新的在上面）
+      await repo.addItem(
+        bookId: b.id,
+        plus: true,
+        amount: 100 + n,
+        note: 'N$n',
+        at: DateTime(2025, 1, 1).add(Duration(days: n)),
+      );
+    }
+    await t.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: const MaterialApp(home: TallyEntryPage(solo: true)),
+      ),
+    );
+    await t.pumpAndSettle();
+    final rows = find.byWidgetPredicate(
+      (w) =>
+          w is Text &&
+          RegExp(r'^N\d+$').hasMatch(w.data ?? w.textSpan?.toPlainText() ?? ''),
+    );
+    // 最新的（N399）在最上面、有建；最舊的（N0）在最底下、還沒建。
+    expect(find.text('N399'), findsOneWidget);
+    expect(find.text('N0'), findsNothing);
+    final first = rows.evaluate().length;
+    expect(first, greaterThan(3));
+    expect(first, lessThan(60)); // 不是 400 筆全建
+    // 往下捲：後面的接著建出來，一路捲到最底就看得到最舊的。
+    await t.fling(find.byType(Scrollable).first, const Offset(0, -3000), 8000);
+    await t.pumpAndSettle();
+    expect(find.text('N399'), findsNothing);
+    final list = find.byType(Scrollable).first;
+    for (var k = 0; k < 300 && find.text('N0').evaluate().isEmpty; k++) {
+      await t.drag(list, const Offset(0, -700));
+      await t.pump();
+    }
+    expect(find.text('N0'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
   testWidgets('首頁頂部有搜尋框：打字只留符合的，結餘不變；清掉就回來；沒有符合會說', (t) async {
     t.view.physicalSize = const Size(400, 860);
     t.view.devicePixelRatio = 1;
@@ -147,37 +199,67 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    final box = find.byKey(const ValueKey('tallySearch'));
-    expect(box, findsOneWidget);
+    final entry = find.byKey(const ValueKey('tallySearch'));
+    final panel = find.byKey(const ValueKey('tallySearchPanel'));
+    final input = find.byKey(const ValueKey('tallySearchInput'));
+    Finder inPanel(String text) =>
+        find.descendant(of: panel, matching: find.text(text));
+    expect(entry, findsOneWidget);
+    // 首頁的搜尋框只是入口：沒有輸入框、沒有面板。
+    expect(find.byType(TextField), findsNothing);
+    expect(panel, findsNothing);
     expect(find.text('晚餐'), findsOneWidget);
     expect(find.text('電影票'), findsOneWidget);
 
-    // 打字不會掉焦點（一直能繼續打）。
-    await t.tap(box);
-    await t.enterText(box, '電');
-    await t.pump(const Duration(milliseconds: 200)); // 停手 0.12 秒才套用到列表
-    await t.enterText(box, '電影');
-    await t.pump(const Duration(milliseconds: 200)); // 停手 0.12 秒才套用到列表
-    expect(find.text('電影票'), findsOneWidget);
-    expect(find.text('晚餐'), findsNothing);
-    expect(find.text('找到 1 筆・點一筆看詳細'), findsOneWidget);
+    // 點下去：跳出懸浮的搜尋面板，輸入框直接可以打字。
+    await t.tap(entry);
+    await t.pumpAndSettle();
+    expect(panel, findsOneWidget);
+    expect(input, findsOneWidget);
+    expect(find.textContaining('都能搜'), findsOneWidget);
+
+    // 打字不會掉焦點（一直能繼續打）；停手 0.12 秒才套用。
+    await t.enterText(input, '電');
+    await t.pump(const Duration(milliseconds: 200));
+    await t.enterText(input, '電影');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(inPanel('電影票'), findsOneWidget);
+    expect(inPanel('晚餐'), findsNothing);
+    expect(find.textContaining('找到 1 筆'), findsOneWidget);
+    // 首頁在後面完全沒被動到：還是完整明細、還是目前結餘。
+    expect(find.text('晚餐'), findsOneWidget);
+    expect(find.text('目前結餘'), findsOneWidget);
 
     // 搜金額也行。
-    await t.enterText(box, '1,200');
-    await t.pump(const Duration(milliseconds: 200)); // 停手 0.12 秒才套用到列表
-    expect(find.text('晚餐'), findsOneWidget);
-    expect(find.text('電影票'), findsNothing);
+    await t.enterText(input, '1,200');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(inPanel('晚餐'), findsOneWidget);
+    expect(inPanel('電影票'), findsNothing);
 
     // 沒有符合。
-    await t.enterText(box, '壽司');
-    await t.pump(const Duration(milliseconds: 200)); // 停手 0.12 秒才套用到列表
-    expect(find.text('沒有符合的記錄'), findsOneWidget);
+    await t.enterText(input, '壽司');
+    await t.pump(const Duration(milliseconds: 200));
+    expect(find.textContaining('沒有符合的記錄'), findsOneWidget);
 
-    // 清除。
+    // 清除、取消：面板關掉，首頁還是首頁。
     await t.tap(find.byTooltip('清除'));
     await t.pump();
+    expect(find.textContaining('都能搜'), findsOneWidget);
+    await t.tap(find.text('取消'));
+    await t.pumpAndSettle();
+    expect(panel, findsNothing);
     expect(find.text('晚餐'), findsOneWidget);
     expect(find.text('電影票'), findsOneWidget);
+
+    // 再開、搜到之後選一筆：面板直接關掉（搜完就關），那一筆的詳細打開。
+    await t.tap(entry);
+    await t.pumpAndSettle();
+    await t.enterText(input, '電影');
+    await t.pump(const Duration(milliseconds: 200));
+    await t.tap(inPanel('電影票'));
+    await t.pumpAndSettle();
+    expect(panel, findsNothing);
+    expect(find.text('目前結餘'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 }

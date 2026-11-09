@@ -99,3 +99,8 @@ App 裡的雪球程式是從設計稿 `design-history/2026-10-21_雪球底座與
   key 是 `_pk('search')`、交給 `PetDuo.searchKey`。兩隻都會爬上去、跳上去。搜尋框每次變動頁面呼叫 `PetDuo.onSearch(字, 搜到幾筆)`：第一個字打下去，
   閒著的兩隻跳上搜尋框；停手 0.9 秒後搜到就一起開心跳（小八「找到 N 筆！」），搜不到小八「找不到耶…」、吉伊「沒關係，換個關鍵字～」（5 秒內不重複反應）。
   小八出場是吉伊出場後 1.5 秒（`_enterHachi` 的 `_later(1.5, …)`）。泡泡太靠上時（站在搜尋框）最低畫在 y=20，不會被切掉。
+- **搜尋是懸浮面板，不動首頁**（2026-11-09 使用者：首頁就是首頁，搜尋只在點下去時像其他視窗一樣跳出來，搜完就關）：首頁的搜尋框只是入口
+  （`_searchButton`，key `tallySearch`，沒有輸入框；頂端那條 1px 透明格子仍是吉祥物的平台）；點下去 `_openSearch` 用 `showGeneralDialog` 跳出
+  `_SearchPanel`（輸入框 key `tallySearchInput`、面板 key `tallySearchPanel`）：打字停 0.12 秒套用、結果用 `_index`（載入時算好的搜尋字串）比對、
+  同關鍵字結果存 `_results`、結果列表捲到才建（`cacheExtent` 1200）；選一筆 → 面板關掉、打開那一筆詳細；點外面或「取消」＝單純關掉。
+  首頁明細也是捲到才建（`_page` 的 `lazyBuilder`，`_listCache` 1600px）。搜尋反應（吉祥物）是面板每次套用時呼叫 `PetDuo.onSearch`，關掉時送空字串收尾。

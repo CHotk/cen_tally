@@ -16,12 +16,16 @@ class GlassCard extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
     this.radius = Radii.card,
     this.onTap,
+    this.borderColor,
   });
 
   final Widget child;
   final EdgeInsets padding;
   final double radius;
   final VoidCallback? onTap;
+
+  /// 要特別強調的卡片（例如搜尋結果）才給：換邊框顏色、邊框加粗一點。
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +38,10 @@ class GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.glassFill,
             borderRadius: shape,
-            border: Border.all(color: AppColors.glassEdge),
+            border: Border.all(
+              color: borderColor ?? AppColors.glassEdge,
+              width: borderColor == null ? 1 : 1.4,
+            ),
           ),
           child: Padding(padding: padding, child: child),
         ),
