@@ -263,16 +263,29 @@ String _half(String s) => String.fromCharCodes([
 /// NT$ 都行）、日期（11/2、2026/11/02、11月、2026）、這一筆之後的結餘、
 /// 遮蔽、改過（獨立分享頁 [solo] 看不到改過的痕跡，所以不搜）。
 bool tallyMatches(TallyItem i, String query, {int? after, bool solo = false}) {
-  final terms = _half(query)
-      .toLowerCase()
-      .replaceAll(RegExp(r'nt\$|\$|,|，'), '')
-      .split(RegExp(r'\s+'))
-      .where((s) => s.isNotEmpty)
-      .toList();
+  final terms = tallySearchTerms(query);
   if (terms.isEmpty) return true;
+  final hay = tallySearchHay(i, after: after, solo: solo);
+  return terms.every(hay.contains);
+}
+
+final _termSplit = RegExp(r'\s+');
+final _termStrip = RegExp(r'nt\$|\$|,|，');
+
+/// 把打的字拆成關鍵字（半形、小寫、拿掉逗號跟 NT$）。
+List<String> tallySearchTerms(String query) => _half(query)
+    .toLowerCase()
+    .replaceAll(_termStrip, '')
+    .split(_termSplit)
+    .where((s) => s.isNotEmpty)
+    .toList();
+
+/// 一筆可以被搜到的全部文字（小寫）。列表載入時每筆只算一次存起來（快取），之後每次打字
+/// 只要比對這串字，不用再重組（2026-11-09 使用者：搜尋要跟 Lume 記帳一樣順、用快取）。
+String tallySearchHay(TallyItem i, {int? after, bool solo = false}) {
   String p(int n) => n.toString().padLeft(2, '0');
   final d = i.at;
-  final hay = [
+  return [
     i.note,
     i.plus ? '豪支出 豪 + 加' : '岑支出 岑 - − 還',
     '${i.amount}',
@@ -286,7 +299,6 @@ bool tallyMatches(TallyItem i, String query, {int? after, bool solo = false}) {
     if (i.hidden) '遮蔽 隱藏 馬賽克',
     if (i.edited && !solo) '改過 修改',
   ].join('\n').toLowerCase();
-  return terms.every(hay.contains);
 }
 
 /// 一筆的簡短描述，異動紀錄用：「＋ NT$500「晚餐」（10/19）」。

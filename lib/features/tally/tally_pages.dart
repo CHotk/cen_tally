@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -332,6 +333,19 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   /// 頂部搜尋框（2026-11-09 使用者）。
   final _search = TextEditingController();
 
+  // 搜尋要順（2026-11-09 使用者：跟 Lume 記帳一樣順、用快取）：
+  // 1. 每一筆可以被搜到的字串、每一筆之後的累計結餘，載入時算一次（_index、_running）；
+  // 2. 打字時輸入框自己馬上更新，列表等停手 _searchDelay 才套用（_q）；
+  // 3. 同一個關鍵字的結果跟「一天一張卡」的分組存起來（_cacheQ…），重畫不重算。
+  static const _searchDelay = Duration(milliseconds: 120);
+  String _q = '';
+  Timer? _qTimer;
+  List<({TallyItem item, String hay})> _index = const [];
+  Map<String, int> _running = const {};
+  String? _cacheQ;
+  List<TallyItem> _cacheShown = const [];
+  List<List<TallyItem>> _cacheDays = const [];
+
   @override
   void initState() {
     super.initState();
@@ -343,6 +357,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
 
   @override
   void dispose() {
+    _qTimer?.cancel();
     _search.dispose();
     _shakes.dispose();
     tallyRevision.removeListener(_load);
@@ -353,10 +368,25 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
     final repo = ref.read(tallyRepositoryProvider);
     final b = (await repo.books()).where((x) => x.id == widget.bookId);
     final items = await repo.items();
+    // 每一筆之後的累計結餘（舊到新算）、每一筆的搜尋字串：資料變了才重算。
+    final running = <String, int>{};
+    final index = <({TallyItem item, String hay})>[];
+    var acc = 0;
+    for (final i in items) {
+      acc += i.signed;
+      running[i.id] = acc;
+      index.add((
+        item: i,
+        hay: tallySearchHay(i, after: acc, solo: widget.solo),
+      ));
+    }
     if (mounted) {
       setState(() {
         _book = b.firstOrNull;
         _items = items;
+        _running = running;
+        _index = index;
+        _cacheQ = null;
         _loaded = true;
       });
     }
@@ -364,28 +394,46 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
 
   int get _balance => _items.fold(0, (s, i) => s + i.signed);
 
-  /// 搜到幾筆（沒打字＝全部）。
-  int _matchCount(String text) {
-    final q = text.trim();
-    if (q.isEmpty) return _items.length;
-    var acc = 0, n = 0;
-    for (final i in _items) {
-      acc += i.signed;
-      if (tallyMatches(i, q, after: acc, solo: widget.solo)) n++;
-    }
-    return n;
+  /// 套用 [q] 的搜尋結果（新的在前）：同一個關鍵字存起來，重畫不重算。
+  List<TallyItem> _shown(String q) {
+    if (_cacheQ == q) return _cacheShown;
+    final terms = tallySearchTerms(q);
+    final out = terms.isEmpty
+        ? _items.reversed.toList()
+        : [
+            for (final e in _index.reversed)
+              if (terms.every(e.hay.contains)) e.item,
+          ];
+    _cacheQ = q;
+    _cacheShown = out;
+    _cacheDays = _byDay(out);
+    return out;
   }
 
-  /// 搜尋框變動：重畫列表，順便告訴兩隻吉祥物（打字會跳上搜尋框、搜到／搜不到有反應）。
-  void _onSearch() {
-    setState(() {});
-    _duo.onSearch(_search.text, _matchCount(_search.text));
+  /// 打字：輸入框自己已經即時更新了，列表等停手 0.12 秒再套用（連打不會每個字都重畫整頁）；
+  /// 清成空的馬上套用。
+  void _onSearchText() {
+    _qTimer?.cancel();
+    if (_search.text.trim().isEmpty) {
+      _applySearch();
+      return;
+    }
+    _qTimer = Timer(_searchDelay, _applySearch);
+  }
+
+  /// 把輸入框現在的字套用到列表，順便告訴兩隻吉祥物（打字會跳上搜尋框、搜到／搜不到有反應）。
+  void _applySearch() {
+    _qTimer?.cancel();
+    final q = _search.text.trim();
+    final n = _shown(q).length;
+    setState(() => _q = q);
+    _duo.onSearch(q, n);
   }
 
   Widget _searchField() => TextField(
     key: const ValueKey('tallySearch'),
     controller: _search,
-    onChanged: (_) => _onSearch(),
+    onChanged: (_) => _onSearchText(),
     textInputAction: TextInputAction.search,
     style: const TextStyle(fontSize: 15, color: AppColors.ink),
     decoration: _input('搜尋（備註、金額、日期）').copyWith(
@@ -403,7 +451,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               color: AppColors.ink3,
               onPressed: () {
                 _search.clear();
-                _onSearch();
+                _applySearch();
               },
             ),
     ),
@@ -490,21 +538,10 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
     final minusSum = _items
         .where((i) => !i.plus)
         .fold(0, (s, i) => s + i.amount);
-    // 每一筆之後的累計結餘（舊到新算），畫面上新的在上面。
-    final running = <String, int>{};
-    var acc = 0;
-    for (final i in _items) {
-      acc += i.signed;
-      running[i.id] = acc;
-    }
-    // 搜尋：只篩下面的明細，結餘、累計結餘還是全部的。
-    final q = _search.text.trim();
-    final shown = [
-      for (final i in _items.reversed)
-        if (q.isEmpty ||
-            tallyMatches(i, q, after: running[i.id], solo: widget.solo))
-          i,
-    ];
+    // 搜尋：只篩下面的明細，結餘、累計結餘還是全部的（累計結餘載入時算好存在 _running）。
+    final q = _q;
+    final shown = _shown(q);
+    final running = _running;
     return _page(
       context,
       bottomKey: _pk('bottom'),
@@ -572,7 +609,10 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               builder: (context, cs) => Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  _searchField(),
+                  ListenableBuilder(
+                    listenable: _search,
+                    builder: (context, _) => _searchField(),
+                  ),
                   Positioned(
                     left: 0,
                     top: 0,
@@ -675,7 +715,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
             const InlineEmptyCard(title: '沒有符合的記錄', message: '換個關鍵字，或清掉搜尋框'),
           // 一天一張卡，上面標日期、當天筆數跟小計（2026-10-20 使用者要求：
           // 不同天要分開，不然混在一起）。
-          for (final day in _byDay(shown)) ...[
+          for (final day in _cacheDays) ...[
             _DayHeader(items: day),
             GlassCard(
               key: _pk('day-${_ymd(day.first.at)}'),
