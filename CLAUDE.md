@@ -94,3 +94,7 @@ App 裡的雪球程式是從設計稿 `design-history/2026-10-21_雪球底座與
   設計稿的「八點檔・小壞話」先只放設計稿參考，要放進 App 再把 `_pos` 加上去。
 - 測試：用 `tools/cdp_test.mjs` 開 `?meet=1`、先在 IndexedDB 放假的 `cen_tally.sync.config.v1`、`tally.books.v1`、`tally.items.v1`
   （要有幾筆明細才有卡片可站）；iframe 在 `document.querySelectorAll('iframe')`，各自的 `contentWindow.__pet` 看得到 act／位置。
+- **搜尋框也是平台**（2026-11-09）：`tally_pages.dart` 在搜尋框頂端放一條 1px 高的透明格子當平台（寬度留掉右邊 84px，不蓋住右上角的雲端同步、異動紀錄按鈕），
+  key 是 `_pk('search')`、交給 `PetDuo.searchKey`。兩隻都會爬上去、跳上去。搜尋框每次變動頁面呼叫 `PetDuo.onSearch(字, 搜到幾筆)`：第一個字打下去，
+  閒著的兩隻跳上搜尋框；停手 0.9 秒後搜到就一起開心跳（小八「找到 N 筆！」），搜不到小八「找不到耶…」、吉伊「沒關係，換個關鍵字～」（5 秒內不重複反應）。
+  小八出場是吉伊出場後 1.5 秒（`_enterHachi` 的 `_later(1.5, …)`）。泡泡太靠上時（站在搜尋框）最低畫在 y=20，不會被切掉。

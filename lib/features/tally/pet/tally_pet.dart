@@ -226,7 +226,7 @@ class _TallyPetLayerState extends State<TallyPetLayer>
   void _enterHachi() {
     x = y = -300;
     plat = null;
-    _later(4.5, () {
+    _later(1.5, () {
       if (!mounted) return;
       final rows = _rows();
       final row = rows.isNotEmpty ? rows.first : null;
@@ -694,6 +694,17 @@ class _TallyPetLayerState extends State<TallyPetLayer>
     hx1 = (nearX + (x < nearX ? -90 : 90))
         .clamp(p.x1 + 10, p.x2 - 10)
         .toDouble();
+    face = hx1 >= x ? 1 : -1;
+    plat = null;
+    _setMode('hop');
+  }
+
+  /// 跳到 [p] 那張卡片的 [landX]（搜尋框當平台：打字時兩隻跳上去看）。
+  void _hopTo(_Plat p, double landX) {
+    hopKey = p.key;
+    hx0 = x;
+    hy0 = y;
+    hx1 = landX.clamp(p.x1 + 10, p.x2 - 10).toDouble();
     face = hx1 >= x ? 1 : -1;
     plat = null;
     _setMode('hop');
@@ -1268,6 +1279,69 @@ class PetDuo {
   /// 兩隻正在約好見面或互動：各自先不要亂跑。
   bool get busy => _phase != 'none';
 
+  // ── 搜尋框（2026-11-09 使用者：搜尋框也是平台，兩隻都能爬、能互動） ──
+  /// 搜尋框那個平台的 key（頁面給的）。
+  GlobalKey? searchKey;
+  String _q = '';
+  int _n = 0;
+  bool _pendingTyping = false, _pendingResult = false;
+  double _resultAt = 0, _clock = 0, _lastReact = -99;
+
+  /// 頁面每次搜尋框內容變動就呼叫：[q] 是現在打的字、[n] 是搜到幾筆。
+  /// 第一個字打下去：兩隻（閒著的）跳上搜尋框看；停手 0.9 秒後：搜到就一起開心跳，搜不到小八說找不到、吉伊安慰。
+  void onSearch(String q, int n) {
+    final wasEmpty = _q.isEmpty;
+    _q = q.trim();
+    _n = n;
+    if (_q.isEmpty) {
+      _pendingTyping = _pendingResult = false;
+      return;
+    }
+    if (wasEmpty) _pendingTyping = true;
+    _pendingResult = true;
+    _resultAt = _clock + .9;
+  }
+
+  void _searchReact(
+    _TallyPetLayerState a,
+    _TallyPetLayerState b,
+    List<_Plat> all,
+  ) {
+    if (busy || (!_pendingTyping && !_pendingResult)) return;
+    final pets = [a, b].where(_free).toList();
+    if (pets.isEmpty) return;
+    if (_pendingTyping) {
+      _pendingTyping = false;
+      _Plat? sp;
+      for (final p in all) {
+        if (p.key == searchKey) sp = p;
+      }
+      if (sp == null) return;
+      for (final s in pets) {
+        if (s.plat == sp.key) continue;
+        s._hopTo(sp, sp.x1 + (sp.x2 - sp.x1) * (s._hachi ? .72 : .28));
+        s._say(s._hachi ? '要找什麼呢？' : '搜尋～', 1.6);
+      }
+      return;
+    }
+    if (_pendingResult && _clock >= _resultAt) {
+      _pendingResult = false;
+      if (_clock - _lastReact < 5) return; // 一直打字不要每次都吵
+      _lastReact = _clock;
+      for (final s in pets) {
+        if (_n > 0) {
+          s._setMode('happy', vy0: -330);
+          s._say(s._hachi ? '找到 $_n 筆！' : '好棒～♪', 1.8);
+        } else if (s._hachi) {
+          s._setMode('look', until0: 2.4 * _TallyPetLayerState._pace);
+          s._say('找不到耶…', 2);
+        } else {
+          s._later(.9, () => s._say('沒關係，換個關鍵字～', 2));
+        }
+      }
+    }
+  }
+
   void _reg(_TallyPetLayerState s) {
     if (s._hachi) {
       _b = s;
@@ -1312,8 +1386,10 @@ class PetDuo {
 
   /// 吉伊那隻每一幀呼叫（[all] 是目前能站的卡片、[w] 是畫面寬度）。
   void _tick(double dt, List<_Plat> all, double w) {
+    _clock += dt;
     final a = _a, b = _b;
     if (a == null || b == null) return;
+    _searchReact(a, b, all);
     switch (_phase) {
       case 'none':
         if (!_free(a) || !_free(b)) return;

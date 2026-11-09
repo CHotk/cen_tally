@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -334,6 +335,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   @override
   void initState() {
     super.initState();
+    _duo.searchKey = _pk('search');
     _load();
     // 雲端同步拿到新資料就重讀。
     tallyRevision.addListener(_load);
@@ -361,6 +363,51 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   }
 
   int get _balance => _items.fold(0, (s, i) => s + i.signed);
+
+  /// 搜到幾筆（沒打字＝全部）。
+  int _matchCount(String text) {
+    final q = text.trim();
+    if (q.isEmpty) return _items.length;
+    var acc = 0, n = 0;
+    for (final i in _items) {
+      acc += i.signed;
+      if (tallyMatches(i, q, after: acc, solo: widget.solo)) n++;
+    }
+    return n;
+  }
+
+  /// 搜尋框變動：重畫列表，順便告訴兩隻吉祥物（打字會跳上搜尋框、搜到／搜不到有反應）。
+  void _onSearch() {
+    setState(() {});
+    _duo.onSearch(_search.text, _matchCount(_search.text));
+  }
+
+  Widget _searchField() => TextField(
+    key: const ValueKey('tallySearch'),
+    controller: _search,
+    onChanged: (_) => _onSearch(),
+    textInputAction: TextInputAction.search,
+    style: const TextStyle(fontSize: 15, color: AppColors.ink),
+    decoration: _input('搜尋（備註、金額、日期）').copyWith(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      prefixIcon: const Icon(
+        Icons.search_rounded,
+        size: 20,
+        color: AppColors.ink3,
+      ),
+      suffixIcon: _search.text.isEmpty
+          ? null
+          : IconButton(
+              tooltip: '清除',
+              icon: const Icon(Icons.close_rounded, size: 18),
+              color: AppColors.ink3,
+              onPressed: () {
+                _search.clear();
+                _onSearch();
+              },
+            ),
+    ),
+  );
 
   Future<void> _edit({bool plus = true, TallyItem? old}) async {
     final r = await showTallyItemForm(
@@ -519,30 +566,21 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         if (_items.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: Gap.sm),
-            child: TextField(
-              key: const ValueKey('tallySearch'),
-              controller: _search,
-              onChanged: (_) => setState(() {}),
-              textInputAction: TextInputAction.search,
-              style: const TextStyle(fontSize: 15, color: AppColors.ink),
-              decoration: _input('搜尋（備註、金額、日期）').copyWith(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: AppColors.ink3,
-                ),
-                suffixIcon: _search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: '清除',
-                        icon: const Icon(Icons.close_rounded, size: 18),
-                        color: AppColors.ink3,
-                        onPressed: () => setState(_search.clear),
-                      ),
+            // 搜尋框也是吉祥物能站的平台（2026-11-09 使用者）：上緣就是地板，右邊留一段給右上角的
+            // 按鈕（不然牠們站上去會蓋住雲端同步、異動紀錄）。平台是頂端那一條 1px 高的透明格子。
+            child: LayoutBuilder(
+              builder: (context, cs) => Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _searchField(),
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    width: math.max(120.0, cs.maxWidth - 84),
+                    height: 1,
+                    child: SizedBox(key: _pk('search')),
+                  ),
+                ],
               ),
             ),
           ),
