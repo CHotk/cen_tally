@@ -1239,7 +1239,9 @@ class _RenderFollow extends RenderProxyBox {
 class PetDuo {
   _TallyPetLayerState? _a, _b; // 吉伊、小八
   String _phase = 'none'; // none / hop / walk / act
-  double _meetIn = _first;
+  // 每次在 10～40 秒之間隨機抽一個時間（2026-11-09 使用者）。
+  late double _meetIn = _fast ? 2 : _draw();
+  double _draw() => 10 + _rng.nextDouble() * 30;
   double _t = 0;
   String? _act;
   double _cx = 0, _xa = 0, _xb = 0;
@@ -1249,7 +1251,6 @@ class PetDuo {
 
   /// 網址加 ?meet=1 可以縮短等待（看效果、測試用）。
   static final _fast = Uri.base.queryParameters['meet'] != null;
-  static final double _first = _fast ? 2 : 16;
 
   /// 互動動作（設計稿 b_ 開頭）：吉伊、小八各站畫面寬度的幾成（跟 web/pet 裡各動作自己的位置一樣）。
   static const _pos = <String, List<double>>{
@@ -1397,7 +1398,7 @@ class PetDuo {
     _phase = 'none';
     _act = null;
     _t = 0;
-    _meetIn = _fast ? 6 : 28 + _rng.nextDouble() * 24;
+    _meetIn = _fast ? 6 : _draw();
   }
 
   /// 其中一隻被打斷（站的卡片捲走了）：兩隻都結束互動、回去各自逛。
