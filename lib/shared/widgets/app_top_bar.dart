@@ -40,8 +40,7 @@ class AppTopBar extends StatelessWidget {
         if (showBack)
           IconButton(
             // 直接開網址進來（沒有上一頁）就回首頁。
-            onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/'),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
             icon: const Icon(Icons.arrow_back_rounded, size: 24),
             color: AppColors.ink,
             tooltip: '返回',

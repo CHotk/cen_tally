@@ -184,10 +184,7 @@ void main() {
     await first;
     await second;
     await Future<void>.delayed(const Duration(milliseconds: 20));
-    expect(
-      cloud['items.json']!.map((j) => j['note']),
-      contains('同步中加的'),
-    );
+    expect(cloud['items.json']!.map((j) => j['note']), contains('同步中加的'));
   });
 
   test('雲端連不上：記一筆失敗、狀態是失敗、本機資料不動；網路好了再同步就上去', () async {

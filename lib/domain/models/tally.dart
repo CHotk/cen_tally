@@ -247,6 +247,48 @@ String tallyMoney(int v) {
   return 'NT\$$b';
 }
 
+/// 全形英數字、空白換成半形（搜尋用，打 ５００ 也找得到 500）。
+String _half(String s) => String.fromCharCodes([
+  for (final c in s.runes)
+    if (c >= 0xFF01 && c <= 0xFF5E)
+      c - 0xFEE0
+    else if (c == 0x3000)
+      0x20
+    else
+      c,
+]);
+
+/// 搜尋（2026-11-09 使用者：頂部加搜尋框，啥都可以搜、金額也能）。用空白隔開多個關鍵字，
+/// 每個都要找得到（且）；大小寫不分。搜的東西：備註、豪支出／岑支出、金額（有沒有逗號、
+/// NT$ 都行）、日期（11/2、2026/11/02、11月、2026）、這一筆之後的結餘、
+/// 遮蔽、改過（獨立分享頁 [solo] 看不到改過的痕跡，所以不搜）。
+bool tallyMatches(TallyItem i, String query, {int? after, bool solo = false}) {
+  final terms = _half(query)
+      .toLowerCase()
+      .replaceAll(RegExp(r'nt\$|\$|,|，'), '')
+      .split(RegExp(r'\s+'))
+      .where((s) => s.isNotEmpty)
+      .toList();
+  if (terms.isEmpty) return true;
+  String p(int n) => n.toString().padLeft(2, '0');
+  final d = i.at;
+  final hay = [
+    i.note,
+    i.plus ? '豪支出 豪 + 加' : '岑支出 岑 - − 還',
+    '${i.amount}',
+    '${d.month}/${d.day}',
+    '${d.year}/${p(d.month)}/${p(d.day)}',
+    '${d.year}-${p(d.month)}-${p(d.day)}',
+    '${d.month}月${d.day}日',
+    '${d.month}月',
+    '${d.year}',
+    if (after != null) '結餘 ${after.abs()}',
+    if (i.hidden) '遮蔽 隱藏 馬賽克',
+    if (i.edited && !solo) '改過 修改',
+  ].join('\n').toLowerCase();
+  return terms.every(hay.contains);
+}
+
 /// 一筆的簡短描述，異動紀錄用：「＋ NT$500「晚餐」（10/19）」。
 String tallyItemLabel(TallyItem i) =>
     '${i.plus ? '＋' : '−'} ${tallyMoney(i.amount)}'

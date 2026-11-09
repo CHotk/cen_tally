@@ -322,6 +322,9 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
   List<TallyItem> _items = const [];
   bool _loaded = false;
 
+  /// 頂部搜尋框（2026-11-09 使用者）。
+  final _search = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -332,6 +335,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
 
   @override
   void dispose() {
+    _search.dispose();
     _shakes.dispose();
     tallyRevision.removeListener(_load);
     super.dispose();
@@ -440,6 +444,14 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
       acc += i.signed;
       running[i.id] = acc;
     }
+    // 搜尋：只篩下面的明細，結餘、累計結餘還是全部的。
+    final q = _search.text.trim();
+    final shown = [
+      for (final i in _items.reversed)
+        if (q.isEmpty ||
+            tallyMatches(i, q, after: running[i.id], solo: widget.solo))
+          i,
+    ];
     return _page(
       context,
       bottomKey: _pk('bottom'),
@@ -480,6 +492,37 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
         ],
       ),
       children: [
+        // 頂部搜尋框：備註、金額、日期、豪／岑支出、結餘都能搜。有記錄才出現。
+        if (_items.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Gap.sm),
+            child: TextField(
+              key: const ValueKey('tallySearch'),
+              controller: _search,
+              onChanged: (_) => setState(() {}),
+              textInputAction: TextInputAction.search,
+              style: const TextStyle(fontSize: 15, color: AppColors.ink),
+              decoration: _input('搜尋（備註、金額、日期都行）').copyWith(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: AppColors.ink3,
+                ),
+                suffixIcon: _search.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: '清除',
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        color: AppColors.ink3,
+                        onPressed: () => setState(_search.clear),
+                      ),
+              ),
+            ),
+          ),
         // 結餘在左、雪球在右，照設計稿 design-history/2026-10-20_雪球放結餘卡.html
         // 的尺寸（2026-10-20 使用者：照設計稿做，包括大小）：卡高 168、雪球寬
         // 160，整顆收在卡片裡（使用者：設計稿是在卡片內，不要凸出去）。數字到
@@ -560,16 +603,18 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
             message: '豪出的錢按「＋ 豪支出」，岑出的錢按「− 岑支出」',
           )
         else ...[
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: Text(
-              '明細・新的在上面・點一筆看詳細',
-              style: TextStyle(fontSize: 13.5, color: AppColors.ink2),
+              q.isEmpty ? '明細・新的在上面・點一筆看詳細' : '找到 ${shown.length} 筆・點一筆看詳細',
+              style: const TextStyle(fontSize: 13.5, color: AppColors.ink2),
             ),
           ),
+          if (q.isNotEmpty && shown.isEmpty)
+            const InlineEmptyCard(title: '沒有符合的記錄', message: '換個關鍵字，或清掉搜尋框'),
           // 一天一張卡，上面標日期、當天筆數跟小計（2026-10-20 使用者要求：
           // 不同天要分開，不然混在一起）。
-          for (final day in _byDay(_items.reversed)) ...[
+          for (final day in _byDay(shown)) ...[
             _DayHeader(items: day),
             GlassCard(
               key: _pk('day-${_ymd(day.first.at)}'),
