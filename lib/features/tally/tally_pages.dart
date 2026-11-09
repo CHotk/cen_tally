@@ -502,7 +502,7 @@ class _TallyBookPageState extends ConsumerState<TallyBookPage> {
               onChanged: (_) => setState(() {}),
               textInputAction: TextInputAction.search,
               style: const TextStyle(fontSize: 15, color: AppColors.ink),
-              decoration: _input('搜尋（備註、金額、日期都行）').copyWith(
+              decoration: _input('搜尋（備註、金額、日期）').copyWith(
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
