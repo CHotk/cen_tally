@@ -39,6 +39,7 @@ const html = `<!doctype html>
   /* 台詞：一行不換行、置中在頭上（2026-10-21 使用者） */
   .bubble { position: absolute; z-index: 3; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .18s;
     font: 800 12.5px/1.2 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.5); }
+  body.nofx #dim, body.nofx #big { display: none; }
   .bubble .h { color: #FF6FA5; } .bubble.foe { color: #ffc2d4; } .bubble.hachi { color: #cfe0ff; }
   #big { position: absolute; z-index: 3; left: 50%; top: 32%; transform: translate(-50%, -50%) scale(.6); font: 900 24px/1 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     letter-spacing: 2px; opacity: 0; white-space: nowrap; color: #fff; text-shadow: 0 0 12px rgba(255,200,87,.8), 0 2px 0 #000; transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1); }
@@ -84,7 +85,7 @@ const groundY = () => fy; // 腳底（搭車、搭火車從這裡開始）
 let cur = 'idle', actT = 0, actionKey = null, fm = 'idle', moving = false, speed = 40, fx = -999, fy = -999, prevFx = null, returning = false, costumeAt = 0;
 // 兩隻各一個窗格：#who=hachi 是小八那個（SELF＝小八），沒帶是吉伊。互動動作兩邊同時跑、只畫自己那隻。
 const ROLE = location.hash.includes('who=hachi') ? 'hachi' : 'chiikawa', IS_HACHI = ROLE === 'hachi', SELF = IS_HACHI ? hachi : me;
-if (IS_HACHI) selfRef = hachi;
+if (IS_HACHI) { selfRef = hachi; window.PET_NOFX = true; document.body.classList.add('nofx'); } // 小八的窗格不畫全畫面的效果（變暗、下雨、閃電、大字），吉伊那個窗格畫就好
 companion = true; // 互動從兩隻現在站的位置開始（不是從畫面外走進來）
 me.S = foe.S = hachi.S = 23;
 // 這幾個動作自己會移動位置（對決、滑倒、忍者瞬移、淹水游泳），做的時候不跟 Flutter 的位置

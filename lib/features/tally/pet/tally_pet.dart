@@ -1245,6 +1245,13 @@ class PetDuo {
     'b_dance': [.3, .7],
     'b_rps': [.3, .7],
     'b_comfort': [.28, .82],
+    // 八點檔・小壞話、短劇（2026-11-09 使用者：都做進去）
+    'b_gossip': [.32, .68],
+    'b_soap_rain': [.3, .85],
+    'b_soap_splash': [.32, .68],
+    'b_soap_amnesia': [.3, .85],
+    'b_soap_will': [.3, .7],
+    'b_short_fridge': [.3, .7],
   };
 
   /// 兩隻正在約好見面或互動：各自先不要亂跑。

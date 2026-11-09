@@ -29,6 +29,7 @@
   /* 台詞：一行不換行、置中在頭上（2026-10-21 使用者） */
   .bubble { position: absolute; z-index: 3; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .18s;
     font: 800 12.5px/1.2 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.5); }
+  body.nofx #dim, body.nofx #big { display: none; }
   .bubble .h { color: #FF6FA5; } .bubble.foe { color: #ffc2d4; } .bubble.hachi { color: #cfe0ff; }
   #big { position: absolute; z-index: 3; left: 50%; top: 32%; transform: translate(-50%, -50%) scale(.6); font: 900 24px/1 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     letter-spacing: 2px; opacity: 0; white-space: nowrap; color: #fff; text-shadow: 0 0 12px rgba(255,200,87,.8), 0 2px 0 #000; transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1); }
@@ -117,6 +118,7 @@ const hachiSkin = toon(0xffffff, { vertexColors: true });
 // App 用：兩隻各有一個窗格時，互動動作用「動作座標」算位置，畫的時候整體平移 BO.x（互動的中心點）；selfRef 是這個窗格自己那隻（預設吉伊）
 const BO = { x: 0 };
 let selfRef = null;
+const SELFP = () => selfRef || me, SW = () => selfRef ? 2 : 0; // 這個窗格自己那隻、對話泡泡的編號（小八是 2）
 // ════════════════ 做一隻（主角、黑色對手、小八共用） ════════════════
 function makePet(o = {}) {
   const dark = !!o.dark, hachi = !!o.hachi;
@@ -706,7 +708,7 @@ act('wake', { g: 'rest', label: '叫醒牠', dur: 3.6, redo: 1, enter() { me.sno
 
 // ── 抓起來／掙扎／被甩出去 ──
 act('held', { g: null, label: '被抓起來',
-  enter() { talk('！', .5); },
+  enter() { talk('！', .5, SW()); },
   pose(P, t) { const T = clockT;
     if (t < .35) { P.wide = 1; both(P, 'up'); P.sy = 1.1; P.mouth = .5; return; }
     // 掙扎一陣、累了抽泣、再爆發（3.6 秒一輪）
@@ -715,14 +717,14 @@ act('held', { g: null, label: '被抓起來',
     const kick = T * (tired ? 6 : 16); P.lLy = .02 + (Math.sin(kick) * .5 + .5) * .3 * f; P.lRy = .02 + (Math.sin(kick + Math.PI) * .5 + .5) * .3 * f; P.lLz = .45 + Math.cos(kick) * .22 * f; P.lRz = .45 + Math.cos(kick + Math.PI) * .22 * f;
     P.roll = Math.sin(T * (tired ? 3 : 9)) * .22 * f; P.turn = Math.sin(T * (tired ? 2 : 5)) * .35 * f; P.sq = 1; P.cry = 1; P.mouth = tired ? .3 + Math.sin(T * 9) * .08 : .85 + Math.sin(T * 30) * .1; P.sy = 1.04; },
   ev(t0, t1) { const tired = ((t1 - .35) % 3.6) > 2.4;
-    if (t1 > .35 && every(t0, t1, tired ? .45 : .14, .35)) for (const s of [-1, 1]) ball(W2(me.face, s * .5, 1.0, .9), 1, 0x5ec2ff, { r: .06, dir: s < 0 ? Math.PI : 0, speed: 170, up: 60, life: .7, alpha: .95 });
-    if (every(t0, t1, 3.6, .35)) talk('放開我～！', 1.2); if (t1 > .35 && every(t0, t1, 3.6, 2.75)) talk('嗚嗚…', 1);
-    if (every(t0, t1, .8, .5) && Math.random() < .5) puff('💦', W2(me.body, (Math.random() < .5 ? -1 : 1) * 1.1, 1.9, 0), { size: .26, vy: 30, life: .6 }); } });
-act('fly', { g: null, label: '飛出去', enter() { talk('哇啊——', 1); },
-  pose(P) { both(P, 'high'); P.wide = 1; P.mouth = .8; P.spin = me.spinA; P.lLy = P.lRy = .2; P.cry = .6; } });
-act('dizzy', { g: null, label: '頭暈', dur: 2.2, enter() { talk('頭好暈…', 1.6); },
+    if (t1 > .35 && every(t0, t1, tired ? .45 : .14, .35)) for (const s of [-1, 1]) ball(W2(SELFP().face, s * .5, 1.0, .9), 1, 0x5ec2ff, { r: .06, dir: s < 0 ? Math.PI : 0, speed: 170, up: 60, life: .7, alpha: .95 });
+    if (every(t0, t1, 3.6, .35)) talk('放開我～！', 1.2, SW()); if (t1 > .35 && every(t0, t1, 3.6, 2.75)) talk('嗚嗚…', 1, SW());
+    if (every(t0, t1, .8, .5) && Math.random() < .5) puff('💦', W2(SELFP().body, (Math.random() < .5 ? -1 : 1) * 1.1, 1.9, 0), { size: .26, vy: 30, life: .6 }); } });
+act('fly', { g: null, label: '飛出去', enter() { talk('哇啊——', 1, SW()); },
+  pose(P) { both(P, 'high'); P.wide = 1; P.mouth = .8; P.spin = SELFP().spinA; P.lLy = P.lRy = .2; P.cry = .6; } });
+act('dizzy', { g: null, label: '頭暈', dur: 2.2, enter() { talk('頭好暈…', 1.6, SW()); },
   pose(P, t) { P.shut = 1; P.eye = 0; P.roll = Math.sin(t * 5) * .14; P.turn = Math.sin(t * 3) * .3; P.mouth = .2 + Math.sin(t * 7) * .1; if (t < .3) { P.sy = .78; P.sx = 1.15; } },
-  ev(t0, t1) { if (every(t0, t1, .12)) { const a = t1 * 7; puff('✦', W2(me.body, Math.cos(a) * 1.1, 2.0, Math.sin(a) * 1.1), { color: '#ffd36b', vy: 0, size: .2, life: .35 }); } } });
+  ev(t0, t1) { if (every(t0, t1, .12)) { const a = t1 * 7; puff('✦', W2(SELFP().body, Math.cos(a) * 1.1, 2.0, Math.sin(a) * 1.1), { color: '#ffd36b', vy: 0, size: .2, life: .35 }); } } });
 act('grabDemo', { g: 'held', label: '示範：抓起來甩一甩', isNew: 1 });
 
 // ── 變身 ──
@@ -1009,12 +1011,12 @@ let rainOn = false, gossip = GOSSIP[0], soapMemo = [];
 const rainGeo = new THREE.BufferGeometry(), RN = 150, rainP = new Float32Array(RN * 6), rainX = new Float32Array(RN), rainY = new Float32Array(RN);
 rainGeo.setAttribute('position', new THREE.BufferAttribute(rainP, 3));
 const rainLines = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xa8dcff, transparent: true, opacity: .6, depthTest: false })); rainLines.renderOrder = 9; rainLines.visible = false; rainLines.frustumCulled = false; scene.add(rainLines);
-function rainStep(dt) { rainLines.visible = rainOn; if (!rainOn) return;
+function rainStep(dt) { rainLines.visible = rainOn && !window.PET_NOFX; if (!rainOn) return;
   for (let i = 0; i < RN; i++) { if (rainY[i] === 0 && rainX[i] === 0) { rainX[i] = Math.random() * (W + 80); rainY[i] = -Math.random() * H; }
     rainY[i] -= 900 * dt; rainX[i] -= 150 * dt; if (rainY[i] < -H - 20) { rainY[i] = 10 + Math.random() * 40; rainX[i] = Math.random() * (W + 80); }
     rainP.set([rainX[i], rainY[i], 150, rainX[i] + 5, rainY[i] + 22, 150], i * 6); }
   rainGeo.attributes.position.needsUpdate = true; }
-function lightning() { glow(new THREE.Vector3(W * .5, -H * .25, 200), 40, .3, 0xffffff); shakeAmt = 8; }
+function lightning() { if (window.PET_NOFX) return; glow(new THREE.Vector3(W * .5, -H * .25, 200), 40, .3, 0xffffff); shakeAmt = 8; }
 function sepia(on) { dim.style.background = on ? 'radial-gradient(circle at 50% 55%, rgba(120,80,30,.15), rgba(60,35,10,.7))' : ''; dim.style.opacity = on ? 1 : 0; }
 const SOAP = { g: 'soap', isNew: 1, enter: buddyEnter, exit() { buddyExit(); rainOn = false; rainLines.visible = false; sepia(false); dim.style.opacity = 0; } };
 const SOAP_END = (t0, t1, at) => { if (cross(t0, t1, at)) bigText('明日待續…', 2.0, '#ffffff'); };
@@ -1154,7 +1156,7 @@ act('b_soap_will', { ...SOAP, label: '💰 八點檔・搶遺產', dur: 15.5,
 
 // 6. 短劇（像 AI 短劇：短、急、一開頭就是鉤子、一路反轉、停在最緊張的地方，不和好）：冰箱裡的人
 // 節奏：每 1～2 秒一個轉折，大字當字幕、閃光當轉場；最後切黑「未完待續」。
-act('b_short_fridge', { ...SOAP, label: '🎬 短劇・冰箱裡的人（短、急、反轉）', dur: 14,
+act('b_short_fridge', { ...SOAP, g: 'short', label: '🎬 短劇・冰箱裡的人（短、急、反轉）', dur: 14,
   pose(P, t, F, H) { const mL = W * .3, hX = W * .7;
     if (buddyWalkIn(P, H, t, mL, hX)) { P.turn = .8; H.turn = .8; return; }
     const u = t - BIN; faceEach(P, H, .8); H.turn = lerp(.8, -.8, seg(u, 2.4, 2.65)); // 小八先背對著，被問到才猛然轉過來
@@ -1183,13 +1185,191 @@ act('b_short_fridge', { ...SOAP, label: '🎬 短劇・冰箱裡的人（短、�
     if (X(10.4)) { bigText('馨岑：誰動我鑫鑫腸？', 1.6, '#ff9ac8'); lightning(); }
     if (X(11.8)) { dim.style.background = 'rgba(0,0,0,.94)'; dim.style.opacity = 1; bigText('【未完待續】', 2.0, '#ffffff'); } } });
 
+// ── 小劇場（2026-11-09 使用者：再設計十個，像 AI 短劇——短、急、有戲劇性、不用刻意和好）──
+// 用「劇本」描述：每一格 beat 有時間 t（走進來之後的秒數）、吉伊的姿勢 P、小八的姿勢 H、台詞 s0／s2、大字 big、特效 fx、兩隻的距離 g。
+// 每齣十幾秒、一開場就是鉤子、一路反轉、停在最緊張的地方（切黑「未完待續」）。
+const FACE = side => side === 0 ? .8 : -.8; // 面對對方的方向
+const SP2 = {
+  idle() {},
+  happy(Q, k) { Q.happy = 1; Q.mouth = .3; hR(Q, 'up', Math.sin(k * 11) * .25, .25, .1); },
+  stare(Q) { Q.wide = 1; Q.sx = .96; both(Q, 'rest'); },
+  back(Q, k, side) { Q.turn = -FACE(side); Q.sy = .98; both(Q, 'rest'); },
+  away(Q, k, side) { walkCycle(Q, clockT * 16, 0, side === 0 ? -1 : 1); },
+  cam(Q) { Q.turn = 0; Q.wide = 1; both(Q, 'rest'); },
+  deadpan(Q) { Q.turn = 0; Q.eye = .55; both(Q, 'rest'); },
+  shock(Q, k) { Q.wide = 1; Q.lean = -.25 * seg(k, 0, .15); Q.mouth = .6; both(Q, 'high'); Q.lLy = Q.lRy = .2; },
+  point(Q) { hR(Q, 'fwdHigh', 0, .05); hL(Q, 'rest'); Q.lean = .2; Q.mouth = .4; },
+  angry(Q, k) { Q.lean = .15; Q.mouth = .5; both(Q, 'chest'); Q.roll = Math.sin(k * 28) * .03; },
+  cry(Q) { Q.cry = 1; Q.sq = 1; Q.mouth = .6; both(Q, 'cheek'); Q.sy = .96; },
+  flustered(Q, k, side) { both(Q, 'cheek'); Q.turn = FACE(side) + Math.sin(k * 9) * .3; Q.mouth = .15; Q.sy = .97; },
+  laugh(Q, k) { Q.happy = 1; Q.mouth = .55; Q.y = Math.abs(Math.sin(k * 10)) * .25; both(Q, 'cheek'); },
+  kneel(Q, k) { const u = seg(k, 0, .3); Q.sy = lerp(1, .62, u); Q.y = -.1 * u; both(Q, 'chest'); },
+  beg(Q, k) { const u = seg(k, 0, .3); Q.sy = lerp(1, .62, u); Q.y = -.1 * u; hR(Q, 'up', Math.sin(k * 6) * .15, .3, .1); hL(Q, 'up', -Math.sin(k * 6) * .15, .3, .1); Q.cry = .6; Q.sq = 1; },
+  faint(Q, k) { Q.lean = 1.3 * seg(k, 0, .4); Q.sq = 1; },
+  smirk(Q) { Q.eye = .6; Q.mouth = .15; Q.lean = -.08; both(Q, 'rest'); },
+  whisper(Q) { Q.lean = .16; hR(Q, 'mouth'); hL(Q, 'rest'); Q.happy = 1; },
+  tremble(Q, k) { Q.wide = 1; Q.roll = Math.sin(k * 34) * .03; both(Q, 'chest'); },
+  slump(Q, k) { Q.lean = .8 * seg(k, 0, .5); Q.sy = .9; Q.sq = 1; both(Q, 'ground'); },
+  hold(Q) { both(Q, 'chest'); Q.happy = 0; },
+  give(Q) { both(Q, 'fwdHigh', -.1, .1); Q.mouth = .2; },
+  sip(Q) { both(Q, 'mouth'); Q.puff = .5; Q.mouth = .15; },
+  jump(Q, k) { jumpPose(Q, (k % .8) / .8); },
+};
+const SFX = {
+  flash: () => { glow(new THREE.Vector3(W * .5 + BO.x, -me.py + me.S * 1.6, 200), 30, .25, 0xffffff); shakeAmt = 8; },
+  thunder: () => lightning(),
+  shake: () => { shakeAmt = 6; },
+  thump: () => { puff('咚…', meMid().add(new THREE.Vector3(0, me.S * .6, 0)), { color: '#ff9ab4', size: .5, vy: 5, life: .6 }); shakeAmt = 3; },
+  ding: () => puff('叮——', new THREE.Vector3(W * .5 + BO.x, -me.py + me.S * 4.6, 0), { color: '#9fd8ff', size: .6, vy: 0, life: 1.2 }),
+  dim: () => { dim.style.background = ''; dim.style.opacity = 1; },
+  undim: () => { dim.style.background = ''; dim.style.opacity = 0; },
+  black: () => { dim.style.background = 'rgba(0,0,0,.94)'; dim.style.opacity = 1; },
+};
+function sfx(name) {
+  if (SFX[name]) return SFX[name]();
+  let m = /^(sweat|anger|q|ex)([02])$/.exec(name);
+  if (m) { const p = m[2] === '0' ? me : hachi; puff({ sweat: '💦', anger: '💢', q: '？', ex: '！' }[m[1]], W2(p.body, m[2] === '0' ? .9 : -.9, 2.4, 0), { size: m[1] === 'q' || m[1] === 'ex' ? .55 : .5, vy: 12, life: .9, color: m[1] === 'ex' ? '#ffd36b' : '#ffffff' }); return; }
+  m = /^e:(.+):([02])$/.exec(name);
+  if (m) puff(m[1], W2(m[2] === '0' ? me.body : hachi.body, 0, 3.0, 0), { size: .9, vy: 8, life: 1.4 });
+}
+const lineDur = s => .9 + s.length * .1;
+function shortAct(key, label, spec) {
+  act(key, { ...SOAP, g: 'short', label, dur: spec.dur,
+    pose(P, t, F, H) { const z = Zs(), mid = W * .5, gap0 = (spec.gap || 150) * z;
+      if (buddyWalkIn(P, H, t, mid - gap0 / 2, mid + gap0 / 2)) { P.turn = .8; H.turn = -.8; return; }
+      const u = t - BIN; faceEach(P, H, .8);
+      let b = spec.beats[0]; for (const x of spec.beats) { if (x.t <= u) b = x; else break; }
+      const k = u - b.t, gap = (b.g || spec.gap || 150) * z;
+      me.px = lerp(me.px, mid - gap / 2, .12); hachi.px = lerp(hachi.px, mid + gap / 2, .12);
+      SP2[b.P || 'idle'](P, k, 0); SP2[b.H || 'idle'](H, k, 2); },
+    ev(t0, t1) { const u0 = t0 - BIN, u1 = t1 - BIN; rainStep(Math.max(0, t1 - t0));
+      for (const b of spec.beats) if (cross(u0, u1, b.t)) {
+        if (b.s0) talk(b.s0, lineDur(b.s0), 0); if (b.s2) talk(b.s2, lineDur(b.s2), 2);
+        if (b.big) bigText(b.big, 1.0, b.bc || '#ffffff');
+        for (const f of b.fx || []) sfx(f); } } });
+}
+const END = '【未完待續】';
+shortAct('b_s_boss', '🎬 小劇場１・霸道總裁', { dur: 14, beats: [
+  { t: 0, P: 'idle', H: 'smirk', fx: ['dim'], big: '【霸道總裁】', bc: '#ffe27a', s2: '吉伊，有件事我瞞你很久了。' },
+  { t: 2.0, P: 'stare', s0: '…什麼事？' },
+  { t: 3.2, H: 'smirk', fx: ['flash'], big: '其實…', s2: '我是這個 App 的總裁。' },
+  { t: 5.0, P: 'shock', fx: ['thunder', 'ex0'], s0: '！？' },
+  { t: 6.2, H: 'smirk', s2: '所以從今天起，你的薪水歸我管。' },
+  { t: 8.0, P: 'deadpan', s0: '…你有發過薪水嗎？' },
+  { t: 9.4, H: 'flustered', fx: ['sweat2'], s2: '…下個月！' },
+  { t: 10.6, P: 'angry', s0: '你上個月也這樣說！', fx: ['thump'] },
+  { t: 11.8, P: 'cam', H: 'cam', fx: ['ding', 'thunder'], big: '馨岑：你被開除了。', bc: '#ff9ac8' },
+  { t: 13.0, fx: ['black'], big: END } ] });
+shortAct('b_s_revenge', '🎬 小劇場２・十年前的飯糰', { dur: 15.5, beats: [
+  { t: 0, P: 'back', H: 'idle', fx: ['dim'], big: '【復仇】', bc: '#ff5a7a', s0: '你還記得…十年前的那顆飯糰嗎？' },
+  { t: 2.4, H: 'stare', fx: ['sweat2'], s2: '…什麼飯糰？' },
+  { t: 3.8, P: 'angry', fx: ['flash'], big: '十年前', s0: '你說「我去買」，就再也沒回來。' },
+  { t: 5.8, H: 'flustered', s2: '那、那是因為…路上有鑫鑫腸…' },
+  { t: 7.2, P: 'point', fx: ['thunder'], big: '背叛', bc: '#ff5a7a', s0: '你選了鑫鑫腸！' },
+  { t: 8.6, H: 'beg', s2: '我、我後來買了十根…' },
+  { t: 10.0, P: 'smirk', s0: '太遲了。我已經…不餓了。' },
+  { t: 11.6, P: 'away', H: 'beg', g: 270, fx: ['thump'] },
+  { t: 13.0, P: 'stare', H: 'beg', s2: '可是…我現在手上有飯糰啊。', fx: ['e:🍙:2'] },
+  { t: 14.2, P: 'cam', fx: ['thump', 'black'], s0: '…哪一種？', big: END } ] });
+shortAct('b_s_mole', '🎬 小劇場３・內鬼', { dur: 14.5, beats: [
+  { t: 0, P: 'stare', H: 'stare', fx: ['dim'], big: '【懸疑】', bc: '#9fb8ff', s2: '馨岑這個月的預算…少了 500。' },
+  { t: 2.0, P: 'shock', fx: ['thump'], s0: '…我們之中有內鬼。' },
+  { t: 3.6, H: 'point', fx: ['thump'], s2: '…是你吧？' },
+  { t: 5.0, P: 'angry', s0: '我昨天一整天都在睡覺！' },
+  { t: 6.4, H: 'smirk', fx: ['flash'], s2: '睡覺的人才最可疑。' },
+  { t: 7.8, P: 'point', fx: ['ex2'], s0: '那你呢？鑫鑫腸攤的收據，在你口袋裡。' },
+  { t: 9.4, H: 'shock', fx: ['sweat2'], s2: '…！那是撿到的！' },
+  { t: 10.6, P: 'cam', H: 'cam', fx: ['black'], big: '停電', },
+  { t: 11.2, fx: ['undim', 'q0', 'q2'], s0: '…你剛剛有動嗎？', s2: '…我沒有動。' },
+  { t: 12.6, big: '那剛才是誰？', bc: '#ff5a7a', fx: ['thunder', 'thump'] },
+  { t: 13.6, fx: ['black'], big: END } ] });
+shortAct('b_s_rebirth', '🎬 小劇場４・重生', { dur: 15, beats: [
+  { t: 0, P: 'faint', H: 'stare', fx: ['dim', 'shake'], big: '【重生】', bc: '#c9a8ff', s2: '吉伊！？吉伊你怎麼了！' },
+  { t: 2.0, P: 'cam', fx: ['flash'], s0: '…我重生了！回到三秒前！' },
+  { t: 3.6, H: 'stare', s2: '…什麼三秒前？' },
+  { t: 4.8, P: 'smirk', s0: '你三秒後會打噴嚏。' },
+  { t: 6.2, H: 'shock', fx: ['e:🤧:2'], s2: '哈啾！' },
+  { t: 7.2, H: 'shock', fx: ['ex2'], s2: '你怎麼知道！？' },
+  { t: 8.4, P: 'smirk', s0: '還有，三秒後馨岑會走進來。' },
+  { t: 10.0, H: 'flustered', fx: ['sweat2'], big: '三…', s2: '…不可能…' },
+  { t: 10.7, big: '二…', fx: ['thump'] }, { t: 11.4, big: '一…', fx: ['thump'], P: 'cam', H: 'cam' },
+  { t: 12.2, fx: ['ding', 'thunder'], big: '馨岑：你們在幹嘛？', bc: '#ff9ac8' },
+  { t: 13.8, fx: ['black'], big: END } ] });
+shortAct('b_s_chase', '🎬 小劇場５・你別走', { dur: 15.5, gap: 190, beats: [
+  { t: 0, P: 'away', H: 'idle', g: 190, fx: ['dim'], big: '【追妻火葬場】', bc: '#ff6fa5', s2: '吉伊！你別走！' },
+  { t: 2.2, P: 'back', g: 250, s0: '現在才說，晚了。' },
+  { t: 3.8, H: 'beg', s2: '我把鑫鑫腸都給你！' },
+  { t: 5.2, P: 'deadpan', s0: '…幾根？' },
+  { t: 6.4, H: 'flustered', s2: '…半根。' },
+  { t: 7.6, P: 'angry', fx: ['thunder'], big: '半根！？', s0: '半根！？' },
+  { t: 9.0, H: 'cry', s2: '已經是我最大的誠意了！' },
+  { t: 10.8, P: 'away', g: 300, s0: '…再見。' },
+  { t: 12.4, P: 'away', H: 'slump', g: 300, fx: ['thump'], s2: '…我還有半根可以給！' },
+  { t: 14.4, fx: ['black'], big: END } ] });
+shortAct('b_s_boba', '🎬 小劇場６・一杯珍奶的陰謀', { dur: 14, beats: [
+  { t: 0, H: 'give', fx: ['dim', 'e:🧋:2'], big: '【宮鬥】', bc: '#ffd36b', s2: '吉伊，這杯是特地幫你買的。' },
+  { t: 2.0, P: 'stare', fx: ['q0'], s0: '…你加了什麼？' },
+  { t: 3.2, H: 'smirk', s2: '糖。' },
+  { t: 4.4, P: 'deadpan', fx: ['thump'], s0: '…你知道我只喝無糖。' },
+  { t: 5.8, H: 'flustered', fx: ['sweat2'], s2: '那、那是…店員給錯了！' },
+  { t: 7.0, P: 'smirk', fx: ['flash', 'e:🧋:0'], s0: '那我們換著喝。' },
+  { t: 8.4, H: 'tremble', fx: ['sweat2', 'thump'], s2: '…！' },
+  { t: 9.6, P: 'sip', H: 'sip', fx: ['thump'] },
+  { t: 10.8, P: 'faint', H: 'faint', fx: ['thunder'], big: '？！', s0: '…你…也加了…' },
+  { t: 12.2, fx: ['black'], big: '【珍奶有毒？】' } ] });
+shortAct('b_s_quit', '🎬 小劇場７・我要辭職', { dur: 13.5, beats: [
+  { t: 0, P: 'angry', fx: ['dim', 'flash', 'e:📄:0'], big: '【職場】', bc: '#9fd8ff', s0: '我要辭職！' },
+  { t: 1.8, H: 'shock', fx: ['ex2'], s2: '為什麼！？' },
+  { t: 3.2, P: 'deadpan', s0: '因為每天只領一根鑫鑫腸。' },
+  { t: 4.8, H: 'flustered', s2: '那…我加到兩根。' },
+  { t: 6.2, P: 'back', s0: '不夠。' },
+  { t: 7.4, H: 'beg', s2: '兩根半！' },
+  { t: 8.6, P: 'smirk', s0: '…我要週休三日。' },
+  { t: 9.8, H: 'cry', fx: ['sweat2'], s2: '這我做不了主…' },
+  { t: 11.0, P: 'cam', H: 'cam', fx: ['ding', 'thunder'], big: '馨岑：批准。', bc: '#ff9ac8' },
+  { t: 12.2, P: 'shock', fx: ['black'], s0: '…？？', big: END } ] });
+shortAct('b_s_scam', '🎬 小劇場８・詐騙電話', { dur: 13.5, beats: [
+  { t: 0, H: 'hold', fx: ['dim', 'e:📱:2'], big: '【反詐騙】', bc: '#7fd0ff', s2: '喂？是吉伊先生嗎？' },
+  { t: 1.8, P: 'stare', s0: '…我是。' },
+  { t: 3.0, H: 'smirk', fx: ['flash'], s2: '你的帳戶被盜用了，請提供密碼。' },
+  { t: 5.0, P: 'deadpan', s0: '…你就站在我旁邊。' },
+  { t: 6.4, H: 'flustered', fx: ['sweat2'], s2: '…（壓低聲音）我是客服。' },
+  { t: 8.0, P: 'point', fx: ['thunder'], s0: '你的客服證件呢？' },
+  { t: 9.2, H: 'hold', s2: '…鑫鑫腸會員卡可以嗎？' },
+  { t: 10.6, P: 'stare', fx: ['q0', 'thump'], s0: '…可以。' },
+  { t: 11.8, H: 'shock', P: 'cam', fx: ['ex2'], s2: '…你就這樣相信了？' },
+  { t: 12.8, fx: ['black'], big: END } ] });
+shortAct('b_s_bomb', '🎬 小劇場９・三十秒', { dur: 16, beats: [
+  { t: 0, P: 'stare', H: 'stare', fx: ['dim', 'e:💣:0'], big: '【緊急】', bc: '#ff5a7a', s0: '…這是什麼？' },
+  { t: 1.6, H: 'tremble', fx: ['thump'], s2: '它、它在倒數！' },
+  { t: 3.0, P: 'point', big: '10', fx: ['thump'], s0: '快剪線！紅的還是藍的！' },
+  { t: 4.6, H: 'flustered', fx: ['sweat2'], s2: '你選！' },
+  { t: 5.8, P: 'tremble', s0: '你選！', fx: ['thump'] },
+  { t: 7.0, big: '3', H: 'tremble', fx: ['thump'] }, { t: 7.8, big: '2', fx: ['thump'] }, { t: 8.6, big: '1', fx: ['thump'] },
+  { t: 9.4, P: 'shock', H: 'shock', fx: ['flash', 'thunder', 'shake'], big: '砰——！' },
+  { t: 9.8, fx: ['black'] },
+  { t: 10.8, P: 'deadpan', H: 'cam', fx: ['undim'], s0: '…我們還活著嗎？' },
+  { t: 12.2, fx: ['ding'], big: '馨岑：整人玩具。', bc: '#ff9ac8', P: 'angry' },
+  { t: 14.2, H: 'laugh', P: 'deadpan', fx: ['black'], s2: '…（笑）', big: END } ] });
+shortAct('b_s_origin', '🎬 小劇場10・你不是我親生的', { dur: 15.5, beats: [
+  { t: 0, P: 'idle', H: 'back', fx: ['dim'], big: '【身世之謎】', bc: '#c9a8ff', s2: '吉伊…有件事我瞞了你很久。' },
+  { t: 2.2, P: 'stare', s0: '…什麼事？' },
+  { t: 3.4, H: 'idle', fx: ['flash'], s2: '你…不是我親生的。' },
+  { t: 5.0, P: 'shock', fx: ['thunder', 'ex0'], s0: '！？' },
+  { t: 6.4, P: 'deadpan', s0: '…我們根本不是同一個物種。' },
+  { t: 8.0, H: 'flustered', s2: '…那倒是。' },
+  { t: 9.2, H: 'smirk', fx: ['flash', 'e:🍙:0'], big: '真相', s2: '其實，你是…一顆飯糰。' },
+  { t: 10.8, P: 'faint', fx: ['thump'] },
+  { t: 12.0, P: 'faint', H: 'cam', fx: ['ding', 'ex2'], big: '馨岑：他是我撿的。', bc: '#ff9ac8' },
+  { t: 14.0, fx: ['black'], big: END } ] });
+
 // ── 常駐模式（2026-11-09 使用者）：兩隻都常駐在畫面上，各逛各的，偶爾會互相走向對方、在中間互動 ──
 // 流程：吉伊平常照原本的動作（走路、吃東西、睡覺…），小八自己逛（走、東張西望、跳、揮手）。
 // 吉伊閒著（待機或走路）時倒數，時間到就有一隻先喊對方 → 兩隻同時走向互動的位置（畫面中間）→ 面對面 → 開始互動 → 結束各自再去逛。
 // 大場面（場景、對決）小八先躲起來，結束再回來。
 let companion = false, hachiHidden = false, meetIn = 8, pendingAct = null, seekWho = 0, seekLast = 0, seekArrive = null;
-const MEET_ACTS = ['b_hello', 'b_share', 'b_hug', 'b_dance', 'b_rps', 'b_comfort', 'b_gossip', 'b_soap_rain', 'b_soap_splash', 'b_soap_amnesia', 'b_soap_will', 'b_short_fridge'];
-const ACT_POS = { b_hello: [.32, .68], b_share: [.3, .72], b_hug: [.28, .72], b_dance: [.3, .7], b_rps: [.3, .7], b_comfort: [.28, .82], b_gossip: [.32, .68], b_soap_rain: [.3, .85], b_soap_splash: [.32, .68], b_soap_amnesia: [.3, .85], b_soap_will: [.3, .7], b_short_fridge: [.3, .7] }; // 吉伊、小八各站畫面寬度的幾成（跟各動作自己的位置一樣）
+const MEET_ACTS = ['b_hello', 'b_share', 'b_hug', 'b_dance', 'b_rps', 'b_comfort', 'b_gossip', 'b_soap_rain', 'b_soap_splash', 'b_soap_amnesia', 'b_soap_will', 'b_short_fridge', 'b_s_boss', 'b_s_revenge', 'b_s_mole', 'b_s_rebirth', 'b_s_chase', 'b_s_boba', 'b_s_quit', 'b_s_scam', 'b_s_bomb', 'b_s_origin'];
+const ACT_POS = { b_hello: [.32, .68], b_share: [.3, .72], b_hug: [.28, .72], b_dance: [.3, .7], b_rps: [.3, .7], b_comfort: [.28, .82], b_gossip: [.32, .68], b_soap_rain: [.3, .85], b_soap_splash: [.32, .68], b_soap_amnesia: [.3, .85], b_soap_will: [.3, .7], b_short_fridge: [.3, .7], b_s_boss: [.3, .7], b_s_revenge: [.3, .7], b_s_mole: [.3, .7], b_s_rebirth: [.3, .7], b_s_chase: [.3, .7], b_s_boba: [.3, .7], b_s_quit: [.3, .7], b_s_scam: [.3, .7], b_s_bomb: [.3, .7], b_s_origin: [.3, .7] }; // 吉伊、小八各站畫面寬度的幾成（跟各動作自己的位置一樣）
 const AI = { mode: 'idle', t: 0, dur: 1.5, tx: 0 };
 function hachiAI(dt, H) { AI.t += dt;
   if (AI.t > AI.dur) { AI.t = 0; const r = Math.random();
@@ -2004,7 +2184,7 @@ const groundY = () => fy; // 腳底（搭車、搭火車從這裡開始）
 let cur = 'idle', actT = 0, actionKey = null, fm = 'idle', moving = false, speed = 40, fx = -999, fy = -999, prevFx = null, returning = false, costumeAt = 0;
 // 兩隻各一個窗格：#who=hachi 是小八那個（SELF＝小八），沒帶是吉伊。互動動作兩邊同時跑、只畫自己那隻。
 const ROLE = location.hash.includes('who=hachi') ? 'hachi' : 'chiikawa', IS_HACHI = ROLE === 'hachi', SELF = IS_HACHI ? hachi : me;
-if (IS_HACHI) selfRef = hachi;
+if (IS_HACHI) { selfRef = hachi; window.PET_NOFX = true; document.body.classList.add('nofx'); } // 小八的窗格不畫全畫面的效果（變暗、下雨、閃電、大字），吉伊那個窗格畫就好
 companion = true; // 互動從兩隻現在站的位置開始（不是從畫面外走進來）
 me.S = foe.S = hachi.S = 23;
 // 這幾個動作自己會移動位置（對決、滑倒、忍者瞬移、淹水游泳），做的時候不跟 Flutter 的位置
