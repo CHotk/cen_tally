@@ -41,9 +41,9 @@ const html = `<!doctype html>
     font: 800 12.5px/1.2 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.5); }
   body.nofx #dim, body.nofx #big { display: none; }
   .bubble .h { color: #FF6FA5; } .bubble.foe { color: #ffc2d4; } .bubble.hachi { color: #cfe0ff; }
-  #big { position: absolute; z-index: 3; left: 50%; top: 32%; transform: translate(-50%, -50%) scale(.6); font: 900 24px/1 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  #big { position: absolute; z-index: 3; left: 50%; top: 32%; transform: translate(-50%, -50%) scale(calc(.6 * var(--fit, 1))); font: 900 24px/1 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     letter-spacing: 2px; opacity: 0; white-space: nowrap; color: #fff; text-shadow: 0 0 12px rgba(255,200,87,.8), 0 2px 0 #000; transition: opacity .25s, transform .35s cubic-bezier(.2,1.6,.4,1); }
-  #big.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #big.on { opacity: 1; transform: translate(-50%, -50%) scale(var(--fit, 1)); }
 </style>
 <script type="importmap">
 { "imports": { "three": "../globe/vendor/three.module.min.js", "three/addons/": "../globe/vendor/addons/" } }
@@ -151,7 +151,7 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   // ── 特效 ──
   for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.age += dt; const k = q.age / q.life; q.v.y += q.g * dt;
     q.sp.position.x += (q.v.x + Math.sin(q.age * 5 + q.ph) * q.wob) * dt; q.sp.position.y += q.v.y * dt; q.sp.material.rotation += q.spin * dt;
-    q.sp.material.opacity = k < .15 ? k / .15 : 1 - Math.max(0, (k - .55) / .45); q.sp.scale.setScalar(q.size * (k < .15 ? .6 + k / .15 * .4 : 1) * (1 + q.grow * k));
+    q.sp.material.opacity = k < .15 ? k / .15 : 1 - Math.max(0, (k - .55) / .45); { const s = q.size * (k < .15 ? .6 + k / .15 * .4 : 1) * (1 + q.grow * k); q.sp.scale.set(s * q.asp, s, 1); }
     if (k >= 1) { scene.remove(q.sp); q.sp.material.dispose(); parts.splice(i, 1); } }
   for (let i = balls.length - 1; i >= 0; i--) { const q = balls[i]; q.age += dt; q.v.y -= q.g * dt; q.m.position.addScaledVector(q.v, dt); q.m.scale.setScalar(Math.max(.01, 1 - q.age / q.life)); if (q.age >= q.life) { scene.remove(q.m); balls.splice(i, 1); } }
   for (let i = fxs.length - 1; i >= 0; i--) { const f = fxs[i]; f.t += dt; const k = Math.min(1, f.t / f.life); f.fn(k); if (k >= 1) { f.end?.(); fxs.splice(i, 1); } }
@@ -163,7 +163,7 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   if (costume && !cur.startsWith('tf_') && clockT - costumeAt > 40 && cur !== 'held') { for (let i = 0; i < 8; i++) puff('●', W2(me.body, (Math.random() - .5) * 2, Math.random() * 2.2, 0), { color: '#e8e8f0', vy: 20, size: .5, grow: 1.5, life: .7 }); wear(null); }
   // ── 台詞泡泡：跟著頭頂（含跳起來、被捏起來），一行不換行 ──
   for (const [i, p] of [[0, me], [1, foe], [2, hachi]]) { const b = bub[i];
-    if (say[i] && clockT < sayUntil[i] && p.root.visible && p.S > 2) { const head = W2(p.body, 0, 2.25, 0); b.style.opacity = 1; const html = say[i].replace('♡', '<span class="h">♡</span>'); if (b.innerHTML !== html) b.innerHTML = html; b.style.left = head.x + 'px'; b.style.top = Math.max(20, -head.y - 4) + 'px'; }
+    if (say[i] && clockT < sayUntil[i] && p.root.visible && p.S > 2) { const head = W2(p.body, 0, 2.25, 0); b.style.opacity = 1; const html = say[i].replace('♡', '<span class="h">♡</span>'); if (b.innerHTML !== html) b.innerHTML = html; const bw = b.offsetWidth, fit = Math.min(1, (W - 6) / Math.max(1, bw)), half = bw * fit / 2; b.style.left = Math.min(Math.max(head.x, half + 3), W - half - 3) + 'px'; b.style.top = Math.max(20, -head.y - 4) + 'px'; b.style.transform = 'translate(-50%, -100%) scale(' + fit + ')'; b.style.transformOrigin = '50% 100%'; }
     else b.style.opacity = 0; }
 }
 // 自己的迴圈只在 Flutter 沒在帶的時候畫（剛載入、Flutter 那邊暫停時）
