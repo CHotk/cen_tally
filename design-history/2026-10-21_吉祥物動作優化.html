@@ -71,6 +71,31 @@
   .note b { font-size: 14.5px; } .note .old { color: var(--ink3); }
   .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 8px; margin-right: 6px; vertical-align: 1px; }
   .tag.o { background: rgba(255,255,255,.08); color: var(--ink3); } .tag.n { background: rgba(95,224,141,.15); color: var(--plus); }
+  select { font: inherit; font-size: 14px; color: var(--ink); background: rgba(255,255,255,.07); border: 1px solid var(--edge); border-radius: 12px; padding: 8px 12px; max-width: 100%; cursor: pointer; }
+  select option { background: #1a1b26; color: #f3f2f8; }
+  /* 劇場版畫面（2026-11-10） */
+  .bubble, .big, .now, .finger { z-index: 3; }
+  #cine { position: absolute; inset: 0; z-index: 2; pointer-events: none; display: none; overflow: hidden; border-radius: inherit; }
+  .stage.cine #cine { display: block; }
+  #cine canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #cine .grain { position: absolute; inset: -50%; opacity: .1; mix-blend-mode: overlay; animation: grain .5s steps(4) infinite;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  @keyframes grain { 0% { transform: translate(0,0); } 25% { transform: translate(-3%,2%); } 50% { transform: translate(2%,-3%); } 75% { transform: translate(-2%,-1%); } 100% { transform: translate(0,0); } }
+  #cine .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 52%, rgba(0,0,0,.6)); }
+  #cine .lb { position: absolute; left: 0; right: 0; background: #000; height: 0; }
+  #cine .lb.top { top: 0; } #cine .lb.bot { bottom: 0; }
+  #cine .curtain { position: absolute; top: 0; bottom: 0; width: 50.6%; background: repeating-linear-gradient(90deg, #5a0f1a 0 13px, #82182a 13px 27px, #4a0b15 27px 40px);
+    box-shadow: inset 0 -40px 50px rgba(0,0,0,.5), inset 0 40px 40px rgba(0,0,0,.35); }
+  #cine .curtain.l { left: 0; border-right: 3px solid #c9a24a; } #cine .curtain.r { right: 0; border-left: 3px solid #c9a24a; }
+  #cine .valance { position: absolute; left: 0; right: 0; top: 0; height: 34px; background: linear-gradient(#3b0710, #6d1222); border-bottom: 4px solid #c9a24a; box-shadow: 0 6px 14px rgba(0,0,0,.5); }
+  #cine .ctitle { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); text-align: center; opacity: 0; width: 92%; color: #f6e3a4; text-shadow: 0 0 18px rgba(255,200,87,.7), 0 2px 0 #000; }
+  #cine .ck { display: inline-block; font-size: 13px; letter-spacing: 6px; padding: 3px 12px 3px 18px; border: 1px solid #c9a24a; border-radius: 3px; margin-bottom: 12px; background: rgba(0,0,0,.4); }
+  #cine .ct { font-weight: 900; letter-spacing: 4px; white-space: nowrap; }
+  #cine .cs { margin-top: 12px; font-size: 12.5px; color: #d8c88f; letter-spacing: 3px; }
+  #cine .credits { position: absolute; left: 0; right: 0; top: 0; text-align: center; color: #eee; display: none; padding: 0 22px; will-change: transform; }
+  #cine .credits .k { font-size: 12px; letter-spacing: 6px; color: #c9a24a; } #cine .credits .t { font-size: 26px; font-weight: 900; color: #f6e3a4; margin-top: 6px; letter-spacing: 3px; }
+  #cine .credits .gap { height: 34px; } #cine .credits .r { display: flex; justify-content: center; gap: 14px; font-size: 13px; line-height: 2; } #cine .credits .r span { color: #9a98aa; text-align: right; flex: 1; } #cine .credits .r b { text-align: left; flex: 1; font-weight: 700; }
+  #cine .credits .fin { font-size: 40px; font-weight: 900; color: #fff; } #cine .credits .sm { font-size: 11px; color: #74738A; margin-top: 10px; }
   @media (max-width: 900px) { .left { position: static; } }
 </style>
 <script type="importmap">
@@ -81,10 +106,12 @@
 <div class="page">
   <div class="intro">
     <h1>吉祥物動作優化</h1>
-    <p>同一隻吉祥物，動作系統整個重做：換動作改成慢慢過渡、手真的會動（舊版手臂轉軸在手掌上，幾乎不會動）、身體可以前趴側躺、臉多了表情。<br>
+    <!-- 說明（原本顯示在頁面上；2026-11-10 使用者：這種說明自己存著就好，不要顯示在頁面上，用註解存）：
+    同一隻吉祥物，動作系統整個重做：換動作改成慢慢過渡、手真的會動（舊版手臂轉軸在手掌上，幾乎不會動）、身體可以前趴側躺、臉多了表情。<br>
     新增：吃東西、睡覺整套、坐卡片邊晃腳、席地坐、數錢、記帳、跳舞、揮手、伸懶腰、打噴嚏、滑倒、害羞；<b>抓起來</b>改成浮在手指上方＋重做掙扎；<b>變身</b>（魔法師、劍士、火焰、冰、廚師、忍者，可以一直變）；<b>黑色對手</b>登場持劍對決。<br>
     <b>2026-11-09 新增：小八</b>（藍色頭頂、貓耳朵、笑嘴）可以跟吉伊互動——打招呼擊掌、分飯糰、抱抱、一起跳舞、猜拳、安慰愛哭的吉伊（右邊「吉伊 × 小八」那一區），還有<b>八點檔戲碼跟偷說馨岑小壞話</b>（「八點檔・小壞話」那一區，先放設計稿參考）。<br>
-    左邊舞台可以直接用手指（滑鼠）拖牠、甩出去。右邊按鈕看單一動作，或開「自動演示」。</p>
+    左邊舞台可以直接用手指（滑鼠）拖牠、甩出去。右邊按鈕看單一動作，或開「自動演示」。
+    -->
   </div>
 
   <div class="left">
@@ -94,6 +121,8 @@
       <div class="dim" id="dim"></div>
       <div id="water"><div class="wv"></div><div class="rays"></div></div>
       <canvas id="c"></canvas>
+      <div id="cine"><canvas id="spot"></canvas><div class="grain"></div><div class="vig"></div><div class="curtain l"></div><div class="curtain r"></div><div class="valance"></div><div class="lb top"></div><div class="lb bot"></div>
+        <div class="ctitle"><div class="ck">劇場版</div><div class="ct"></div><div class="cs"></div></div><div class="credits"></div></div>
       <div class="bubble" id="bub0" style="opacity:0"></div>
       <div class="bubble foe" id="bub1" style="opacity:0"></div>
       <div class="bubble hachi" id="bub2" style="opacity:0"></div>
@@ -105,14 +134,15 @@
       <button id="auto" class="on">▶ 自動演示</button>
       <button id="blend" class="on">過場漸變</button>
       <button id="springy" class="on">耳朵彈性・壓扁</button>
-      <button id="zoom" class="on">放大看</button>
+      <button id="zoom">放大看</button>
       <button id="slow">慢動作</button>
-      <button id="buddy">👭 兩隻常駐</button>
+      <button id="buddy" class="on">👭 兩隻常駐</button>
+      <button id="cinema" class="on" title="八點檔／小劇場開演時：標題卡、布幕、黑邊、四周變暗、聚光燈跟著牠們（劇場版一定會有）">🎞 劇場版畫面</button>
     </div>
   </div>
 
   <div class="right">
-    <div class="group"><h3>第一版 <small>App 原本的動作（換動作一格跳過去、手不會動、坐椅子），留著對照</small></h3><div class="btns" data-g="v1"></div></div>
+    <div class="group"><h3>第一版 <small>App 原本的動作（換動作一格跳過去、手不會動、坐椅子），留著對照</small></h3><div class="btns"><select id="v1sel"><option value="">選一個第一版的動作…</option></select></div></div>
     <div class="group"><h3>看模型 <small>單獨看每個 3D 模型長怎樣（會自己轉，可以拖著轉）</small></h3><div class="btns" id="viewBtns"></div></div>
     <div class="group"><h3>基本</h3><div class="btns" data-g="basic"></div></div>
     <div class="group"><h3>吃東西</h3><div class="btns" data-g="eat"></div></div>
@@ -123,6 +153,7 @@
     <div class="group"><h3>吉伊 × 小八 <small>下面按鈕＝小八從右邊走進來互動；想看兩隻都在畫面上、偶爾自己互相找，開左邊「👭 兩隻常駐」</small></h3><div class="btns" data-g="buddy"></div></div>
     <div class="group"><h3>八點檔・小壞話 <small>2026-11-09 新增，先放設計稿參考（App 裡還沒有）：雨中下跪、潑水、失憶、搶遺產，加上偷偷說馨岑的小壞話被抓包</small></h3><div class="btns" data-g="soap"></div></div>
     <div class="group"><h3>小劇場・AI 短劇風 <small>2026-11-09 新增，先放設計稿參考：短、急、一路反轉、不和好、停在最緊張的地方（切黑「未完待續」）；11 齣，每齣十幾秒</small></h3><div class="btns" data-g="short"></div></div>
+    <div class="group"><h3>劇場版 <small>2026-11-10 新增，先放設計稿參考：長片約 45 秒，標題卡→布幕拉開→四周變暗、追光跟著兩隻→結尾切黑、跑演職員表（點任何東西可以跳過）</small></h3><div class="btns" data-g="film"></div></div>
     <div class="group"><h3>對決</h3><div class="btns" data-g="duel"></div></div>
     <div class="group"><h3>場景 <small>淹水潛水（整個畫面）、沙灘度假（卡片上一小塊）、搭飛機、搭車、搭火車、烤肉、馴服恐龍</small></h3><div class="btns" data-g="scene"></div></div>
     <div class="group"><h3>祝福馨岑 <small>發財、好運、趕走小人</small></h3><div class="btns" data-g="bless"></div></div>
@@ -166,6 +197,9 @@
       <div class="note"><b>八點檔・小壞話</b>（2026-11-09 使用者：多一個像八點檔的戲碼，甚至可以開玩笑說馨岑的小壞話；先放設計稿參考）<br>
         <span class="tag n">新</span>都是玩笑話、沒有惡意。<b>小聲說馨岑小壞話</b>：兩隻頭靠頭、手遮嘴輪流說（六組隨機：忘記記帳、偷偷買東西、熬夜、存鑫鑫腸、拖到最後一天補十天、說了八次「最後一次」），說到正開心突然停住、一起看向螢幕外冒冷汗，馬上改口「我們在說馨岑今天好漂亮喔～」。<b>八點檔・雨中下跪</b>：畫面變暗下雨打雷、「第 88 集」，吉伊背對著哭，小八衝過來跪下哀求，原來是偷吃了飯糰，吉伊「…你偷吃我的飯糰？？」，吉伊冷冷說「…我們絕交。」轉身走掉，小八一個人留在雨裡哭（不要和好結局，太假）。<b>八點檔・潑水</b>：小八氣呼呼說「你吃了我最後一顆飯糰！」把水潑到吉伊身上，吉伊面無表情淋著說「…那顆飯糰是馨岑的。」小八崩潰道歉。<b>八點檔・失憶</b>：吉伊撞到頭倒下，醒來「…你是誰？」小八崩潰，回憶殺（畫面變褐色，飯糰、唱歌、夕陽輪流浮出來），吉伊突然「鑫鑫腸！你還欠我一根鑫鑫腸！」小八「…你根本沒失憶吧！」。<b>八點檔・搶遺產</b>：兩隻搶一堆金幣「這是阿嬤留給我的！」，搖晃拔河，突然馨岑出聲「我的預算！」金幣消失，兩隻癱坐，最後約好「一起去跟馨岑要零用錢」。每個結尾都有「明日待續…」。<br>
         <b>短劇・冰箱裡的人</b>（2026-11-09 使用者：再來一個不用刻意和好、有戲劇張力的，最好像 AI 短劇，短、急、有戲劇性）：只有十幾秒，一開場就是鉤子——小八背對著冷冷說「我都看到了。」→ 吉伊「…看到什麼？」→ 閃光轉場、小八猛然轉身「昨晚十二點，你在冰箱前面做什麼？」→ 吉伊冒冷汗找藉口 → 雷聲「謊言！」小八亮出證據「我拍到了。」→ <b>反轉</b>：吉伊面無表情反問「…那你半夜為什麼會在我家冰箱前面？」→ 小八僵住、吉伊指著他「你是來偷吃的！」→ 兩個對瞪、心跳聲「咚…咚…」→ <b>反轉二</b>：冰箱「叮——」，兩隻同時轉頭看向螢幕外，馨岑的聲音「誰動我鑫鑫腸？」→ 畫面切黑「【未完待續】」。沒有和好，停在最緊張的地方。</div>
+      <div class="note"><b>劇場版畫面</b>（2026-11-10 使用者：像卡哇伊那邊的劇場版，畫面也會很像——其他地方變暗、甚至有聚光燈；先設計到 HTML）<br>
+        <span class="tag n">新</span>八點檔、小劇場開演時（左下「🎞 劇場版畫面」可關掉對照）：<b>① 標題卡</b>——布幕關著，金色字「小劇場・霸道總裁」淡入，約 1.9 秒；<b>② 布幕往兩邊拉開</b>、上下滑進電影黑邊，兩隻才走進來；<b>③ 其他地方變暗＋聚光燈</b>——兩道追光從上面打下來（有光柱、灰塵、地上一圈光），跟著牠們走（有一點延遲，像真人操作追光），吉伊暖黃、小八冷藍；<b>誰在說話誰最亮</b>，另一隻退到半暗；<b>④ 劇本能指揮燈光</b>：只打一隻、全場打亮、全暗、紅（緊張）／藍（難過）／暖（溫馨）色調、回憶變褐色，打雷閃光整個畫面瞬間亮；⑤ 結尾「未完待續」切黑（連牠們都蓋掉）、燈慢慢收掉、黑邊滑出去。上面再加一層很淡的底片顆粒跟暗角。<br>
+        <span class="tag n">新</span><b>劇場版（長片，約 45 秒）</b>：開場標題卡會多一行「劇場版」金框；結尾切黑後跑<b>演職員表</b>（演出：吉伊、小八；特別出演（聲音）：馨岑…），最後一個大大的「完」。兩齣：<b>鑫鑫腸・最後的一根</b>（序章→對峙→比賽→冰箱前→馨岑吃掉了→和好，喜劇）、<b>一起存的那一年</b>（回憶褐色、春夏秋冬、一年後存滿，溫馨）。劇場版就算關掉「劇場版畫面」也一定用這套畫面。</div>
       <div class="note"><b>小劇場十齣</b>（2026-11-09 使用者：再設計十個，像 AI 短劇；前面那齣「冰箱裡的人」是第一齣，這裡再加十齣）<br>
         每齣十幾秒、一開場就是鉤子、每 1～2 秒一個轉折、大字當字幕、閃光跟雷聲當轉場、最後<b>反轉</b>並切黑「未完待續」，<b>都不和好</b>。<br>
         １<b>霸道總裁</b>：「我是這個 App 的總裁」→「你有發過薪水嗎？」「…下個月！」→ 馨岑「你被開除了。」。
@@ -1469,7 +1503,7 @@ shortAct('b_s_quit', '🎬 小劇場７・我要辭職', { dur: 13.5, beats: [
   { t: 9.8, H: 'cry', fx: ['sweat2'], s2: '這我做不了主…' },
   { t: 11.0, P: 'cam', H: 'cam', fx: ['ding', 'thunder'], big: '馨岑：批准。', bc: '#ff9ac8' },
   { t: 12.2, P: 'shock', fx: ['black'], s0: '…？？', big: END } ] });
-shortAct('b_s_scam', '🎬 小劇場８・詐騙電話', { dur: 13.5, beats: [
+shortAct('b_s_scam', '🎬 小劇場８・詐騙電話', { dur: 16, beats: [
   { t: 0, H: 'hold', fx: ['dim', 'e:📱:2'], big: '【反詐騙】', bc: '#7fd0ff', s2: '喂？是吉伊先生嗎？' },
   { t: 1.8, P: 'stare', s0: '…我是。' },
   { t: 3.0, H: 'smirk', fx: ['flash'], s2: '你的帳戶被盜用了，請提供密碼。' },
@@ -1479,7 +1513,7 @@ shortAct('b_s_scam', '🎬 小劇場８・詐騙電話', { dur: 13.5, beats: [
   { t: 9.2, H: 'hold', s2: '…鑫鑫腸會員卡可以嗎？' },
   { t: 10.6, P: 'stare', fx: ['q0', 'thump'], s0: '…可以。' },
   { t: 11.8, H: 'shock', P: 'cam', fx: ['ex2'], s2: '…你就這樣相信了？' },
-  { t: 12.8, fx: ['black'], big: END } ] });
+  { t: 14.4, fx: ['black'], big: END } ] });
 shortAct('b_s_bomb', '🎬 小劇場９・三十秒', { dur: 16, beats: [
   { t: 0, P: 'stare', H: 'stare', fx: ['dim', 'e:💣:0'], big: '【緊急】', bc: '#ff5a7a', s0: '…這是什麼？' },
   { t: 1.6, H: 'tremble', fx: ['thump'], s2: '它、它在倒數！' },
@@ -1492,7 +1526,7 @@ shortAct('b_s_bomb', '🎬 小劇場９・三十秒', { dur: 16, beats: [
   { t: 10.8, P: 'deadpan', H: 'cam', fx: ['undim'], s0: '…我們還活著嗎？' },
   { t: 12.2, fx: ['ding'], big: '馨岑：整人玩具。', bc: '#ff9ac8', P: 'angry' },
   { t: 14.2, H: 'laugh', P: 'deadpan', fx: ['black'], s2: '…（笑）', big: END } ] });
-shortAct('b_s_origin', '🎬 小劇場10・你不是我親生的', { dur: 15.5, beats: [
+shortAct('b_s_origin', '🎬 小劇場10・你不是我親生的', { dur: 16.2, beats: [
   { t: 0, P: 'idle', H: 'back', fx: ['dim'], big: '【身世之謎】', bc: '#c9a8ff', s2: '吉伊…有件事我瞞了你很久。' },
   { t: 2.2, P: 'stare', s0: '…什麼事？' },
   { t: 3.4, H: 'idle', fx: ['flash'], s2: '你…不是我親生的。' },
@@ -1501,8 +1535,8 @@ shortAct('b_s_origin', '🎬 小劇場10・你不是我親生的', { dur: 15.5, 
   { t: 8.0, H: 'flustered', s2: '…那倒是。' },
   { t: 9.2, H: 'smirk', fx: ['flash', 'e:🍙:0'], big: '真相', s2: '其實，你是…一顆飯糰。' },
   { t: 10.8, P: 'faint', fx: ['thump'] },
-  { t: 12.0, P: 'faint', H: 'cam', fx: ['ding', 'ex2'], big: '馨岑：他是我撿的。', bc: '#ff9ac8' },
-  { t: 14.0, fx: ['black'], big: END } ] });
+  { t: 12.0, P: 'faint', H: 'cam', fx: ['ding', 'ex2'], s2: '…其實，是我在路邊撿到的。' },
+  { t: 14.6, fx: ['black'], big: END } ] });
 
 // ── 常駐模式（2026-11-09 使用者）：兩隻都常駐在畫面上，各逛各的，偶爾會互相走向對方、在中間互動 ──
 // 流程：吉伊平常照原本的動作（走路、吃東西、睡覺…），小八自己逛（走、東張西望、跳、揮手）。
@@ -2325,7 +2359,187 @@ let cur = 'idle', actT = 0, walkTo = null, auto = true, blend = true, springy = 
 function setAct(name) { ACTS[cur].exit?.(); chairV1.visible = false; sparkV1.visible = false; cur = name; actT = 0; const a = ACTS[name]; a.enter?.();
   if (a.walk) { const tx = 60 + Math.random() * (W - 120); walkTo = Math.abs(tx - me.px) < 60 ? (me.px > W / 2 ? 70 : W - 70) : tx; me.dir = walkTo > me.px ? 1 : -1; } else walkTo = null;
   document.getElementById('now').textContent = a.label;
-  document.querySelectorAll('[data-act]').forEach(b => b.classList.toggle('on', b.dataset.act === name)); }
+  document.querySelectorAll('[data-act]').forEach(b => b.classList.toggle('on', b.dataset.act === name));
+  const vs = document.getElementById('v1sel'); if (vs) vs.value = a.g === 'v1' ? name : ''; }
+// ════════════════ 劇場版畫面（2026-11-10 使用者：像卡哇伊那邊的劇場版，其他地方變暗、甚至有聚光燈；先設計到 HTML） ════════════════
+// 不動引擎，只在外面包一層：八點檔／小劇場／劇場版開演時——
+//   1. 先出標題卡（布幕關著）→ 布幕拉開、上下黑邊滑進來，兩隻才走進來
+//   2. 整個畫面變暗，兩道追光跟著牠們走（吉伊暖黃、小八冷藍）；誰在說話誰最亮，另一隻退到半暗
+//   3. 劇本可以指定燈光：單打一隻、全場打亮、全暗、紅／藍／暖色調、回憶變褐色、閃電整個畫面瞬間亮
+//   4. 小劇場結尾「未完待續」切黑、八點檔「明日待續」；劇場版結尾切黑、跑演職員表
+// 全部用「模擬時間」推進（跟動作同一個時鐘），所以快轉／慢動作都跟得上。
+const cineEl = document.getElementById('cine'), spotC = document.getElementById('spot'), sctx = spotC.getContext('2d');
+const cineQ = s => cineEl.querySelector(s);
+const cine = {
+  enabled: true, on: false, phase: '', t: 0, tAll: 0, pending: null, name: null, film: false,
+  dark: 0, darkT: .9, black: 0, flashV: 0, sepia: false, mode: 'auto', gel: [0, 0, 0], gelA: 0, gelT: 0, tint: 0,
+  curtain: 0, lb: 0, titleO: 0, credT: 0, credLen: 9, spec: null,
+  lights: [{ x: 0, y: 0, fy: 0, r: 120, i: 0, ti: 0, on: false }, { x: 0, y: 0, fy: 0, r: 120, i: 0, ti: 0, on: false }, { x: 0, y: 0, fy: 0, r: 120, i: 0, ti: 0, on: false }],
+  dust: Array.from({ length: 28 }, () => ({ a: Math.random() * 2 - 1, f: Math.random(), v: .05 + Math.random() * .08, s: .6 + Math.random() * 1.2 })),
+  get busy() { return this.phase === 'intro' || this.phase === 'outro' || this.phase === 'credits'; },
+  isCine(name) { const a = ACTS[name]; return !!a && (a.g === 'film' || ((a.g === 'soap' || a.g === 'short') && this.enabled)); },
+  // 標題卡的字：「🎬 小劇場１・霸道總裁」→ 小劇場１／霸道總裁
+  titleOf(name) { const a = ACTS[name], raw = a.label.replace(/^\S+\s*/, '').replace(/（.*?）/g, ''); const i = raw.indexOf('・');
+    if (a.film) return { k: '劇場版', t: a.film.title, s: a.film.sub };
+    return { k: a.g === 'soap' ? '八點檔' : '小劇場', t: i < 0 ? raw : raw.slice(i + 1), s: i < 0 ? '吉伊 × 小八' : raw.slice(0, i) + '　吉伊 × 小八' }; },
+  begin(name) {
+    const a = ACTS[name]; this.skip(true);
+    if (cur !== 'idle') setActRaw('idle'); // 先站定，布幕後面才不會看到牠們亂走
+    this.on = true; this.phase = 'intro'; this.t = 0; this.pending = name; this.film = a.g === 'film'; this.spec = a.film || null;
+    this.black = 0; this.dark = 0; this.darkT = .9; this.mode = 'auto'; this.gelT = 0; this.sepia = false; this.curtain = 0; this.lb = 0; this.titleO = 0; this.credT = 0;
+    for (const L of this.lights) { L.i = L.ti = 0; L.on = false; }
+    const tt = this.titleOf(name); cineQ('.ck').textContent = tt.k; cineQ('.ct').textContent = tt.t; cineQ('.cs').textContent = tt.s;
+    cineQ('.ct').style.fontSize = Math.min(34, Math.floor((W - 56) / Math.max(4, tt.t.length))) + 'px';
+    cineQ('.credits').style.display = 'none'; stage.classList.add('cine'); dim.style.visibility = 'hidden';
+    document.getElementById('now').textContent = a.label.startsWith('🎞') ? a.label : '🎞 ' + a.label; },
+  // 走進正片
+  play() { this.phase = 'play'; this.t = 0; this.name = this.pending; this.pending = null; setActRaw(this.name); },
+  end() { // 動作做完（或被換掉）
+    if (!this.on || this.phase === 'outro' || this.phase === 'credits') return;
+    if (this.phase === 'intro') { this.skip(); return; }
+    if (this.film) { this.phase = 'credits'; this.t = 0; this.credLen = 3 + (this.spec?.credits?.length || 8) * .75; this.credit(); }
+    else { this.phase = 'outro'; this.t = 0; this.darkT = 0; } },
+  credit() { const el = cineQ('.credits'), s = this.spec;
+    el.innerHTML = '<div class="k">劇場版</div><div class="t">' + s.title + '</div><div class="gap"></div>' + (s.credits || []).map(([a, b]) => b == null ? '<div class="gap"></div>' : '<div class="r"><span>' + a + '</span><b>' + b + '</b></div>').join('') + '<div class="gap"></div><div class="fin">完</div><div class="sm">角色版權屬原作者・私人使用</div>';
+    el.style.display = 'block'; },
+  skip(silent) { // 立刻收掉
+    this.on = false; this.phase = ''; this.pending = null; this.name = null; this.black = 0; this.dark = 0; this.sepia = false; this.gelA = 0; this.flashV = 0;
+    stage.classList.remove('cine'); dim.style.visibility = ''; this.apply(); sctx.clearRect(0, 0, spotC.width, spotC.height); },
+  flash(k = 1) { if (this.on) this.flashV = Math.max(this.flashV, k); },
+  // 每個模擬時間格呼叫
+  update(dt) {
+    if (!this.on) return; this.t += dt; this.tAll += dt; const c = this;
+    if (c.phase === 'intro') { const T = c.film ? 3.2 : 1.9; c.lb = seg(c.t, 0, .6); c.titleO = seg(c.t, .15, .7) * (1 - seg(c.t, T - .45, T)); c.curtain = 0; if (c.t >= T) c.play(); }
+    else if (c.phase === 'play') { c.curtain = seg(c.t, 0, 1.3); c.lb = 1; c.titleO = 0; }
+    else if (c.phase === 'outro') { c.lb = 1 - seg(c.t, .25, 1.0); c.curtain = 1; if (c.t > 1.1) { c.skip(); return; } }
+    else if (c.phase === 'credits') { c.curtain = 1; c.lb = 1; c.black = Math.min(.985, seg(c.t, 0, 1.1) * .985); c.credT = c.t;
+      if (c.t > c.credLen + 1.2) { c.phase = 'outro'; c.t = 0; c.darkT = 0; c.black = 0; cineQ('.credits').style.display = 'none'; } }
+    // 光：每隻可見的牠一道追光
+    const talking = i => say[i] && clockT < sayUntil[i], any = talking(0) || talking(2) || talking(1);
+    const pets = [[me, 0, [255, 224, 150]], [hachi, 2, [150, 188, 255]], [foe, 1, [200, 140, 255]]], solo = c.mode === 'solo0' ? 0 : c.mode === 'solo2' ? 2 : -1;
+    for (const [k, [p, who, gel]] of pets.entries()) { const L = c.lights[k]; L.gel = gel;
+      if (!p.root.visible || p.px > 9000 || c.phase === 'intro') { L.ti = 0; L.i += (0 - L.i) * (1 - Math.exp(-dt * 8)); continue; }
+      const v = W2(p.body, 0, 1.0, 0), f = W2(p.body, 0, 0, 0), x = v.x, y = -v.y, fy = -f.y + 2;
+      if (!L.on) { L.x = x; L.y = y; L.fy = fy; L.on = true; }
+      const kk = 1 - Math.exp(-dt * 6); L.x += (x - L.x) * kk; L.y += (y - L.y) * kk; L.fy += (fy - L.fy) * kk; L.r = Math.max(70, p.S * 2.3);
+      L.ti = c.mode === 'off' ? 0 : c.mode === 'wide' ? .9 : solo >= 0 ? (who === solo ? 1 : 0) : talking(who) ? 1 : any ? .32 : .78;
+      if (c.phase === 'credits' || c.phase === 'outro') L.ti = 0;
+      L.i += (L.ti - L.i) * (1 - Math.exp(-dt * 5)); }
+    const dT = c.phase === 'play' || c.phase === 'intro' ? (c.phase === 'intro' ? 0 : c.darkT) : c.darkT;
+    c.dark += (dT - c.dark) * (1 - Math.exp(-dt * 2.6));
+    c.flashV = Math.max(0, c.flashV - dt * 2.6); c.gelA += (c.gelT - c.gelA) * (1 - Math.exp(-dt * 3)); c.tint += ((c.sepia ? 1 : 0) - c.tint) * (1 - Math.exp(-dt * 3));
+    // 切黑：劇本用 fx:['black']（引擎設的 #dim 是 0.94 黑），這裡改成蓋在整個畫面上、連牠們都蓋掉
+    if (c.phase !== 'credits') { const blk = dim.style.opacity === '1' && /0,\s*0,\s*0,\s*0?\.9/.test(dim.style.background); c.black += ((blk ? .985 : 0) - c.black) * (1 - Math.exp(-dt * 4)); }
+    dim.style.visibility = 'hidden'; c.apply(); c.draw(); },
+  apply() { const c = this;
+    cineQ('.curtain.l').style.transform = `translateX(${-c.curtain * 101}%)`; cineQ('.curtain.r').style.transform = `translateX(${c.curtain * 101}%)`;
+    cineQ('.valance').style.transform = `translateY(${-c.curtain * 120}%)`;
+    cineQ('.lb.top').style.height = c.lb * 10.5 + '%'; cineQ('.lb.bot').style.height = c.lb * 10.5 + '%';
+    const ct = cineQ('.ctitle'); ct.style.opacity = c.titleO; ct.style.transform = `translate(-50%, -50%) scale(${.94 + c.titleO * .06})`;
+    const cr = cineQ('.credits'); if (cr.style.display === 'block') { const h = cr.offsetHeight, H0 = stage.clientHeight; cr.style.transform = `translateY(${H0 - (H0 + h) * Math.min(1, c.credT / c.credLen)}px)`; } },
+  draw() { const c = this, w = W, h = H; if (spotC.width !== w || spotC.height !== h) { spotC.width = w; spotC.height = h; }
+    const g0 = sctx; g0.globalCompositeOperation = 'source-over'; g0.clearRect(0, 0, w, h);
+    if (c.phase === 'intro') return;
+    const wide = c.mode === 'wide', solo = c.mode.startsWith('solo'), fl = c.flashV;
+    const dk = Math.min(.96, c.dark * (wide ? .62 : 1)) * (1 - .93 * fl) * (1 + Math.sin(c.tAll * 41) * .012);
+    g0.fillStyle = `rgba(4,5,14,${dk})`; g0.fillRect(0, 0, w, h);
+    g0.globalCompositeOperation = 'destination-out';
+    for (const L of c.lights) { if (L.i < .01) continue; const r = L.r * (wide ? 1.75 : solo ? 1.18 : 1) * (1 + fl * 1.6);
+      let g = g0.createRadialGradient(L.x, L.y, r * .12, L.x, L.y, r); g.addColorStop(0, `rgba(0,0,0,${L.i})`); g.addColorStop(.6, `rgba(0,0,0,${L.i * .82})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      g0.fillStyle = g; g0.fillRect(L.x - r, L.y - r, r * 2, r * 2);
+      g0.save(); g0.translate(L.x, L.fy); g0.scale(1, .3); g = g0.createRadialGradient(0, 0, r * .1, 0, 0, r * 1.15); g.addColorStop(0, `rgba(0,0,0,${L.i})`); g.addColorStop(.7, `rgba(0,0,0,${L.i * .7})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      g0.fillStyle = g; g0.fillRect(-r * 1.2, -r * 1.2, r * 2.4, r * 2.4); g0.restore(); }
+    g0.globalCompositeOperation = 'source-over';
+    for (const L of c.lights) { if (L.i < .02 || fl > .5) continue; const r = L.r * (wide ? 1.75 : solo ? 1.18 : 1), ax = w / 2 + (L.x - w / 2) * .45, [R, G, B] = L.gel || [255, 240, 200];
+      // 光柱（從上面打下來）
+      const bg = g0.createLinearGradient(0, 0, 0, L.fy); bg.addColorStop(0, `rgba(${R},${G},${B},${.3 * L.i})`); bg.addColorStop(1, `rgba(${R},${G},${B},${.045 * L.i})`);
+      g0.fillStyle = bg; g0.beginPath(); g0.moveTo(ax - 6, 0); g0.lineTo(ax + 6, 0); g0.lineTo(L.x + r * .78, L.fy); g0.lineTo(L.x - r * .78, L.fy); g0.closePath(); g0.fill();
+      // 光柱裡飄的灰塵
+      for (const d of c.dust) { d.f = (d.f + d.v * .016) % 1; const f = d.f, x = ax + (L.x + d.a * r * .72 - ax) * f, y = L.fy * f; g0.fillStyle = `rgba(${R},${G},${B},${.5 * L.i * (1 - Math.abs(f - .5))})`; g0.beginPath(); g0.arc(x, y, d.s, 0, 6.3); g0.fill(); }
+      // 光暈上色（吉伊暖黃、小八冷藍）
+      const gl = g0.createRadialGradient(L.x, L.y, 0, L.x, L.y, r * .95); gl.addColorStop(0, `rgba(${R},${G},${B},${.17 * L.i})`); gl.addColorStop(1, `rgba(${R},${G},${B},0)`); g0.fillStyle = gl; g0.fillRect(L.x - r, L.y - r, r * 2, r * 2);
+      // 燈頭
+      g0.fillStyle = `rgba(${R},${G},${B},${.9 * L.i})`; g0.fillRect(ax - 9, 0, 18, 5); }
+    if (c.gelA > .01) { const [R, G, B] = c.gel; g0.fillStyle = `rgba(${R},${G},${B},${.2 * c.gelA})`; g0.fillRect(0, 0, w, h); }
+    if (c.tint > .01) { g0.fillStyle = `rgba(150,100,40,${.34 * c.tint})`; g0.fillRect(0, 0, w, h); }
+    if (fl > .02) { g0.fillStyle = `rgba(255,255,255,${.5 * fl})`; g0.fillRect(0, 0, w, h); }
+    if (c.black > .005) { g0.fillStyle = `rgba(0,0,0,${c.black})`; g0.fillRect(0, 0, w, h); } },
+};
+// 包住 setAct：開演要先走標題卡；換掉動作要收場
+const setActRaw = setAct;
+setAct = function (name) {
+  if (cine.phase === 'outro' || cine.phase === 'credits') cine.skip();
+  if (cine.phase === 'intro') cine.skip();
+  if (cine.isCine(name)) { cine.begin(name); return; }
+  if (cine.on && name !== cine.name) cine.end();
+  setActRaw(name); };
+// 閃電、閃光、回憶褐色：整個畫面跟著亮／變色
+{ const l0 = lightning; lightning = () => { l0(); cine.flash(.85); }; const f0 = SFX.flash; SFX.flash = () => { f0(); cine.flash(.6); };
+  const s0 = sepia; sepia = on => { cine.sepia = !!on; s0(on); }; }
+// 劇本可以下的燈光指令（放在 fx 裡）
+Object.assign(SFX, {
+  spotAuto: () => { cine.mode = 'auto'; }, spotSolo0: () => { cine.mode = 'solo0'; }, spotSolo2: () => { cine.mode = 'solo2'; },
+  spotWide: () => { cine.mode = 'wide'; }, spotOff: () => { cine.mode = 'off'; },
+  gelRed: () => { cine.gel = [255, 40, 70]; cine.gelT = 1; }, gelBlue: () => { cine.gel = [60, 110, 255]; cine.gelT = 1; },
+  gelWarm: () => { cine.gel = [255, 170, 60]; cine.gelT = .8; }, gelNone: () => { cine.gelT = 0; },
+  sepiaOn: () => { sepia(true); }, sepiaOff: () => { sepia(false); },
+  rainOn: () => { rainOn = true; }, rainOff: () => { rainOn = false; rainLines.visible = false; },
+});
+
+// ── 劇場版（長片，約 45 秒）：有標題卡、幕、演職員表。劇本寫法跟小劇場一樣，多了燈光指令（spotXxx／gelXxx） ──
+function filmAct(key, label, spec) { shortAct(key, label, spec); ACTS[key].g = 'film'; ACTS[key].film = spec; }
+filmAct('f_last_sausage', '🎞 劇場版・鑫鑫腸　最後的一根', { dur: 49, title: '最後的一根', sub: '劇場版　吉伊 × 小八', credits: [
+  ['演出', '吉伊'], ['演出', '小八'], [], ['特別出演（聲音）', '馨岑'], [], ['劇情協力', '冰箱'], ['友情贊助', '最後一根鑫鑫腸'], [], ['燈光', '追光兩盞'], ['布幕', '紅色的'] ], beats: [
+  { t: 0, P: 'idle', H: 'idle', fx: ['spotWide'], big: '序章・平靜的早晨', bc: '#ffe27a', s0: '今天也要好好記帳～' },
+  { t: 3.0, H: 'happy', fx: ['spotAuto'], s2: '吉伊！我在冰箱找到了！' },
+  { t: 5.6, P: 'stare', s0: '找到什麼？' },
+  { t: 7.4, H: 'smirk', fx: ['spotSolo2', 'flash'], big: '最後一根', s2: '…鑫鑫腸。' },
+  { t: 10.0, P: 'shock', fx: ['spotAuto', 'thunder', 'ex0'], s0: '！！！' },
+  { t: 11.6, P: 'tremble', s0: '…是我先看到的。' },
+  { t: 13.6, H: 'deadpan', s2: '是我先拿到的。', g: 130 },
+  { t: 15.8, P: 'angry', H: 'angry', fx: ['gelRed', 'thump'], big: '第一幕・對峙', bc: '#ff7a8a', s0: '要用公平的方式決定。' },
+  { t: 18.4, H: 'smirk', s2: '好啊，比什麼？' },
+  { t: 20.4, P: 'point', fx: ['ex2'], s0: '比誰先跑到冰箱！' },
+  { t: 22.6, P: 'jump', H: 'jump', fx: ['spotWide', 'gelWarm', 'shake'], big: '3、2、1…', g: 210 },
+  { t: 25.0, fx: ['gelNone'], big: '開跑！', bc: '#ffffff' },
+  { t: 27.2, P: 'stare', H: 'idle', fx: ['spotSolo0', 'gelNone'], big: '第二幕・冰箱前', bc: '#9fd8ff', s0: '…咦？', g: 150 },
+  { t: 29.2, H: 'stare', fx: ['spotSolo2'], s2: '怎麼會…' },
+  { t: 31.0, P: 'shock', H: 'shock', fx: ['spotAuto', 'thunder', 'sweat0', 'sweat2'], s0: '冰箱門…是開著的。' },
+  { t: 33.4, H: 'tremble', s2: '裡面只剩下…包裝紙。' },
+  { t: 35.6, P: 'cam', H: 'cam', fx: ['gelRed', 'spotWide'], s0: '誰？！' },
+  { t: 37.0, fx: ['ding', 'flash', 'gelNone', 'spotAuto'], big: '馨岑：不好意思，我半夜吃掉了。', bc: '#ff9ac8' },
+  { t: 39.6, P: 'slump', H: 'slump', fx: ['gelBlue', 'spotSolo0'], s0: '…' },
+  { t: 41.2, H: 'cry', fx: ['spotSolo2'], s2: '我的…鑫鑫腸…' },
+  { t: 43.2, P: 'hold', H: 'idle', fx: ['gelWarm', 'spotAuto'], s0: '明天一起去買新的吧。' },
+  { t: 45.7, H: 'happy', s2: '嗯！' },
+  { t: 47.0, P: 'happy', fx: ['spotWide', 'gelNone', 'e:✨:0', 'e:✨:2'], big: '完', bc: '#ffffff' } ] });
+filmAct('f_saving_year', '🎞 劇場版・一起存的那一年', { dur: 52, title: '一起存的那一年', sub: '劇場版　吉伊 × 小八', credits: [
+  ['演出', '吉伊'], ['演出', '小八'], [], ['存錢罐', '一個'], ['銅板', '三百六十五個'], [], ['季節協力', '春夏秋冬'], ['鑫鑫腸', '一根（分著吃）'], [], ['特別感謝', '馨岑每天記帳'] ], beats: [
+  { t: 0, P: 'idle', H: 'slump', fx: ['spotWide', 'sepiaOn'], big: '序章・一年前', bc: '#ffd9a0', s0: '那時候，我們一個銅板都沒有。' },
+  { t: 3.4, fx: ['spotAuto'], s2: '連鑫鑫腸都買不起…' },
+  { t: 5.8, P: 'hold', H: 'idle', s0: '那…我們開始存吧。', fx: ['e:🪙:0'] },
+  { t: 8.2, P: 'give', H: 'happy', fx: ['spotWide', 'e:🌸:0', 'e:🌸:2'], big: '春', bc: '#ffb3c8', s2: '今天存一個銅板！' },
+  { t: 10.6, P: 'happy', fx: ['spotAuto'], s0: '我也存一個！' },
+  { t: 12.8, P: 'jump', H: 'jump', fx: ['spotWide', 'gelWarm', 'e:☀:0'], big: '夏', bc: '#ffd36b', s2: '好熱喔～' },
+  { t: 15.0, P: 'sip', H: 'sip', fx: ['spotAuto', 'e:🍉:0'], s0: '但是不能買冰。' },
+  { t: 17.0, P: 'deadpan', H: 'flustered', fx: ['gelNone', 'e:🍂:2'], big: '秋', bc: '#ffb066', s2: '…我偷偷買了一支。' },
+  { t: 19.2, P: 'angry', fx: ['anger0', 'thump'], s0: '說好不能買的！' },
+  { t: 21.0, H: 'cry', s2: '對不起嘛…' },
+  { t: 23.0, P: 'happy', H: 'idle', fx: ['gelBlue', 'spotWide', 'e:❄:0', 'e:❄:2'], big: '冬', bc: '#bfe6ff', s0: '下雪了。' },
+  { t: 25.2, P: 'hold', H: 'hold', g: 100, s2: '好冷…' },
+  { t: 27.0, fx: ['spotAuto'], s0: '靠近一點，就不冷了。' },
+  { t: 30.0, P: 'stare', H: 'stare', g: 150, fx: ['sepiaOff', 'gelNone', 'spotWide'], big: '一年後', bc: '#ffe27a', s0: '…存滿了。' },
+  { t: 32.4, H: 'happy', fx: ['spotAuto', 'flash', 'e:💰:2'], s2: '三百六十五個銅板！' },
+  { t: 35.2, P: 'happy', fx: ['ex0'], s0: '可以去買鑫鑫腸了！' },
+  { t: 37.6, P: 'hold', H: 'hold', fx: ['spotSolo0'], s0: '可是…' },
+  { t: 39.0, fx: ['spotSolo2'], s2: '嗯。' },
+  { t: 40.6, P: 'give', H: 'stare', g: 110, fx: ['spotAuto', 'gelWarm'], s0: '最後一根，給你。' },
+  { t: 43.4, H: 'cry', fx: ['e:💗:2'], s2: '吉伊…' },
+  { t: 45.4, P: 'happy', fx: ['e:💗:0'], s0: '因為，是一起存的呀。' },
+  { t: 48.6, P: 'laugh', H: 'laugh', g: 130, fx: ['spotWide', 'gelNone', 'e:✨:0', 'e:✨:2'], big: '完', bc: '#ffffff' } ] });
+
+document.getElementById('v1sel').onchange = e => { if (!e.target.value) return; stopAuto(); if (drag) release(); setAct(e.target.value); };
+document.getElementById('cinema').onclick = e => { e.currentTarget.classList.toggle('on'); cine.enabled = e.currentTarget.classList.contains('on'); };
 // ── App 裡的出現機率（每次牠想下一件事時；跟 tally_pet.dart 同步，改那邊要一起改這裡） ──
 // 新動作 50%：先抽一組（吃東西、休息、變身、祝福、其他 各 1 份，場景 0.6 份，不連續同組），再在組裡平均抽（不連續同一個）。
 const APP_PROB = (() => { const groups = { eat: ['rice', 'sausage', 'tea'], rest: ['sitEdge', 'sitFloor', 'stretch'], tf: ['tf_wizard', 'tf_sword', 'tf_fire', 'tf_ice', 'tf_chef', 'tf_ninja'],
@@ -2336,7 +2550,9 @@ const APP_PROB = (() => { const groups = { eat: ['rice', 'sausage', 'tea'], rest
 const PROB_NOTE = { wake: '睡完接著', grabDemo: '手指捏才會' };
 const probText = k => PROB_NOTE[k] ? PROB_NOTE[k] : APP_PROB[k] == null ? (ACTS[k]?.g === 'v1' ? '' : '未放進 App') : (APP_PROB[k] * 100).toFixed(1) + '%';
 const stopAuto = () => { auto = false; document.getElementById('auto').classList.remove('on'); };
-for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue; const b = document.createElement('button'); b.dataset.act = k; b.textContent = a.label;
+for (const [k, a] of Object.entries(ACTS)) { if (!a.g) continue;
+  if (a.g === 'v1') { const o = document.createElement('option'); o.value = k; o.textContent = a.label; document.getElementById('v1sel').append(o); continue; }
+  const b = document.createElement('button'); b.dataset.act = k; b.textContent = a.label;
   if (k === 'iceage') { b.style.textDecoration = 'line-through'; b.title = '2026-11-09 使用者：不用一進來就放冰原歷險記，按鈕加刪除線（還是點得到）'; }
   if (a.isNew || a.redo) { const s = document.createElement('span'); s.className = 'new'; s.textContent = a.redo ? '重做' : '新'; b.append(s); }
   { const p = probText(k); if (p) { const s = document.createElement('span'); s.className = 'prob' + (p.endsWith('%') ? '' : ' off'); s.textContent = p; b.append(s); } }
@@ -2430,7 +2646,7 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   else if (cur !== 'held') me.py += (top - me.py) * Math.min(1, dt * 20);
   // ── 目標姿勢 ──
   const P = { ...BASE }, F = { ...BASE }, Hh = { ...BASE };
-  companionTick(dt, a);
+  if (!cine.busy) companionTick(dt, a);
   if (companion && !hachiHidden && cur !== 'b_seek' && ACTS[cur].g !== 'buddy') hachiAI(dt, Hh);
   if (a.walk) { walkCycle(P, clockT * a.walk * .16, a.walk > 80 ? 1 : 0); if (walkTo != null) { const step = a.walk * dt; if (Math.abs(walkTo - me.px) <= step) { me.px = walkTo; walkTo = null; } else me.px += Math.sign(walkTo - me.px) * step; } }
   else a.pose?.(P, actT, F, Hh);
@@ -2451,17 +2667,20 @@ function tick(dt) { clockT += dt; const t0 = actT; actT += dt;
   // ── 動作結束、自動演示 ──
   if (a.dur && actT >= a.dur) { setAct('idle'); }
   else if (a.walk && walkTo == null) setAct('idle');
-  if (auto && cur === 'idle' && actT > 1.0) { let n, g = 0; do n = PLAN[planI++ % PLAN.length]; while (companion && n.startsWith('b_') && ++g < 50); if (n === 'grabDemo') startGrabDemo(); else setAct(n); }
+  if (auto && cur === 'idle' && actT > 1.0 && !cine.busy) { let n, g = 0; do n = PLAN[planI++ % PLAN.length]; while (companion && n.startsWith('b_') && ++g < 50); if (n === 'grabDemo') startGrabDemo(); else setAct(n); }
   if (auto && (cur === 'sitEdge' || cur === 'sitFloor') && actT > 7) setAct('idle');
   if (auto && cur === 'sleep' && actT > SL.lie + 8) setAct('wake');
   // ── 對話泡泡：跟著頭頂（含跳起來、被拎起來），一行不換行 ──
   for (const [i, p] of [[0, me], [1, foe], [2, hachi]]) { const b = bub[i];
     if (say[i] && clockT < sayUntil[i] && p.root.visible) { const head = W2(p.body, 0, 2.2, 0); b.style.opacity = 1; b.innerHTML = say[i].replace('♡', '<span class="h">♡</span>'); const bw = b.offsetWidth, fit = Math.min(1, (W - 8) / Math.max(1, bw)), half = bw * fit / 2; b.style.left = Math.min(Math.max(head.x, half + 4), W - half - 4) + 'px'; b.style.top = Math.max(20, -head.y - 6) + 'px'; b.style.transform = 'translate(-50%, -100%) scale(' + fit + ')'; b.style.transformOrigin = '50% 100%'; }
     else b.style.opacity = 0; }
+  cine.update(dt);
 }
+me.S = foe.S = hachi.S = 23; // 預設不放大（跟 App 裡一樣大）
 me.py = cardTop(); setAct('idle'); talk('馨岑妳好啊♡', 2.4);
+document.getElementById('buddy').classList.remove('on'); document.getElementById('buddy').click(); // 預設兩隻常駐
 requestAnimationFrame(frame);
-window.__pet = { advance(sec) { paused = true; for (let i = 0; i < sec * 60; i++) tick(1 / 60); }, play() { paused = false; }, setAct, get act() { return cur; }, get t() { return actT; }, set t(v) { actT = v; }, me, foe, hachi, ACTS, grabAt, moveTo, release, wear, get drag() { return drag; } };
+window.__pet = { advance(sec) { paused = true; for (let i = 0; i < sec * 60; i++) tick(1 / 60); }, play() { paused = false; }, setAct, get act() { return cur; }, get t() { return actT; }, set t(v) { actT = v; }, me, foe, hachi, ACTS, cine, grabAt, moveTo, release, wear, get drag() { return drag; } };
 </script>
 <div id="viewer"><div class="t" id="vTitle"></div><canvas id="vc"></canvas><div class="s" id="vSub"></div><button id="vClose">關閉</button></div>
 </body>
